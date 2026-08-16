@@ -37,7 +37,9 @@ De conteúdo, que definem o trabalho:
    lado específico — busca por similaridade, modelagem temporal, auditabilidade?
 7. Como ela avalia a questão da contribuição: um sistema funcionando basta, ou
    o trabalho precisa de uma pergunta de pesquisa com resposta medida?
-8. Ela tem preferência de metodologia de avaliação?
+8. O desenho de avaliação proposto — tempo por etapa como medida de esforço e
+   verificação automática de completude como medida de conformidade — serve,
+   ou ela prefere outro?
 
 ## Roteiro de leitura — camada 0, antes da reunião
 
@@ -49,7 +51,7 @@ Fontes primárias. São as que sustentam o problema e as que ela pode cobrar.
 | 2 | Instrução Normativa SEGES/ME nº 65/2021 | gov.br/compras | 40 min | Metodologia oficial da pesquisa de preços: parâmetros admitidos, cesta de preços, tratamento de valores discrepantes. É o requisito funcional do seu módulo, escrito por quem regula |
 | 3 | Manual das APIs de Consulta do PNCP + Swagger | pncp.gov.br/api/consulta/swagger-ui | 1h, mexendo | **Prioridade máxima.** Verificar se dá para consultar item por descrição e região com preço unitário. Se não der, metade do projeto muda |
 
-## Roteiro de leitura — camada 1, se sobrar tempo
+## Roteiro de leitura — camada 1, depois da reunião
 
 Literatura acadêmica. Encontrada em busca preliminar; **os metadados ainda não
 foram conferidos** e nenhuma destas pode ser citada antes disso.
@@ -68,13 +70,17 @@ Para ampliar a lista, use `docs/pesquisas/prompt-levantamento-literatura.md`.
 
 ## Ordem sugerida dos dois dias
 
-**Dia 1** — leituras 1 e 2 da camada 0, anotando os artigos que sustentam cada
-afirmação do problema. À noite, a leitura 3: mexer na API do PNCP e responder
-se ela entrega o que o projeto precisa.
+**Dia 1** — a leitura 3 primeiro: mexer na API do PNCP e responder se ela
+entrega o que o projeto precisa. É a única incógnita capaz de derrubar metade
+do projeto, e a mais barata de resolver. Depois as leituras 1 e 2, anotando os
+artigos que sustentam cada afirmação do problema.
 
-**Dia 2** — escrever o documento de 2 a 3 páginas, com as fontes já em mãos.
-Disparar o prompt de levantamento de literatura em paralelo, para ter o que
-filtrar depois da reunião.
+**Dia 2** — discutir as conclusões das leituras e escrever o documento de 2 a
+3 páginas, com as fontes já em mãos.
+
+O levantamento de literatura fica para **depois** da reunião: ela pode eliminar
+metade dos eixos de busca, e leitura apressada de artigo é pior que leitura
+nenhuma.
 
 ## Risco a encarar antes de escrever
 

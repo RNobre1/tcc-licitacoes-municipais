@@ -113,6 +113,10 @@ publicados.
 
 Antes de criar nota nova, verifique se há template em `TCC/_templates/`.
 
+As pastas `requisitos/` e `lições/` existem no vault mas não são versionadas:
+a primeira guarda relato de trabalho de terceiros, a segunda registra erros
+próprios. As duas são de uso interno.
+
 ## Rigor bibliográfico
 
 Regra dura, herdada de erro já cometido: **nunca preencher metadados de citação
