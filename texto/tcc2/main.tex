@@ -1,0 +1,76 @@
+% =============================================================================
+% TCC II — Monografia
+% UFOPA / IEG — Bacharelado em Ciência da Computação
+%
+% Mesmo preâmbulo do TCC I (../comum/ufopa-tcc.sty) e mesma bibliografia
+% (../comum/refs.bib). O que muda: natureza do trabalho, ano, elementos
+% pré-textuais adicionais e as seções.
+% =============================================================================
+
+\documentclass[12pt,a4paper,oneside]{article}
+
+\usepackage{ufopa-tcc}
+
+% --- Dados do trabalho -------------------------------------------------------
+\ufopatitulo{Sistemas inteligentes aplicados à gestão pública}
+\ufopasubtitulo{automação da fase preparatória e pesquisa de preços em
+  licitações municipais}
+\ufopaautor{Rafael Nobre de Souza}
+\ufopaorientador{Prof.\textsuperscript{a} \pendente{titulação: Dra.\ ou Ma.?}
+  Socorro Vânia Lourenço Alves}
+\ufopainstituicao{Universidade Federal do Oeste do Pará}
+\ufopaunidade{Instituto de Engenharia e Geociências}
+\ufopacurso{Bacharelado em Ciência da Computação}
+\ufopalocal{Santarém --- Pará}
+\ufopaano{2027}
+\ufopanatureza{Trabalho de Conclusão de Curso apresentado como requisito para
+  obtenção do grau de Bacharel em Ciência da Computação, pela Universidade
+  Federal do Oeste do Pará, no Instituto de Engenharia e Geociências.}
+
+\begin{document}
+
+% --- Elementos pré-textuais ---------------------------------------------------
+\ufopainiciopretextual
+\ufopacapa
+\ufopafolhaderosto
+\ufopafichacatalografica{figuras/ficha-catalografica.pdf}
+\ufopafolhadeaprovacao{%
+  \pendente{preencher após a defesa}%
+}{%
+  \ufopamembrobanca{\ufopaimprimirorientador}{\ufopaimprimirinstituicao}
+  \ufopamembrobanca{\pendente{nome do segundo examinador}}{\pendente{instituição}}
+  \ufopamembrobanca{\pendente{nome do terceiro examinador}}{\pendente{instituição}}
+}
+
+% Dedicatória, agradecimentos e epígrafe são opcionais (guia 3.2.5 a 3.2.7).
+% Descomente e escreva quando fizer sentido — não deixe placeholder na entrega.
+% \begin{ufopadedicatoria}...\end{ufopadedicatoria}
+% \begin{ufopaagradecimentos}...\end{ufopaagradecimentos}
+% \begin{ufopaepigrafe}...\end{ufopaepigrafe}
+
+\ufoparesumo{%
+  \pendente{Resumo definitivo, entre \ufoparesumomin{} e \ufoparesumomax{}
+  palavras: objetivo, método, resultados obtidos e conclusão.}%
+}{%
+  \pendente{entre \ufopapalavraschavemin{} e \ufopapalavraschavemax{} termos}%
+}
+\ufopaabstract{%
+  \pendente{Tradução do resumo definitivo.}%
+}{%
+  \pendente{tradução das palavras-chave}%
+}
+\ufopasumario
+
+% --- Elementos textuais -------------------------------------------------------
+\ufopainiciotextual
+\input{capitulos/01-introducao}
+\input{capitulos/02-fundamentacao}
+\input{capitulos/03-trabalhos-relacionados}
+\input{capitulos/04-materiais-e-metodos}
+\input{capitulos/05-resultados}
+\input{capitulos/06-consideracoes-finais}
+
+% --- Elementos pós-textuais ---------------------------------------------------
+\ufopareferencias
+
+\end{document}

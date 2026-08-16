@@ -1,0 +1,27 @@
+# Infraestrutura do TEXTO do TCC (manifesto de normas, geradores e testes de
+# conformidade). O sistema desenvolvido no TCC mora em `code/` e terá o próprio
+# pyproject — são projetos distintos e não devem compartilhar dependências.
+
+[project]
+name = "tcc-infra-texto"
+version = "0.1.0"
+description = "Manifesto de normas ABNT/UFOPA, geradores e testes de conformidade do texto"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+  "lento: compila o PDF; rode com `pytest -m lento`",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

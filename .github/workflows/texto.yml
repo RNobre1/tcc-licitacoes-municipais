@@ -1,0 +1,69 @@
+name: Texto
+
+# Guarda de frescor e conformidade do texto com as normas da instituição.
+# O que o pipeline impede: o `.sty` divergir do manifesto de normas, e o PDF
+# entregue divergir do que a norma exige.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Push seguido de push no mesmo branch cancela a execução anterior.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  manifesto:
+    name: Manifesto de normas
+    runs-on: ubuntu-latest
+    steps:
+      # TODO: fixar as actions por SHA em vez de tag antes de o repositório
+      # receber contribuição externa. Não fixado agora porque exige conferir o
+      # SHA na origem — inventar o valor seria pior que a tag.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instala dependências
+        run: pip install pytest ruff
+
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Guardas do manifesto
+        run: pytest -m "not lento" -v
+
+  conformidade:
+    name: Conformidade do PDF
+    runs-on: ubuntu-latest
+    container:
+      image: texlive/texlive:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instala poppler e pytest
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends poppler-utils python3-pip
+          pip3 install --break-system-packages pytest
+
+      - name: Compila e verifica os dois documentos
+        run: pytest -m lento -v
+
+      - name: Publica os PDFs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdfs
+          path: texto/**/main.pdf
+          if-no-files-found: warn

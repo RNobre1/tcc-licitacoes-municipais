@@ -1,0 +1,25 @@
+# Alvos compartilhados por texto/tcc1 e texto/tcc2.
+# FONTE ÚNICA: não duplique receitas nos Makefiles dos documentos.
+
+export TEXINPUTS := ../comum:$(TEXINPUTS)
+export BIBINPUTS := ../comum:$(BIBINPUTS)
+
+.PHONY: help pdf watch clean distclean
+
+help:  ## Lista os alvos
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+
+pdf:  ## Compila main.tex em main.pdf
+	latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+
+watch:  ## Recompila a cada gravação
+	latexmk -pdf -pvc -interaction=nonstopmode main.tex
+
+clean:  ## Remove artefatos intermediários, preserva o PDF
+	latexmk -c
+	rm -f *.bbl *.run.xml
+
+distclean:  ## Remove tudo, inclusive o PDF
+	latexmk -C
+	rm -f *.bbl *.run.xml

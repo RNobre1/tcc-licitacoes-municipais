@@ -1,0 +1,365 @@
+% =============================================================================
+% ufopa-tcc.sty — Template de TCC conforme o guia de produção acadêmica da UFOPA
+%
+% FONTE ÚNICA do preâmbulo: TCC I e TCC II carregam este arquivo. Nenhuma
+% configuração de formatação deve ser duplicada nos main.tex.
+%
+% As medidas normativas NÃO estão aqui: vêm de ufopa-normas.sty, gerado a partir
+% de scripts/normas_ufopa.py. Para mudar uma margem, edite o manifesto.
+% =============================================================================
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{ufopa-tcc}[2026/08/16 TCC da UFOPA conforme o guia do SIBI]
+
+% --- Medidas normativas (geradas do manifesto) -------------------------------
+\RequirePackage{ufopa-normas}
+
+% --- Codificação e idioma ----------------------------------------------------
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[brazil]{babel}
+
+% --- Fonte: Times New Roman ---------------------------------------------------
+% O guia admite Times New Roman ou Arial. Times porque o substituto livre do
+% pdfLaTeX (Nimbus Roman, via mathptmx) é metricamente idêntico ao original —
+% o que não vale para Arial, cujo substituto (Helvetica) tem métrica diferente.
+\RequirePackage{mathptmx}
+
+% --- Geometria da página ------------------------------------------------------
+% Derivada do manifesto: mexer aqui não adianta, mexa em scripts/normas_ufopa.py.
+\RequirePackage{geometry}
+\geometry{
+  a4paper,
+  left=\ufopamargemesquerda,
+  right=\ufopamargemdireita,
+  top=\ufopamargemsuperior,
+  bottom=\ufopamargeminferior,
+}
+
+% Número de página a 2 cm da borda superior, com o corpo começando a 3 cm:
+% a folga do cabeçalho é a diferença, menos a altura da própria linha.
+\setlength{\headheight}{\baselineskip}
+\newlength{\ufopafolgacabecalho}
+\setlength{\ufopafolgacabecalho}{\ufopamargemsuperior}
+\addtolength{\ufopafolgacabecalho}{-\ufopadistpaginacao}
+\addtolength{\ufopafolgacabecalho}{-\headheight}
+\geometry{headsep=\ufopafolgacabecalho}
+
+% --- Espaçamento e parágrafo --------------------------------------------------
+\RequirePackage{setspace}
+\onehalfspacing
+\RequirePackage{indentfirst}
+\setlength{\parindent}{\ufoparecuoparagrafo}
+\setlength{\parskip}{0pt}
+% Folga de última instância para o justificador, útil em bibliografia com URL
+% longa e em português, cujas palavras são mais compridas que as do inglês.
+\setlength{\emergencystretch}{3em}
+
+% --- Utilitários --------------------------------------------------------------
+\RequirePackage{microtype}
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{array}
+\RequirePackage{tabularx}
+\RequirePackage{booktabs}
+\RequirePackage{longtable}
+\RequirePackage{float}
+\RequirePackage[hidelinks]{hyperref}
+
+% --- Bibliografia: ABNT via biblatex -----------------------------------------
+% biblatex-abnt entrega o par exigido pelo guia: citação em caixa e baixa no
+% texto (NBR 10520:2023) e sobrenome em caixa alta na lista (NBR 6023:2018).
+% NÃO ligar a opção `accite`: ela força caixa alta na citação e viola a norma.
+\RequirePackage[backend=biber,style=abnt,repeatfields=false]{biblatex}
+\addbibresource{refs.bib}
+
+% --- Numeração de seções ------------------------------------------------------
+% O guia limita a numeração à seção quinária e proíbe ponto após o indicativo.
+\setcounter{secnumdepth}{5}
+\setcounter{tocdepth}{3}
+\RequirePackage{titlesec}
+\titlelabel{\thetitle\hspace{0.5em}}
+
+\titleformat{\section}[block]{\normalfont\bfseries\MakeUppercase}{\thesection}{1em}{}
+\titlespacing*{\section}{0pt}{0pt}{\baselineskip}
+\titleformat{\subsection}[block]{\normalfont\bfseries}{\thesubsection}{1em}{}
+\titlespacing*{\subsection}{0pt}{\baselineskip}{\baselineskip}
+\titleformat{\subsubsection}[block]{\normalfont}{\thesubsubsection}{1em}{}
+\titlespacing*{\subsubsection}{0pt}{\baselineskip}{\baselineskip}
+
+% Seções primárias começam em nova página, no topo da mancha gráfica.
+\let\ufopaoriginalsection\section
+\renewcommand{\section}{\clearpage\ufopaoriginalsection}
+
+% O guia (2.7) exige que o destaque dos títulos no sumário seja idêntico ao do
+% texto. Como a caixa alta das seções primárias é aplicada na formatação do
+% título, ela não chega ao sumário sozinha — daí a reescrita da entrada.
+% Sem \makeatletter/\makeatother: dentro de um .sty o @ já é letra, e fechar com
+% \makeatother aqui derrubaria todas as definições \ufopa@... deste arquivo.
+\renewcommand*{\l@section}[2]{%
+  \@dottedtocline{1}{0em}{1.5em}{\bfseries\MakeUppercase{#1}}{#2}%
+}
+
+% --- Paginação ----------------------------------------------------------------
+% Pré-textuais são contados mas não numerados; a numeração aparece a partir da
+% parte textual, em algarismo arábico, no canto superior direito.
+\RequirePackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyhead[R]{\small\thepage}%
+  \renewcommand{\headrulewidth}{0pt}}
+
+\newcommand{\ufopainiciopretextual}{\pagestyle{empty}}
+\newcommand{\ufopainiciotextual}{\clearpage\pagestyle{fancy}}
+
+% =============================================================================
+% Dados do trabalho
+% =============================================================================
+
+\newcommand{\ufopatitulo}[1]{\def\ufopa@titulo{#1}}
+\newcommand{\ufopasubtitulo}[1]{\def\ufopa@subtitulo{#1}}
+\newcommand{\ufopaautor}[1]{\def\ufopa@autor{#1}}
+\newcommand{\ufopaorientador}[1]{\def\ufopa@orientador{#1}}
+\newcommand{\ufopacoorientador}[1]{\def\ufopa@coorientador{#1}}
+\newcommand{\ufopainstituicao}[1]{\def\ufopa@instituicao{#1}}
+\newcommand{\ufopaunidade}[1]{\def\ufopa@unidade{#1}}
+\newcommand{\ufopacurso}[1]{\def\ufopa@curso{#1}}
+\newcommand{\ufopanatureza}[1]{\def\ufopa@natureza{#1}}
+\newcommand{\ufopalocal}[1]{\def\ufopa@local{#1}}
+\newcommand{\ufopaano}[1]{\def\ufopa@ano{#1}}
+
+\ufopasubtitulo{}
+\ufopacoorientador{}
+
+% Acessores públicos: nos main.tex o @ não é letra, então \ufopa@orientador
+% seria lido como \ufopa seguido do texto "@orientador".
+\newcommand{\ufopaimprimirautor}{\ufopa@autor}
+\newcommand{\ufopaimprimirorientador}{\ufopa@orientador}
+\newcommand{\ufopaimprimirinstituicao}{\ufopa@instituicao}
+
+% =============================================================================
+% Elementos pré-textuais
+% =============================================================================
+
+% Título com subtítulo precedido de dois-pontos, quando houver (3.1.1 / 3.2.1).
+\newcommand{\ufopa@tituloCompleto}{%
+  \ufopa@titulo
+  \ifx\ufopa@subtitulo\empty\else: \ufopa@subtitulo\fi
+}
+
+% --- Capa (3.1.1) -------------------------------------------------------------
+% Ordem exigida: instituição e curso, autor, título, subtítulo, local, ano.
+\newcommand{\ufopacapa}{%
+  \begin{titlepage}
+    \thispagestyle{empty}
+    \begin{center}
+      {\MakeUppercase{\ufopa@instituicao}}\\
+      {\MakeUppercase{\ufopa@unidade}}\\
+      {\MakeUppercase{\ufopa@curso}}
+
+      \vspace*{\fill}
+
+      {\MakeUppercase{\ufopa@autor}}
+
+      \vspace{3\baselineskip}
+
+      {\bfseries\MakeUppercase{\ufopa@tituloCompleto}}
+
+      \vspace*{\fill}
+
+      {\MakeUppercase{\ufopa@local}}\\
+      \ufopa@ano
+    \end{center}
+  \end{titlepage}
+}
+
+% --- Folha de rosto (3.2.1) ---------------------------------------------------
+% A natureza do trabalho e o orientador alinham do meio da mancha à direita.
+\newcommand{\ufopafolhaderosto}{%
+  \clearpage
+  \thispagestyle{empty}
+  \begin{center}
+    {\MakeUppercase{\ufopa@autor}}
+
+    \vspace{4\baselineskip}
+
+    {\bfseries\MakeUppercase{\ufopa@tituloCompleto}}
+  \end{center}
+
+  \vspace{3\baselineskip}
+
+  \noindent\hspace*{0.5\textwidth}%
+  \begin{minipage}{0.5\textwidth}
+    \begin{singlespace}
+      \noindent\ufopa@natureza
+
+      \vspace{\baselineskip}
+      \noindent Orientadora: \ufopa@orientador
+      \ifx\ufopa@coorientador\empty\else
+
+        \noindent Coorientador: \ufopa@coorientador
+      \fi
+    \end{singlespace}
+  \end{minipage}
+
+  \vspace*{\fill}
+
+  \begin{center}
+    {\MakeUppercase{\ufopa@local}}\\
+    \ufopa@ano
+  \end{center}
+  \clearpage
+}
+
+% --- Ficha catalográfica (3.2.2) ----------------------------------------------
+% Elaborada por bibliotecário da UFOPA, solicitada via SIGAA. Entra como PDF.
+\newcommand{\ufopafichacatalografica}[1]{%
+  \thispagestyle{empty}
+  \IfFileExists{#1}{%
+    \begin{center}\includegraphics[width=\textwidth]{#1}\end{center}%
+  }{%
+    \vspace*{\fill}
+    \begin{center}
+      \pendente{Ficha catalográfica: solicitar ao SIBI/Ufopa via SIGAA e
+      salvar o PDF recebido como \code{#1}.}
+    \end{center}
+    \vspace*{\fill}
+  }%
+  \clearpage
+}
+
+% --- Folha de aprovação (3.2.4) -----------------------------------------------
+% Sem título e sem indicativo numérico. Data e banca preenchidas após a defesa.
+\newcommand{\ufopafolhadeaprovacao}[2]{%
+  \thispagestyle{empty}
+  \begin{center}
+    {\MakeUppercase{\ufopa@autor}}
+
+    \vspace{3\baselineskip}
+
+    {\bfseries\MakeUppercase{\ufopa@tituloCompleto}}
+  \end{center}
+
+  \vspace{2\baselineskip}
+
+  \noindent\hspace*{0.5\textwidth}%
+  \begin{minipage}{0.5\textwidth}
+    \begin{singlespace}\noindent\ufopa@natureza\end{singlespace}
+  \end{minipage}
+
+  \vspace{3\baselineskip}
+
+  \noindent Data de aprovação: #1
+
+  \vspace{2\baselineskip}
+
+  \noindent Banca examinadora:
+
+  #2
+  \clearpage
+}
+
+% Um membro da banca: nome, titulação e instituição, com espaço para assinatura.
+\newcommand{\ufopamembrobanca}[2]{%
+  \vspace{3\baselineskip}
+  \begin{center}
+    \rule{0.7\textwidth}{0.4pt}\\
+    #1\\
+    #2
+  \end{center}
+}
+
+% --- Dedicatória, agradecimentos e epígrafe (3.2.5 a 3.2.7) -------------------
+\newenvironment{ufopadedicatoria}{%
+  \thispagestyle{empty}\vspace*{\fill}%
+  \begin{flushright}\begin{minipage}{0.5\textwidth}\itshape
+}{%
+  \end{minipage}\end{flushright}\clearpage
+}
+
+\newenvironment{ufopaagradecimentos}{%
+  \thispagestyle{empty}
+  \begin{center}\textbf{AGRADECIMENTOS}\end{center}\par\vspace{\baselineskip}
+}{%
+  \clearpage
+}
+
+\newenvironment{ufopaepigrafe}{%
+  \thispagestyle{empty}\vspace*{\fill}%
+  \begin{flushright}\begin{minipage}{0.5\textwidth}\itshape
+}{%
+  \end{minipage}\end{flushright}\clearpage
+}
+
+% --- Resumo e abstract (3.2.8) ------------------------------------------------
+% Título centralizado e sem indicativo numérico; parágrafo único; palavras-chave
+% separadas por ponto e vírgula. Extensão conferida em tests/.
+\newcommand{\ufoparesumo}[2]{%
+  \thispagestyle{empty}
+  \begin{center}\textbf{RESUMO}\end{center}
+  \par\vspace{\baselineskip}
+  \noindent #1
+  \par\vspace{\baselineskip}
+  \noindent\textbf{Palavras-chave:} #2
+  \clearpage
+}
+
+\newcommand{\ufopaabstract}[2]{%
+  \thispagestyle{empty}
+  \begin{center}\textbf{ABSTRACT}\end{center}
+  \par\vspace{\baselineskip}
+  \noindent #1
+  \par\vspace{\baselineskip}
+  \noindent\textbf{Keywords:} #2
+  \clearpage
+}
+
+% --- Sumário (3.2.10) ---------------------------------------------------------
+\newcommand{\ufopasumario}{%
+  \thispagestyle{empty}
+  \begin{center}\textbf{SUMÁRIO}\end{center}
+  \par\vspace{\baselineskip}
+  \begin{singlespace}
+    \@starttoc{toc}
+  \end{singlespace}
+  \clearpage
+}
+
+% --- Referências (3.2.11) -----------------------------------------------------
+\newcommand{\ufopareferencias}{%
+  \clearpage
+  \printbibliography[title={REFERÊNCIAS},heading=bibliography]
+}
+
+% =============================================================================
+% Macros de escrita
+% =============================================================================
+
+% Marcador de pendência editorial. O texto "PENDENTE" é o que os testes de
+% conformidade procuram para saber que uma seção ainda não pode ser avaliada —
+% não troque a palavra sem atualizar tests/test_conformidade_pdf.py.
+\newcommand{\pendente}[1]{{\color{red}\textbf{[PENDENTE]} \textit{#1}}}
+
+% Trecho de código, nome de arquivo, endpoint ou parâmetro, em monoespaçada.
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+% Fonte da ilustração ou tabela (2.10 e 2.11): logo abaixo do elemento, em
+% corpo menor e espaço simples. Obrigatória mesmo quando o elemento é do autor.
+\newcommand{\fonte}[1]{%
+  \begin{singlespace}
+    \noindent{\footnotesize Fonte: #1}
+  \end{singlespace}
+}
+
+% Citação longa (mais de três linhas): recuo de 4 cm, espaço simples, corpo menor.
+\newenvironment{ufopacitacao}{%
+  \begin{singlespace}
+  \begin{list}{}{\setlength{\leftmargin}{\ufoparecuocitacao}\setlength{\rightmargin}{0pt}}
+  \item[]\small\noindent\ignorespaces
+}{%
+  \end{list}\end{singlespace}
+}
+
+\endinput

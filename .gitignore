@@ -1,0 +1,72 @@
+# =============================================================================
+# Política de versionamento
+#
+# O repositório é público. Dado real de processo licitatório nunca entra:
+# o que se versiona é a fixture sintética derivada dele.
+# =============================================================================
+
+# --- Dados de domínio --------------------------------------------------------
+# Documento real da prefeitura: edital, ETP, TR, certidão, proposta, cotação.
+# Só existe localmente; o que se versiona é a versão sintética em fixtures.
+dados-dominio/
+*.docx
+*.xlsx
+!docs/**/*.docx
+
+# --- Segredos ----------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- LaTeX: artefatos de compilação ------------------------------------------
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.synctex(busy)
+*.toc
+*.vrb
+
+# PDF é artefato de saída. Versionar só em release (tag), nunca no fluxo normal.
+texto/**/main.pdf
+
+# --- Vault -------------------------------------------------------------------
+# Fichamentos .md são versionados; os PDFs dos trabalhos, não (volume e direito
+# autoral). O layout local do Obsidian é de cada máquina.
+TCC/papers/*.pdf
+TCC/papers/*.html
+TCC/papers/*_files/
+TCC/.obsidian/workspace*
+TCC/.obsidian/cache/
+.trash/
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Editores e sistema ------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+.~lock.*#
