@@ -154,22 +154,6 @@ A tabela do documento LaTeX é a versão canônica; esta espelha. Datas reais de
 execução ficam em `TCC/sessões/` — cronograma de planejamento e log de execução
 são coisas diferentes e não devem ser confundidos.
 
-## Como a banca avalia
-
-Extraído do formulário oficial de avaliação de TCC II do curso. Vale como régua
-desde o começo, não só na véspera da defesa.
-
-**Redação:** clareza, concisão e precisão do texto · organização do trabalho ·
-adequação e qualidade do embasamento teórico · adequação das referências ·
-adequação e qualidade do modelo proposto · adequação da metodologia e das
-avaliações · adequação e qualidade da contribuição.
-
-**Apresentação:** respeito ao tempo e qualidade do material · clareza na
-exposição · domínio do tema.
-
-Cada quesito vale de 0,0 a 1,0. Quesito que pode ser corrigido ou melhorado não
-recebe conceito inferior a seis.
-
 ## Hardware
 
 Notebook Dell G15 5530, Fedora Linux. Intel i5-13450HX (10c/16t), 16 GiB DDR5,

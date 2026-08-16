@@ -79,8 +79,6 @@ def gerar_markdown() -> str:
         f"- **Norma:** {normas_ufopa.GUIA_CITACAO_ABNT}",
         f"- **Cópia local:** [`{normas_ufopa.GUIA_ARQUIVO}`]"
         f"({Path(normas_ufopa.GUIA_ARQUIVO).name})",
-        "- **Exemplo de TCC aprovado no curso:** "
-        "[`exemplo-tcc-cc-ufopa-2025-rego.pdf`](exemplo-tcc-cc-ufopa-2025-rego.pdf)",
         "",
         "Todo valor abaixo vive em `scripts/normas_ufopa.py` e é verificado no PDF",
         "compilado por `tests/test_conformidade_pdf.py`.",

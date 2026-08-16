@@ -9,7 +9,6 @@ rodapé), consulte o guia completo.
 
 - **Norma:** UNIVERSIDADE FEDERAL DO OESTE DO PARÁ. Sistema Integrado de Bibliotecas. Guia para a elaboração e apresentação da produção acadêmica da Ufopa. 3. ed. rev. e atual. Santarém: Ufopa, 2025.
 - **Cópia local:** [`docs/normas/guia-ufopa-producao-academica-3ed-2025.pdf`](guia-ufopa-producao-academica-3ed-2025.pdf)
-- **Exemplo de TCC aprovado no curso:** [`exemplo-tcc-cc-ufopa-2025-rego.pdf`](exemplo-tcc-cc-ufopa-2025-rego.pdf)
 
 Todo valor abaixo vive em `scripts/normas_ufopa.py` e é verificado no PDF
 compilado por `tests/test_conformidade_pdf.py`.
