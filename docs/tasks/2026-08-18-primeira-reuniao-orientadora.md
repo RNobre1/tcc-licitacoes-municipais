@@ -49,7 +49,23 @@ Fontes primárias. São as que sustentam o problema e as que ela pode cobrar.
 |---|---|---|---|---|
 | 1 | Lei nº 14.133/2021 — Art. 6º (inciso XX: ETP; inciso do TR), Art. 18 (fase preparatória) e Art. 23 (valor estimado) | planalto.gov.br | 1h | Só esses artigos, não a lei inteira. O Art. 23, §1º, I nomeia o PNCP como parâmetro — é o alicerce do módulo de cotação |
 | 2 | Instrução Normativa SEGES/ME nº 65/2021 | gov.br/compras | 40 min | Metodologia oficial da pesquisa de preços: parâmetros admitidos, cesta de preços, tratamento de valores discrepantes. É o requisito funcional do seu módulo, escrito por quem regula |
-| 3 | Manual das APIs de Consulta do PNCP + Swagger | pncp.gov.br/api/consulta/swagger-ui | 1h, mexendo | **Prioridade máxima.** Verificar se dá para consultar item por descrição e região com preço unitário. Se não der, metade do projeto muda |
+| 3 | ~~Manual das APIs de Consulta do PNCP + Swagger~~ | pncp.gov.br/api/consulta/swagger-ui | 1h, mexendo | ✅ **FEITO em 17/08.** Resultado em [`docs/pesquisas/api-pncp-viabilidade-pesquisa-de-precos.md`](../pesquisas/api-pncp-viabilidade-pesquisa-de-precos.md) |
+
+### O que a verificação da API respondeu
+
+Resumo do que levar para a reunião — detalhamento e evidência na nota de pesquisa:
+
+- **O módulo é viável.** Preço unitário por item, com fornecedor e data, é
+  acessível publicamente e sem credencial.
+- **Mas não pela API que a documentação de consulta anuncia.** É preciso
+  combinar duas interfaces, uma delas não documentada.
+- **A busca do portal não alcança a descrição do item** — só o objeto da
+  contratação. Isto é o achado que sustenta o recorte de banco de dados: sem
+  índice próprio sobre as descrições, não há pesquisa de preço por item.
+- **A API de Consulta oficial estava fora do ar** durante toda a janela de
+  teste. Indisponibilidade da fonte é risco medido, não hipotético.
+- **A paginação falha em silêncio:** o padrão devolve 10 itens de uma
+  contratação que tem 223, com HTTP 200 e sem aviso.
 
 ## Roteiro de leitura — camada 1, depois da reunião
 
@@ -70,10 +86,13 @@ Para ampliar a lista, use `docs/pesquisas/prompt-levantamento-literatura.md`.
 
 ## Ordem sugerida dos dois dias
 
-**Dia 1** — a leitura 3 primeiro: mexer na API do PNCP e responder se ela
-entrega o que o projeto precisa. É a única incógnita capaz de derrubar metade
-do projeto, e a mais barata de resolver. Depois as leituras 1 e 2, anotando os
-artigos que sustentam cada afirmação do problema.
+**Dia 1** — ✅ a leitura 3 está feita: a API entrega o que o projeto precisa, com
+três ressalvas registradas na nota de pesquisa. Restam as leituras 1 e 2,
+anotando os artigos que sustentam cada afirmação do problema. Na leitura 2, uma
+pergunta específica ficou pendente da verificação técnica: **a IN 65 admite
+preço homologado de contratação pública como parâmetro, e em que ordem de
+preferência?** É o que decide se o dado que a API entrega serve como
+fundamentação legal do valor estimado.
 
 **Dia 2** — discutir as conclusões das leituras e escrever o documento de 2 a
 3 páginas, com as fontes já em mãos.
