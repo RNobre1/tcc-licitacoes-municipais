@@ -40,9 +40,11 @@ armadilhas que fazem o resultado parecer correto quando está incompleto.
 |---|---|---|
 | Existe preço unitário por item? | **Sim** — estimado e homologado | §5.2, §5.3 |
 | Precisa de credencial? | **Não**, para leitura | §5.3 |
-| Existe filtro por UF e município? | **Sim** | §5.4 |
-| Existe busca por descrição do item? | **Não** | §5.5 |
-| A API de consulta oficial serve? | **Não** — e estava fora do ar | §5.1 |
+| Existe filtro por UF e município? | **Sim**, por código IBGE | §5.1, §5.4 |
+| Existe busca por descrição do item? | **Não** — em nenhuma interface | §5.5 |
+| A API de Consulta entrega itens? | **Não** — só totais da compra | §5.1 |
+| A API de Consulta serve para varredura? | **Sim** | §5.1 |
+| A fonte é estável? | Queda de ~1h40 observada, com recuperação | §5.1 |
 
 ## 4. Método
 
@@ -62,6 +64,12 @@ não foram confirmadas e estão declaradas como tal.
 
 O volume de requisições foi mantido deliberadamente baixo — cerca de 60 no
 total, contra um serviço público.
+
+**Reprodutibilidade.** Toda requisição desta nota está em
+[`postman/pncp.postman_collection.json`](postman/pncp.postman_collection.json),
+com asserções que verificam cada achado. A coleção funciona como guarda de
+frescor: se uma asserção falhar, a API mudou e esta nota precisa ser corrigida.
+Instruções e equivalentes em `curl` em [`postman/README.md`](postman/README.md).
 
 ## 5. Achados
 
@@ -96,15 +104,47 @@ dados."` Os 504 vieram do gateway após 70 s exatos. Não é erro de parâmetro:
 mesma indisponibilidade ocorreu em quatro endpoints distintos, com e sem filtro
 de UF, com janelas de data de um único dia. **[provado]**
 
-Ao mesmo tempo, o portal e as outras duas APIs respondiam em menos de 0,7 s — a
+A falha **piorou ao longo da observação**, em vez de oscilar: **[provado]**
+
+| Hora | Retorno |
+|---|---|
+| 09h51 | `api-docs` do serviço respondeu **200** com o OpenAPI completo |
+| 09h52 | 500 — `"Erro na comunicação com o banco de dados."` |
+| 09h53–10h05 | 504 após 70 s |
+| 10h18 | 502 |
+| 11h20 | 503 — `"No server is available to handle this request."` |
+
+Às 11h20 **nem a própria documentação OpenAPI do serviço respondia** — o mesmo
+endpoint que 90 minutos antes havia entregado a especificação inteira. A
+mensagem indica ausência de instância disponível, não sobrecarga.
+
+Ao mesmo tempo, o portal e a API de Integração respondiam em menos de 0,7 s — a
 falha era do serviço de consulta, não da infraestrutura do PNCP. **[provado]**
 
-> **Consequência para o projeto.** Indisponibilidade da fonte de dados é risco
-> operacional real, não hipotético — foi observado no primeiro dia de teste. O
-> sistema precisa de cache local e de degradação graciosa, e o texto precisa
-> registrar a data e a duração da indisponibilidade observada. Isto reforça,
-> por si só, a necessidade de persistência própria — que é o recorte de banco de
-> dados do trabalho.
+**A indisponibilidade era transitória.** Às 11h33 o serviço voltou: 200 em
+0,45 s. A queda durou aproximadamente 1h40 no que foi observado. **[provado]**
+
+Com o serviço no ar, foi possível verificar o que ele de fato entrega:
+**[provado]**
+
+| Verificação | Resultado |
+|---|---|
+| Traz itens da contratação? | **Não** — apenas `valorTotalEstimado` e `valorTotalHomologado` |
+| Traz a chave para chamar `/itens`? | **Sim** — `cnpj`, `anoCompra`, `sequencialCompra` |
+| Serve para varredura exaustiva, sem termo textual? | **Sim** |
+| Envelope de paginação? | **Sim** — `totalRegistros`, `totalPaginas`, `paginasRestantes` |
+| Filtro por município? | **Sim, por código IBGE oficial** (`codigoMunicipioIbge`) |
+| Janela ampla de data? | **Sim** — um mês inteiro do Pará: 821 contratações em 17 páginas, 7,9 s |
+
+> **Consequência para o projeto.** Indisponibilidade da fonte é risco operacional
+> real, não hipotético — foi observada no primeiro dia de teste, com degradação
+> progressiva até a ausência de instância. Mas é **transitória**, e a API de
+> Consulta **serve** para o papel de varredura: ela tem paginação bem-feita e
+> filtro geográfico por código IBGE, o que a torna preferível à busca não
+> documentada sempre que não for preciso pesquisar por termo.
+>
+> O que isto **não** muda: ela continua sem entregar preço por item. O índice
+> próprio permanece obrigatório.
 
 ### 5.2. Os dados existem — na API de Integração
 
@@ -220,8 +260,20 @@ Filtros verificados um a um, comparando o total retornado: **[provado]**
 
 Também **não há curinga**: `q=a` e `q=*` retornam zero. A busca serve para
 procurar por termo, **não para varredura exaustiva** de um período ou município.
-Varredura exaustiva depende da API de Consulta — justamente a que estava fora
-do ar. **[provado]**
+**[provado]**
+
+Isso delimita bem o papel de cada interface, e reduz o peso da dependência não
+documentada:
+
+| Tarefa | Interface adequada |
+|---|---|
+| Varrer todas as contratações de um município num período | **API de Consulta** (documentada, código IBGE, paginação com total) |
+| Procurar contratações por termo no objeto | `/api/search/` — não há alternativa documentada |
+| Obter itens e preços | **API de Integração** |
+
+A busca não documentada é, portanto, **conveniência e não alicerce**: o caminho
+crítico do módulo de cotação — varrer, baixar itens, indexar — pode ser
+percorrido inteiramente por interfaces documentadas.
 
 ### 5.5. O achado que sustenta o recorte de banco de dados
 
@@ -296,22 +348,22 @@ perfeitamente tratável no hardware disponível.
 ```mermaid
 flowchart TB
     subgraph fontes["Fontes públicas do PNCP"]
-        S["/api/search/<br/>NÃO DOCUMENTADA<br/>busca textual + filtro geográfico<br/>exige User-Agent de navegador"]
-        C["/api/consulta/v1<br/>documentada<br/>varredura por data<br/>INDISPONÍVEL em 17/08/2026"]
-        I["/api/pncp/v1<br/>Manual de Integração<br/>itens + resultados por contratação<br/>leitura pública"]
+        C["/api/consulta/v1 — DOCUMENTADA<br/>varredura por data + código IBGE<br/>paginação com totalRegistros<br/>não entrega itens"]
+        I["/api/pncp/v1 — Manual de Integração<br/>itens + resultados por contratação<br/>leitura pública, sem token"]
+        S["/api/search/ — NÃO DOCUMENTADA<br/>busca por termo no objeto<br/>exige User-Agent de navegador<br/>OPCIONAL"]
     end
 
     subgraph sistema["Sistema do TCC"]
-        Col["Coletor<br/>paginação validada contra /itens/quantidade"]
+        Col["Coletor<br/>completude validada contra /itens/quantidade"]
         Idx["Índice próprio de itens<br/>busca por similaridade sobre descrição"]
         Aud["Trilha de auditoria<br/>resposta bruta + data + parâmetros"]
         Est["Tratamento estatístico<br/>IN SEGES/ME 65/2021"]
     end
 
-    S -->|"cnpj, ano, sequencial"| Col
-    C -.->|"varredura exaustiva<br/>quando disponível"| Col
-    Col --> I
-    I -->|"descricao, valorUnitarioEstimado,<br/>valorUnitarioHomologado"| Idx
+    C ==>|"cnpj, ano, sequencial<br/>CAMINHO PRINCIPAL"| Col
+    S -.->|"quando a busca é por termo"| Col
+    Col ==> I
+    I ==>|"descricao, valorUnitarioEstimado,<br/>valorUnitarioHomologado"| Idx
     Col --> Aud
     Idx --> Est
     Est --> Map["Mapa de cotação"]
@@ -321,28 +373,34 @@ flowchart TB
 Quatro exigências que deixaram de ser opinião e passaram a ser consequência do
 que foi medido:
 
-1. **Índice próprio de itens** — porque a busca oficial não alcança a descrição
-   do item (§5.5).
-2. **Persistência da resposta bruta com data e parâmetros** — porque a fonte
-   fica indisponível (§5.1) e porque a promessa de reproduzir uma pesquisa
-   exatamente como ela era exige guardar o que foi recebido, não só o que foi
-   calculado.
+1. **Índice próprio de itens** — porque nenhuma das interfaces permite pesquisar
+   pela descrição do item (§5.5). É a exigência que não tem contorno.
+2. **Persistência da resposta bruta com data e parâmetros** — porque a fonte fica
+   indisponível (§5.1) e porque a promessa de reproduzir uma pesquisa exatamente
+   como ela era exige guardar o que foi recebido, não só o que foi calculado.
 3. **Validação de completude na coleta** — porque a paginação falha em silêncio
    (§5.6) e porque filtro inválido é ignorado sem erro (§5.4).
 4. **Backoff e cache** — porque a fonte é serviço público de terceiro, sem
-   contrato de disponibilidade, e já foi observada fora do ar.
+   contrato de disponibilidade, e já foi observada fora do ar por 1h40.
 
 ## 7. Riscos identificados
 
 | Risco | Gravidade | Evidência | Mitigação |
 |---|---|---|---|
-| Dependência de API não documentada (`/api/search/`) | **alta** | §5.4 | Isolar atrás de interface própria; ter a API de Consulta como caminho alternativo; documentar a dependência no texto |
-| Indisponibilidade da fonte | **alta** | §5.1 — observada | Cache local; coleta assíncrona; nunca depender de chamada ao vivo na hora de gerar o documento |
-| Coleta parcial silenciosa | **alta** | §5.6 | Conferência obrigatória contra `/itens/quantidade` |
+| Coleta parcial silenciosa | **alta** | §5.6 — 91% dos itens perdidos sem aviso | Conferência obrigatória contra `/itens/quantidade` |
+| Indisponibilidade da fonte | média | §5.1 — observada, 1h40, transitória | Cache local; coleta assíncrona; nunca depender de chamada ao vivo ao gerar o documento |
 | Filtro ignorado sem erro | média | §5.4 | Contraprova de contagem por consulta |
 | Orçamento sigiloso zera valores | média | campo `orcamentoSigiloso` | Descartar da cesta, registrando o descarte |
 | Descrição heterogênea entre municípios | média | §5.5 | É o problema de pesquisa, não um defeito a esconder |
-| Mudança de contrato da API sem aviso | média | API não documentada | Teste de contrato no pipeline |
+| Dependência de API não documentada (`/api/search/`) | **baixa** | §5.4 — caminho crítico não depende dela | Usar a API de Consulta como caminho principal; isolar a busca atrás de interface própria |
+| Mudança de contrato da API sem aviso | média | não há versionamento anunciado | Teste de contrato no pipeline — a coleção Postman já serve de base |
+
+**Correção de avaliação.** A dependência da API não documentada foi classificada
+como risco alto na primeira leitura dos achados e foi **rebaixada para baixa**
+depois que o serviço de consulta voltou ao ar e se confirmou que ele cobre a
+varredura com filtro por código IBGE e paginação adequada. O caminho crítico do
+módulo — varrer, baixar itens, indexar — não depende de interface não
+documentada.
 
 ## 8. O que ficou em aberto
 
@@ -351,15 +409,18 @@ Declarado como não verificado, para não virar suposição depois:
 1. **A adequação do `valorUnitarioHomologado` como parâmetro da IN SEGES/ME
    nº 65/2021** não foi confrontada com o texto da Instrução Normativa. O campo
    existe e traz preço praticado; se a IN admite esse parâmetro, em que ordem de
-   preferência e com quais ressalvas, é leitura pendente.
+   preferência e com quais ressalvas, é leitura pendente. **É a pergunta que
+   decide se o dado serve como fundamentação legal do valor estimado.**
 2. **Rate limit real** — não atingido em 15 requisições. Desconhecido.
-3. **Se a indisponibilidade da API de Consulta é transitória ou crônica.** Uma
-   janela de 30 minutos num único dia não decide isso. Vale repetir a medição
-   em dias diferentes antes de afirmar qualquer coisa no texto.
-4. **Como recuperar a compra a que um item pertence sem passar pela busca
-   textual** — a varredura exaustiva depende da API de Consulta.
+3. **Frequência das quedas do serviço de consulta.** Foi observada uma queda de
+   ~1h40 em 17/08/2026, com recuperação. Uma única observação não estabelece
+   frequência nem duração típica. Antes de afirmar qualquer coisa no texto, vale
+   medir em dias diferentes — a coleção Postman traz a requisição que serve de
+   monitor.
+4. **Custo total da varredura** de um município por ano: número de requisições,
+   tempo e volume em disco. Estimável a partir dos números de §5.7, não medido.
 5. **Estabilidade do id interno de município** usado por `/api/search/`, que não
-   é o código IBGE.
+   é o código IBGE. Só importa se a busca por termo virar caminho principal.
 
 ## 9. Conclusão
 
@@ -368,9 +429,10 @@ por item, com fornecedor e data — está acessível publicamente e sem credenci
 
 Mas a viabilidade vem com uma correção importante de premissa: **não é um caso
 de "consumir uma API pública"**. É um caso de construir persistência e índice
-próprios sobre dados que a fonte oficial só entrega de forma fragmentada, por
-duas interfaces distintas, uma delas não documentada, com armadilhas que
-produzem resultado incompleto sem sinalizar erro.
+próprios sobre dados que a fonte oficial só entrega de forma fragmentada — a
+varredura numa interface, os itens e preços em outra, e a pesquisa por descrição
+de item em nenhuma delas —, com armadilhas que produzem resultado incompleto sem
+sinalizar erro.
 
 Isso torna o trabalho mais difícil e academicamente mais defensável. O problema
 de banco de dados não precisou ser justificado por conveniência de orientação:

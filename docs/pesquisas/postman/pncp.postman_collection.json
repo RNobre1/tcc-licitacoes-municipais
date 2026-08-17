@@ -1,0 +1,857 @@
+{
+  "info": {
+    "_postman_id": "b7f3c1e0-9a2d-4c58-8f11-6d4e2a9c7b30",
+    "name": "PNCP — viabilidade da pesquisa de preços",
+    "description": "Requisições que sustentam docs/pesquisas/api-pncp-viabilidade-pesquisa-de-precos.md\n\nCada requisição tem asserções que verificam um achado da nota. Rode a pasta inteira no Collection Runner: se uma asserção falhar, a nota está desatualizada e precisa ser corrigida.\n\nORDEM DE USO\n1. Rode `0. Descobrir contratação` primeiro — ele popula cnpj/ano/seq/item automaticamente.\n2. Depois qualquer requisição das outras pastas.\n\nNENHUM identificador real fica gravado neste arquivo. As variáveis são preenchidas em tempo de execução.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_search",
+      "value": "https://pncp.gov.br/api/search",
+      "description": "Busca textual. NÃO DOCUMENTADA — é o serviço que a tela do portal usa."
+    },
+    {
+      "key": "base_integra",
+      "value": "https://pncp.gov.br/api/pncp",
+      "description": "API de Integração (Manual de Integração). É onde estão os itens e os preços unitários."
+    },
+    {
+      "key": "base_consulta",
+      "value": "https://pncp.gov.br/api/consulta",
+      "description": "API de Consulta documentada no Swagger. Não entrega itens."
+    },
+    {
+      "key": "ua",
+      "value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36",
+      "description": "Obrigatório em /api/search — sem User-Agent de navegador o servidor derruba a conexão."
+    },
+    { "key": "cnpj", "value": "", "description": "preenchido por '0. Descobrir contratação'" },
+    { "key": "ano", "value": "", "description": "preenchido por '0. Descobrir contratação'" },
+    { "key": "seq", "value": "", "description": "preenchido por '0. Descobrir contratação'" },
+    { "key": "item", "value": "1", "description": "número do item dentro da contratação" },
+    { "key": "total_itens", "value": "", "description": "preenchido por 'Quantidade de itens'" }
+  ],
+  "item": [
+    {
+      "name": "0. Descobrir contratação",
+      "item": [
+        {
+          "name": "Buscar compra encerrada com resultado (popula as variáveis)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "",
+                  "const b = pm.response.json();",
+                  "pm.test('resposta tem items e total', () => {",
+                  "  pm.expect(b).to.have.property('items');",
+                  "  pm.expect(b).to.have.property('total');",
+                  "});",
+                  "",
+                  "// Escolhe a primeira compra que JÁ TEM resultado homologado.",
+                  "// tem_resultado só serve como campo de retorno — como FILTRO ele é ignorado.",
+                  "const comResultado = (b.items || []).filter(i => i.tem_resultado === true);",
+                  "",
+                  "pm.test('achou pelo menos uma compra com resultado homologado', () => {",
+                  "  pm.expect(comResultado.length, 'nenhuma compra com tem_resultado=true nesta página — aumente tam_pagina ou troque o termo de busca').to.be.above(0);",
+                  "});",
+                  "",
+                  "if (comResultado.length) {",
+                  "  const c = comResultado[0];",
+                  "  pm.collectionVariables.set('cnpj', c.orgao_cnpj);",
+                  "  pm.collectionVariables.set('ano', String(c.ano));",
+                  "  pm.collectionVariables.set('seq', String(c.numero_sequencial));",
+                  "  pm.collectionVariables.set('item', '1');",
+                  "  console.log('--- variáveis populadas ---');",
+                  "  console.log('cnpj = ' + c.orgao_cnpj);",
+                  "  console.log('ano  = ' + c.ano);",
+                  "  console.log('seq  = ' + c.numero_sequencial);",
+                  "  console.log('orgao: ' + c.orgao_nome + ' (' + c.municipio_nome + '/' + c.uf + ')');",
+                  "  console.log('numero_controle_pncp: ' + c.numero_controle_pncp);",
+                  "  console.log('total de resultados da busca: ' + b.total);",
+                  "}",
+                  "",
+                  "pm.test('a busca devolve a chave que liga as duas APIs', () => {",
+                  "  const c = (b.items || [])[0];",
+                  "  pm.expect(c).to.have.property('orgao_cnpj');",
+                  "  pm.expect(c).to.have.property('ano');",
+                  "  pm.expect(c).to.have.property('numero_sequencial');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "User-Agent", "value": "{{ua}}", "description": "OBRIGATÓRIO" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_search}}/?q=aquisição&tipos_documento=edital&ufs=PA&anos=2025&status=encerradas&ordenacao=-data&pagina=1&tam_pagina=50",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "search", ""],
+              "query": [
+                { "key": "q", "value": "aquisição", "description": "OBRIGATÓRIO. Não há curinga: q=a e q=* devolvem zero." },
+                { "key": "tipos_documento", "value": "edital" },
+                { "key": "ufs", "value": "PA", "description": "funciona" },
+                { "key": "anos", "value": "2025", "description": "PLURAL. 'ano' no singular é ignorado." },
+                { "key": "status", "value": "encerradas", "description": "PLURAL. 'encerrada' no singular é ignorado." },
+                { "key": "ordenacao", "value": "-data" },
+                { "key": "pagina", "value": "1" },
+                { "key": "tam_pagina", "value": "50" }
+              ]
+            },
+            "description": "Descobre uma contratação real e grava cnpj/ano/seq nas variáveis da coleção.\n\nRode esta primeiro. As demais requisições dependem dela."
+          }
+        },
+        {
+          "name": "Filtrar por município",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('todo resultado é do município filtrado', () => {",
+                  "  const municipios = [...new Set((b.items || []).map(i => i.municipio_nome))];",
+                  "  console.log('municípios nos resultados: ' + municipios.join(', '));",
+                  "  pm.expect(municipios.length, 'o filtro de município não restringiu').to.be.at.most(1);",
+                  "});",
+                  "console.log('total: ' + b.total);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "User-Agent", "value": "{{ua}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_search}}/?q=aquisição&tipos_documento=edital&ufs=PA&municipios=249&pagina=1&tam_pagina=20",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "search", ""],
+              "query": [
+                { "key": "q", "value": "aquisição" },
+                { "key": "tipos_documento", "value": "edital" },
+                { "key": "ufs", "value": "PA" },
+                { "key": "municipios", "value": "249", "description": "id INTERNO do PNCP, não código IBGE. Descubra o id lendo municipio_id de uma busca por nome." },
+                { "key": "pagina", "value": "1" },
+                { "key": "tam_pagina", "value": "20" }
+              ]
+            },
+            "description": "Prova que o filtro geográfico por município funciona.\n\nATENÇÃO: `municipios` usa o id interno do PNCP, não o código IBGE. Para achar o id de um município, busque pelo nome dele e leia o campo `municipio_id` do retorno."
+          }
+        }
+      ]
+    },
+    {
+      "name": "0b. Varredura pela API de Consulta (caminho principal)",
+      "item": [
+        {
+          "name": "Varrer contratações por período e município (popula as variáveis)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if ([500, 502, 503, 504].includes(pm.response.code)) {",
+                  "  console.log('>>> Serviço de consulta indisponível (' + pm.response.code + ').');",
+                  "  console.log('>>> Em 17/08/2026 ficou fora ~1h40 e voltou. Use a pasta 0 como alternativa.');",
+                  "  pm.test.skip('serviço indisponível — sem o que verificar');",
+                  "} else {",
+                  "  pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "  const b = pm.response.json();",
+                  "",
+                  "  pm.test('tem envelope de paginação — ao contrário de /itens', () => {",
+                  "    pm.expect(b).to.have.property('totalRegistros');",
+                  "    pm.expect(b).to.have.property('totalPaginas');",
+                  "  });",
+                  "",
+                  "  pm.test('varre sem precisar de termo textual', () => {",
+                  "    pm.expect(b.totalRegistros).to.be.above(0);",
+                  "  });",
+                  "",
+                  "  console.log('totalRegistros: ' + b.totalRegistros + ' em ' + b.totalPaginas + ' páginas');",
+                  "",
+                  "  const c = (b.data || [])[0];",
+                  "  if (c) {",
+                  "    pm.test('NÃO traz itens — só totais da compra', () => {",
+                  "      pm.expect(c).to.not.have.property('itens');",
+                  "      pm.expect(c).to.have.property('valorTotalEstimado');",
+                  "    });",
+                  "",
+                  "    pm.test('traz a chave para chamar /itens', () => {",
+                  "      pm.expect(c.orgaoEntidade).to.have.property('cnpj');",
+                  "      pm.expect(c).to.have.property('anoCompra');",
+                  "      pm.expect(c).to.have.property('sequencialCompra');",
+                  "    });",
+                  "",
+                  "    pm.collectionVariables.set('cnpj', c.orgaoEntidade.cnpj);",
+                  "    pm.collectionVariables.set('ano', String(c.anoCompra));",
+                  "    pm.collectionVariables.set('seq', String(c.sequencialCompra));",
+                  "    pm.collectionVariables.set('item', '1');",
+                  "    console.log('cnpj/ano/seq populados: ' + c.orgaoEntidade.cnpj + '/' + c.anoCompra + '/' + c.sequencialCompra);",
+                  "    console.log('municipio: ' + c.unidadeOrgao.municipioNome + '/' + c.unidadeOrgao.ufSigla + ' (IBGE ' + c.unidadeOrgao.codigoIbge + ')');",
+                  "    console.log('>>> Use este codigoIbge no filtro codigoMunicipioIbge.');",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_consulta}}/v1/contratacoes/publicacao?dataInicial=20250801&dataFinal=20250831&codigoModalidadeContratacao=6&uf=PA&pagina=1&tamanhoPagina=50",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "consulta", "v1", "contratacoes", "publicacao"],
+              "query": [
+                { "key": "dataInicial", "value": "20250801", "description": "yyyyMMdd, OBRIGATÓRIO" },
+                { "key": "dataFinal", "value": "20250831", "description": "yyyyMMdd, OBRIGATÓRIO. Um mês inteiro funciona: 821 contratações no PA em 17 páginas, 7,9 s" },
+                { "key": "codigoModalidadeContratacao", "value": "6", "description": "OBRIGATÓRIO. 6=Pregão Eletrônico, 8=Dispensa" },
+                { "key": "uf", "value": "PA" },
+                { "key": "codigoMunicipioIbge", "value": "", "disabled": true, "description": "Código IBGE OFICIAL — melhor que o id interno da /api/search/. Habilite e preencha para filtrar por município" },
+                { "key": "pagina", "value": "1", "description": "OBRIGATÓRIO" },
+                { "key": "tamanhoPagina", "value": "50", "description": "MÍNIMO 10 — menos que isso devolve 400" }
+              ]
+            },
+            "description": "Este é o CAMINHO PRINCIPAL da coleta, e uma alternativa documentada à pasta 0.\n\nVantagens sobre /api/search/: é documentada, dispensa termo de busca, tem envelope de paginação com totalRegistros/totalPaginas, e filtra por código IBGE oficial em vez de id interno.\n\nLimitação: não entrega itens — daí a pasta 1.\n\nSe devolver 5xx, o serviço está fora do ar; use a pasta 0 nesse caso."
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. O que o projeto precisa (preço unitário por item)",
+      "item": [
+        {
+          "name": "Quantidade de itens da contratação",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const n = Number(pm.response.text());",
+                  "pm.test('devolve um número', () => pm.expect(n).to.be.a('number').and.not.NaN);",
+                  "pm.collectionVariables.set('total_itens', String(n));",
+                  "console.log('esta contratação tem ' + n + ' itens');",
+                  "if (n > 10) {",
+                  "  console.log('>>> ATENÇÃO: o endpoint /itens devolve só 10 por padrão.');",
+                  "  console.log('>>> Sem tamanhoPagina você perderia ' + (n - 10) + ' itens SEM NENHUM AVISO.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens/quantidade",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens", "quantidade"]
+            },
+            "description": "O total real de itens. É a ÚNICA forma de saber quantas páginas buscar: /itens devolve array puro, sem envelope de paginação e sem header de total.\n\nRode sempre isto antes de coletar, e confira que o número de itens coletados bate."
+          }
+        },
+        {
+          "name": "Itens da contratação — completo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const itens = pm.response.json();",
+                  "pm.test('é um array', () => pm.expect(itens).to.be.an('array'));",
+                  "",
+                  "const esperado = Number(pm.collectionVariables.get('total_itens'));",
+                  "if (esperado) {",
+                  "  pm.test('coleta COMPLETA: ' + itens.length + ' de ' + esperado + ' itens', () => {",
+                  "    pm.expect(itens.length).to.eql(esperado);",
+                  "  });",
+                  "}",
+                  "",
+                  "pm.test('o item traz preço unitário, descrição, quantidade e unidade', () => {",
+                  "  const i = itens[0];",
+                  "  pm.expect(i).to.have.property('descricao');",
+                  "  pm.expect(i).to.have.property('valorUnitarioEstimado');",
+                  "  pm.expect(i).to.have.property('quantidade');",
+                  "  pm.expect(i).to.have.property('unidadeMedida');",
+                  "});",
+                  "",
+                  "// guarda um item que tenha resultado homologado, para a próxima requisição",
+                  "const comRes = itens.filter(i => i.temResultado === true);",
+                  "if (comRes.length) {",
+                  "  pm.collectionVariables.set('item', String(comRes[0].numeroItem));",
+                  "  console.log('item com resultado homologado: nº ' + comRes[0].numeroItem);",
+                  "} else {",
+                  "  console.log('nenhum item desta contratação tem resultado ainda (temResultado=false)');",
+                  "}",
+                  "",
+                  "const sigilosos = itens.filter(i => i.orcamentoSigiloso === true).length;",
+                  "if (sigilosos) console.log('>>> ' + sigilosos + ' itens com orçamento sigiloso — valores vêm ZERADOS, descarte da cesta');",
+                  "",
+                  "console.log('--- amostra ---');",
+                  "itens.slice(0, 3).forEach(i => console.log('item ' + i.numeroItem + ' | ' + i.unidadeMedida + ' | unit. estimado ' + i.valorUnitarioEstimado + ' | ' + String(i.descricao).slice(0, 60)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens?pagina=1&tamanhoPagina=500",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens"],
+              "query": [
+                { "key": "pagina", "value": "1" },
+                { "key": "tamanhoPagina", "value": "500", "description": "Sem isto, volta só 10. Testado: 200 devolve 200; 500 devolve tudo." }
+              ]
+            },
+            "description": "Serviço 10.13 do Manual de Integração.\n\nCampos que interessam: descricao (até 2048 chars), quantidade, unidadeMedida, valorUnitarioEstimado, criterioJulgamentoNome, temResultado, orcamentoSigiloso.\n\nSem Authorization. Não precisa de token."
+          }
+        },
+        {
+          "name": "Resultado do item — PREÇO HOMOLOGADO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "const lista = Array.isArray(b) ? b : (b.listaResultados || [b]);",
+                  "",
+                  "pm.test('tem resultado', () => pm.expect(lista.length, 'nenhum resultado — este item não foi homologado. Rode a requisição de itens antes, ela escolhe um item com temResultado=true').to.be.above(0));",
+                  "",
+                  "pm.test('traz o PREÇO UNITÁRIO HOMOLOGADO', () => {",
+                  "  const r = lista[0];",
+                  "  pm.expect(r).to.have.property('valorUnitarioHomologado');",
+                  "  pm.expect(Number(r.valorUnitarioHomologado)).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test('traz fornecedor, quantidade e data — o que a IN 65 pede para rastrear a origem do preço', () => {",
+                  "  const r = lista[0];",
+                  "  pm.expect(r).to.have.property('nomeRazaoSocialFornecedor');",
+                  "  pm.expect(r).to.have.property('quantidadeHomologada');",
+                  "  pm.expect(r).to.have.property('dataResultado');",
+                  "});",
+                  "",
+                  "const r = lista[0];",
+                  "console.log('valorUnitarioHomologado: ' + r.valorUnitarioHomologado);",
+                  "console.log('quantidadeHomologada:    ' + r.quantidadeHomologada);",
+                  "console.log('dataResultado:           ' + r.dataResultado);",
+                  "console.log('porte do fornecedor:     ' + r.porteFornecedorNome);",
+                  "console.log('situação:                ' + r.situacaoCompraItemResultadoNome);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens/{{item}}/resultados",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens", "{{item}}", "resultados"]
+            },
+            "description": "Serviço 10.17 do Manual de Integração. ESTE É O ENDPOINT MAIS IMPORTANTE DO PROJETO.\n\n`valorUnitarioHomologado` é o preço efetivamente contratado por item — o candidato a parâmetro de pesquisa de preços.\n\nTambém traz: nomeRazaoSocialFornecedor, niFornecedor, quantidadeHomologada, dataResultado, porteFornecedorNome, percentualDesconto."
+          }
+        },
+        {
+          "name": "Item específico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const i = pm.response.json();",
+                  "pm.test('devolve um único item, não array', () => pm.expect(i).to.not.be.an('array'));",
+                  "console.log(String(i.descricao).slice(0, 120));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens/{{item}}",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens", "{{item}}"]
+            },
+            "description": "Serviço 10.14. Útil para reconsultar um item já conhecido sem baixar a contratação inteira."
+          }
+        },
+        {
+          "name": "Contratação (cabeçalho)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json();",
+                  "console.log('modalidade: ' + (c.modalidadeNome || '—'));",
+                  "console.log('valorTotalEstimado: ' + c.valorTotalEstimado);",
+                  "console.log('valorTotalHomologado: ' + c.valorTotalHomologado);",
+                  "pm.test('o cabeçalho NÃO tem preço por item — só totais da compra', () => {",
+                  "  pm.expect(c).to.not.have.property('itens');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}"]
+            },
+            "description": "Metadados da contratação. Note que só há valores TOTAIS aqui — é por isso que a API de Consulta não resolve o problema."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Armadilhas (rode para ver com seus olhos)",
+      "item": [
+        {
+          "name": "ARMADILHA 1 — paginação silenciosa (só 10 itens, HTTP 200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK — nenhum erro, nenhum aviso', () => pm.response.to.have.status(200));",
+                  "const itens = pm.response.json();",
+                  "const total = Number(pm.collectionVariables.get('total_itens'));",
+                  "",
+                  "console.log('itens devolvidos: ' + itens.length);",
+                  "console.log('itens que a contratação tem: ' + (total || 'rode a requisição de quantidade primeiro'));",
+                  "",
+                  "pm.test('NÃO existe header de total nem de paginação', () => {",
+                  "  ['X-Total-Count','X-Total','X-Page','Link'].forEach(h =>",
+                  "    pm.expect(pm.response.headers.has(h), 'header ' + h + ' existe?').to.be.false);",
+                  "});",
+                  "",
+                  "pm.test('a resposta é array PURO — sem campo totalRegistros/totalPaginas', () => {",
+                  "  pm.expect(itens).to.be.an('array');",
+                  "});",
+                  "",
+                  "if (total && itens.length < total) {",
+                  "  const perc = ((1 - itens.length / total) * 100).toFixed(1);",
+                  "  console.log('>>> ' + perc + '% dos itens DESAPARECERAM sem erro, sem aviso, sem header.');",
+                  "  console.log('>>> Uma cotação montada sobre isto dá valor errado com cara de certo.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens"]
+            },
+            "description": "Mesma URL da requisição 'Itens — completo', SEM tamanhoPagina.\n\nCompare o número de itens com o que /itens/quantidade informou. A resposta é HTTP 200, JSON válido, sem nenhum sinal de que está incompleta."
+          }
+        },
+        {
+          "name": "ARMADILHA 2 — filtro inválido é ignorado em silêncio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK — parâmetro errado não gera erro', () => pm.response.to.have.status(200));",
+                  "const total = pm.response.json().total;",
+                  "pm.collectionVariables.set('_total_singular', String(total));",
+                  "console.log('status=encerrada (SINGULAR, inválido) -> total = ' + total);",
+                  "console.log('Rode a próxima requisição e compare.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "User-Agent", "value": "{{ua}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_search}}/?q=papel&tipos_documento=edital&status=encerrada&pagina=1&tam_pagina=1",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "search", ""],
+              "query": [
+                { "key": "q", "value": "papel" },
+                { "key": "tipos_documento", "value": "edital" },
+                { "key": "status", "value": "encerrada", "description": "SINGULAR — inválido, ignorado sem erro" },
+                { "key": "pagina", "value": "1" },
+                { "key": "tam_pagina", "value": "1" }
+              ]
+            },
+            "description": "`status=encerrada` no singular NÃO filtra nada. A API devolve 200 e o total da busca sem filtro.\n\nMesma coisa com: situacao, situacoes, data_publicacao_inicial, data_inicial, dataFinal, tem_resultado, ano (singular)."
+          }
+        },
+        {
+          "name": "ARMADILHA 2b — o mesmo filtro no plural funciona",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const total = pm.response.json().total;",
+                  "const singular = Number(pm.collectionVariables.get('_total_singular'));",
+                  "console.log('status=encerradas (PLURAL, válido) -> total = ' + total);",
+                  "console.log('status=encerrada  (singular)       -> total = ' + singular);",
+                  "",
+                  "pm.test('o plural filtra e o singular não — os totais têm que diferir', () => {",
+                  "  pm.expect(total, 'se os totais forem iguais, a API mudou de comportamento e a nota precisa ser corrigida').to.not.eql(singular);",
+                  "});",
+                  "console.log('>>> Lição: toda consulta precisa de contraprova de contagem. Filtro não se presume.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "User-Agent", "value": "{{ua}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_search}}/?q=papel&tipos_documento=edital&status=encerradas&pagina=1&tam_pagina=1",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "search", ""],
+              "query": [
+                { "key": "q", "value": "papel" },
+                { "key": "tipos_documento", "value": "edital" },
+                { "key": "status", "value": "encerradas", "description": "PLURAL — válido" },
+                { "key": "pagina", "value": "1" },
+                { "key": "tam_pagina", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ARMADILHA 3 — a busca NÃO alcança a descrição do item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "console.log('total de resultados: ' + b.total);",
+                  "console.log('');",
+                  "console.log('Objetos das compras encontradas:');",
+                  "(b.items || []).slice(0, 5).forEach(i => console.log('  - ' + String(i.description).slice(0, 90)));",
+                  "console.log('');",
+                  "console.log('>>> TESTE MANUAL: pegue uma contratação com muitos itens (rode a pasta 1),');",
+                  "console.log('>>> escolha a descrição de um item do meio da lista, e busque por ela aqui.');",
+                  "console.log('>>> A contratação NÃO vai aparecer: o termo casa contra o OBJETO da compra,');",
+                  "console.log('>>> não contra a descrição dos itens.');",
+                  "console.log('>>> É por isso que o projeto precisa de índice próprio sobre as descrições.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "User-Agent", "value": "{{ua}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_search}}/?q=microscópio digital eletrônico&tipos_documento=edital&ufs=PA&pagina=1&tam_pagina=30",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "search", ""],
+              "query": [
+                { "key": "q", "value": "microscópio digital eletrônico" },
+                { "key": "tipos_documento", "value": "edital" },
+                { "key": "ufs", "value": "PA" },
+                { "key": "pagina", "value": "1" },
+                { "key": "tam_pagina", "value": "30" }
+              ]
+            },
+            "description": "O achado que sustenta o recorte de banco de dados do TCC.\n\nUma contratação municipal de 2025 com 223 itens tem um microscópio digital no item 181. Esta busca não a retorna."
+          }
+        },
+        {
+          "name": "ARMADILHA 4 — sem User-Agent de navegador a conexão cai",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// No Postman desktop este pode passar, porque o app manda User-Agent próprio",
+                  "// e o servidor às vezes o aceita. Via curl sem User-Agent, a conexão é encerrada",
+                  "// sem código HTTP: 'OpenSSL SSL_read: connection reset by peer'.",
+                  "console.log('status: ' + pm.response.code);",
+                  "console.log('Se falhou/caiu: comportamento reproduzido.');",
+                  "console.log('Se passou: o Postman mandou algum User-Agent aceitável — teste no terminal com:');",
+                  "console.log(\"  curl -sv 'https://pncp.gov.br/api/search/?q=papel&tam_pagina=1' -H 'User-Agent:'\");"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "User-Agent", "value": "", "disabled": false, "description": "vazio de propósito" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_search}}/?q=papel&tipos_documento=edital&pagina=1&tam_pagina=1",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "search", ""],
+              "query": [
+                { "key": "q", "value": "papel" },
+                { "key": "tipos_documento", "value": "edital" },
+                { "key": "pagina", "value": "1" },
+                { "key": "tam_pagina", "value": "1" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Provas negativas",
+      "item": [
+        {
+          "name": "Leitura é pública — CNPJ inválido devolve 400, não 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('NÃO é 401 nem 403 — não há barreira de autenticação', () => {",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "  pm.expect(pm.response.code).to.not.eql(403);",
+                  "});",
+                  "pm.test('é 400 — a requisição chegou à validação de negócio', () => {",
+                  "  pm.expect(pm.response.code).to.eql(400);",
+                  "});",
+                  "console.log(pm.response.text());",
+                  "console.log('>>> A requisição atravessou a camada de auth e morreu na validação do CNPJ.');",
+                  "console.log('>>> Isso prova que GET de leitura não exige token.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_integra}}/v1/orgaos/10000000000003/compras/2021/1/itens",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "pncp", "v1", "orgaos", "10000000000003", "compras", "2021", "1", "itens"]
+            },
+            "description": "CNPJ do exemplo do próprio Manual de Integração — existe só no ambiente de treinamento.\n\nEm produção devolve 400 com erro de validação de CNPJ. Se houvesse exigência de token, devolveria 401 antes de validar."
+          }
+        },
+        {
+          "name": "API de Consulta documentada — não entrega itens (e pode estar fora do ar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('status: ' + pm.response.code + ' em ' + pm.response.responseTime + 'ms');",
+                  "",
+                  "if ([500, 502, 503, 504].includes(pm.response.code)) {",
+                  "  console.log('>>> Serviço indisponível — mesmo comportamento observado em 17/08/2026.');",
+                  "  console.log('>>> corpo: ' + pm.response.text().slice(0, 200));",
+                  "  pm.test('INDISPONÍVEL (achado da nota reproduzido)', () => pm.expect(true).to.be.true);",
+                  "} else if (pm.response.code === 200) {",
+                  "  const b = pm.response.json();",
+                  "  console.log('>>> A API VOLTOU. totalRegistros: ' + b.totalRegistros);",
+                  "  pm.test('mesmo funcionando, NÃO traz preço por item — só totais da compra', () => {",
+                  "    const c = (b.data || [])[0];",
+                  "    if (c) {",
+                  "      pm.expect(c).to.have.property('valorTotalEstimado');",
+                  "      pm.expect(c, 'se passou a ter itens, a arquitetura do projeto pode simplificar').to.not.have.property('itens');",
+                  "    }",
+                  "  });",
+                  "  console.log('>>> Atualize a nota de pesquisa: a indisponibilidade era transitória.');",
+                  "} else {",
+                  "  console.log('>>> status inesperado: ' + pm.response.code);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_consulta}}/v1/contratacoes/publicacao?dataInicial=20250805&dataFinal=20250805&codigoModalidadeContratacao=6&uf=PA&pagina=1&tamanhoPagina=10",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "consulta", "v1", "contratacoes", "publicacao"],
+              "query": [
+                { "key": "dataInicial", "value": "20250805", "description": "yyyyMMdd, OBRIGATÓRIO" },
+                { "key": "dataFinal", "value": "20250805", "description": "yyyyMMdd, OBRIGATÓRIO" },
+                { "key": "codigoModalidadeContratacao", "value": "6", "description": "OBRIGATÓRIO. 6=Pregão Eletrônico, 8=Dispensa" },
+                { "key": "uf", "value": "PA" },
+                { "key": "pagina", "value": "1", "description": "OBRIGATÓRIO" },
+                { "key": "tamanhoPagina", "value": "10", "description": "MÍNIMO 10 — menos que isso devolve 400" }
+              ]
+            },
+            "description": "A API que o Swagger anuncia como interface de consulta.\n\nDois problemas: (1) não devolve itens, só totais da compra; (2) respondeu 500/502/503/504 durante toda a janela de teste de 17/08/2026.\n\nEsta requisição serve como monitor: se voltar 200, a nota de pesquisa precisa ser atualizada."
+          }
+        },
+        {
+          "name": "A busca exige termo — não há curinga",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('status: ' + pm.response.code);",
+                  "let total = null;",
+                  "try { total = pm.response.json().total; } catch (e) { console.log('resposta não é JSON de objeto'); }",
+                  "console.log('total com q=*: ' + total);",
+                  "pm.test('curinga não funciona — logo a busca NÃO serve para varredura exaustiva', () => {",
+                  "  pm.expect(total === 0 || total === null).to.be.true;",
+                  "});",
+                  "console.log('>>> Consequência: varrer um município/período inteiro depende da API de Consulta,');",
+                  "console.log('>>> que é justamente a que estava fora do ar.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "User-Agent", "value": "{{ua}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_search}}/?q=*&tipos_documento=edital&ufs=PA&anos=2025&pagina=1&tam_pagina=1",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["api", "search", ""],
+              "query": [
+                { "key": "q", "value": "*" },
+                { "key": "tipos_documento", "value": "edital" },
+                { "key": "ufs", "value": "PA" },
+                { "key": "anos", "value": "2025" },
+                { "key": "pagina", "value": "1" },
+                { "key": "tam_pagina", "value": "1" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Especificações (OpenAPI cru)",
+      "item": [
+        {
+          "name": "OpenAPI — API de Consulta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('status: ' + pm.response.code);",
+                  "if (pm.response.code === 200) {",
+                  "  const spec = pm.response.json();",
+                  "  const n = Object.keys(spec.paths || {}).length;",
+                  "  console.log('endpoints: ' + n);",
+                  "  pm.test('o spec continua sem endpoint de itens de contratação', () => {",
+                  "    const temItens = Object.keys(spec.paths || {}).some(p => /compras\\/.+\\/itens/.test(p));",
+                  "    pm.expect(temItens, 'PASSOU A TER! a arquitetura do projeto pode simplificar — atualize a nota').to.be.false;",
+                  "  });",
+                  "} else {",
+                  "  console.log('>>> corpo: ' + pm.response.text().slice(0, 150));",
+                  "  console.log('>>> Nem a DOCUMENTAÇÃO do serviço de consulta está no ar.');",
+                  "  console.log('>>> Em 17/08/2026 este endpoint respondeu 200 às 09h51 e 503 às 11h20.');",
+                  "  pm.test('serviço pncp-consulta indisponível (achado reproduzido)', () => {",
+                  "    pm.expect([500, 502, 503, 504]).to.include(pm.response.code);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "https://pncp.gov.br/pncp-consulta/v3/api-docs",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["pncp-consulta", "v3", "api-docs"]
+            },
+            "description": "Spec cru, mais confiável que a página do Swagger UI. Declara 12 endpoints, nenhum de itens.\n\nATENÇÃO: este endpoint faz parte do mesmo serviço que caiu. Se devolver 503, o serviço de consulta está fora — inclusive a documentação."
+          }
+        },
+        {
+          "name": "OpenAPI — API de Integração",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "https://pncp.gov.br/pncp-api/v3/api-docs",
+              "protocol": "https",
+              "host": ["pncp", "gov", "br"],
+              "path": ["pncp-api", "v3", "api-docs"]
+            },
+            "description": "Spec da API de Integração — onde estão os endpoints de itens e resultados. Bem maior que a de consulta."
+          }
+        }
+      ]
+    }
+  ]
+}
