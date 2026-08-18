@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 
 from scripts import normas_ufopa
+from tests.leitura_pdffonts import fontes_bitmap, fontes_nao_embutidas
 
 RAIZ = Path(__file__).resolve().parent.parent
 DOCUMENTOS = ["tcc1", "tcc2"]
@@ -131,11 +132,26 @@ def test_fonte_do_corpo_e_times(pdf: Path):
 def test_todas_as_fontes_estao_embutidas(pdf: Path):
     """PDF de entrega com fonte não embutida troca de tipografia na banca."""
     _exige("pdffonts")
-    linhas = subprocess.run(
+    saida = subprocess.run(
         ["pdffonts", str(pdf)], capture_output=True, text=True, check=True
-    ).stdout.splitlines()[2:]
-    nao_embutidas = [linha.split()[0] for linha in linhas if linha.strip() and " no " in linha]
-    assert nao_embutidas == [], f"fontes não embutidas: {nao_embutidas}"
+    ).stdout
+    nao_embutidas = fontes_nao_embutidas(saida)
+    assert nao_embutidas == [], f"fontes não embutidas: {nao_embutidas}\n{saida}"
+
+
+def test_nenhuma_fonte_e_bitmap(pdf: Path):
+    """Type 3 é fonte rasterizada: serrilha na tela e na impressão.
+
+    Aparece quando falta a versão vetorial de uma fonte do encoding T1/TS1 e o
+    TeX gera bitmap PK no lugar. O PDF continua válido e as fontes continuam
+    embutidas — por isso o teste acima não pega.
+    """
+    _exige("pdffonts")
+    saida = subprocess.run(
+        ["pdffonts", str(pdf)], capture_output=True, text=True, check=True
+    ).stdout
+    bitmap = fontes_bitmap(saida)
+    assert bitmap == [], f"fontes rasterizadas: {bitmap} — falta cm-super?\n{saida}"
 
 
 # --- Margens ------------------------------------------------------------------

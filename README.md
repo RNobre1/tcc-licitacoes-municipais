@@ -44,7 +44,7 @@ O trabalho se concentra nas questões de dados que a aplicação levanta:
 
 ```
 docs/     documentação do projeto e normas de formatação
-texto/    LaTeX — projeto (TCC I) e monografia (TCC II)
+texto/    LaTeX — nota de projeto, projeto (TCC I) e monografia (TCC II)
 code/     o sistema
 scripts/  manifesto de normas e geradores
 tests/    conformidade do texto com as normas da instituição
@@ -75,6 +75,49 @@ cd texto/tcc1 && make pdf     # ou make watch
 ```
 
 Requer TeX Live com `biblatex`, `biblatex-abnt` e `biber`.
+
+### Preparar a máquina
+
+```bash
+uv sync --all-groups          # ambiente Python e ferramentas de teste
+```
+
+Fora do Python, o texto depende de duas coisas: uma distribuição TeX e o
+`poppler`, que fornece o `pdfinfo`, o `pdftotext` e o `pdffonts` usados pelos
+testes para medir o PDF.
+
+**Linux (Fedora):**
+
+```bash
+sudo dnf install texlive-scheme-medium texlive-biblatex-abnt biber poppler-utils
+```
+
+**macOS (Apple Silicon):** o MacTeX pesa cerca de 6 GB e o instalador pede
+senha de administrador. O TinyTeX resolve o mesmo problema em uma fração disso
+e deixa o `tlmgr` funcionando sem `sudo`:
+
+```bash
+curl -sL "https://yihui.org/tinytex/install-bin-unix.sh" | sh
+export PATH="$HOME/Library/TinyTeX/bin/universal-darwin:$PATH"   # ponha no ~/.zshrc
+
+tlmgr install biber biblatex biblatex-abnt babel-portuges psnfss cm-super \
+  geometry titlesec fancyhdr setspace microtype booktabs float longtable \
+  tabularx xcolor hyperref indentfirst csquotes xpatch l3packages rsfs
+
+brew install poppler libthai
+```
+
+Duas armadilhas específicas do macOS, ambas encontradas na prática:
+
+- **`libthai`** não é opcional. O `biber` do TeX Live para macOS é um binário
+  empacotado que carrega `Unicode::LineBreak`, compilado contra a `libthai` do
+  Homebrew. Sem ela o `biber` sequer inicia — falha com `Library not loaded:
+  /opt/homebrew/opt/libthai/lib/libthai.0.dylib`, e a bibliografia some do PDF
+  sem que o LaTeX reclame.
+- **`cm-super`** também não. Sem ele, os trechos em itálico do encoding T1
+  saem como fontes Type 3, isto é, bitmaps rasterizados em 600 dpi: o PDF
+  compila, as fontes ficam embutidas e o texto serrilha na tela e na impressão.
+  Há um teste que pega isso.
 
 ## Contexto
 

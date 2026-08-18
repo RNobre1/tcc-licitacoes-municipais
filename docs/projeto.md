@@ -160,8 +160,17 @@ são coisas diferentes e não devem ser confundidos.
 
 ## Hardware
 
-Notebook Dell G15 5530, Fedora Linux. Intel i5-13450HX (10c/16t), 16 GiB DDR5,
-NVMe 1 TB, NVIDIA RTX 3050 6 GB.
+Máquina de trabalho desde 18/08/2026: MacBook com Apple M4, 10 núcleos, 16 GiB
+de memória unificada, SSD de 460 GiB.
+
+Antes: notebook Dell G15 5530 com Fedora Linux — Intel i5-13450HX (10c/16t),
+16 GiB DDR5, NVMe 1 TB, NVIDIA RTX 3050 6 GB. Continua disponível, e é a única
+das duas com GPU dedicada: se algum experimento exigir treinar ou rodar modelo
+localmente, é nela.
+
+A troca importa para o texto: o `README.md` traz o preparo do ambiente nas duas
+plataformas, com as duas dependências que só o macOS exige (`libthai` para o
+`biber` iniciar, `cm-super` para o PDF não sair com fonte rasterizada).
 
 ## Pendências abertas
 
