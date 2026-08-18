@@ -44,13 +44,19 @@ texto/**/main.pdf
 
 # --- Vault -------------------------------------------------------------------
 # Fichamentos .md são versionados; os PDFs dos trabalhos, não (volume e direito
-# autoral). O layout local do Obsidian é de cada máquina.
+# autoral).
 TCC/papers/*.pdf
 TCC/papers/*.html
 TCC/papers/*_files/
-TCC/.obsidian/workspace*
-TCC/.obsidian/cache/
 .trash/
+
+# Config do Obsidian: preferências e plugins vão para o git, para que o vault se
+# comporte igual em qualquer máquina; layout de janelas e cache não, porque são
+# de cada uma. As regras usam ** de propósito — a pasta .obsidian nasce onde o
+# vault for aberto, que já foi TCC/ e hoje é a raiz. Regra presa a um caminho
+# deixaria a próxima de fora sem avisar.
+**/.obsidian/workspace*
+**/.obsidian/cache/
 
 # --- Python ------------------------------------------------------------------
 __pycache__/
