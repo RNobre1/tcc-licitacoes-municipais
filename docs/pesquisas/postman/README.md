@@ -29,7 +29,7 @@ Para rodar tudo de uma vez: **Collection Runner**, na ordem das pastas.
 | `0b. Varredura pela API de Consulta` | **Caminho principal.** Varre por período e município, sem termo. Também popula as variáveis |
 | `1. O que o projeto precisa` | O caminho até o preço unitário por item |
 | `2. Armadilhas` | Cinco comportamentos que produzem resultado errado sem erro |
-| `3. Provas negativas` | O que a API **não** faz — e a prova de que a leitura é pública |
+| `3. Provas negativas` | O que a API **não** faz, a prova de que a leitura é pública e o registro do endpoint que mudou de lugar |
 | `4. Especificações` | OpenAPI cru das duas APIs |
 
 Qualquer uma das duas pastas de descoberta (`0` ou `0b`) serve para popular as
@@ -42,10 +42,38 @@ variáveis. A diferença importa:
 | Filtro de município | id interno do PNCP | **código IBGE oficial** |
 | Total e nº de páginas | `total` | `totalRegistros`, `totalPaginas` |
 | `User-Agent` de navegador | **obrigatório** | não |
-| Disponibilidade observada | estável | caiu por ~1h40 em 17/08/2026 |
+| Disponibilidade observada | estável | caiu por ~1h40 em 17/08 e devolveu 500 em 18/08 |
 
 Use `0b` como padrão. Use `0` quando precisar procurar por termo — é a única
 forma de fazer isso.
+
+## O endpoint que mudou de lugar em 18/08/2026
+
+Se você rodou esta coleção em 17/08, a requisição **Contratação (cabeçalho)**
+passava com 200 na API de Integração. Em 18/08 o mesmo endereço passou a
+devolver **301**:
+
+```
+Este endpoint foi movido para:
+https://pncp.gov.br/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}
+```
+
+A coleção já aponta para o endereço novo. O antigo ficou registrado como prova
+negativa, porque o fato importa mais que o conserto: **o contrato da API mudou
+em um dia, sem versão e sem changelog.**
+
+A migração é **parcial** — e é isso que salva o projeto. `/itens`,
+`/itens/quantidade` e `/itens/{n}/resultados` continuam na API de Integração
+respondendo 200; os mesmos caminhos sob `/api/consulta` devolvem 404. O preço
+unitário por item, que é o dado que interessa, não mudou de casa.
+
+Para ver o 301 com os próprios olhos, **desligue** *Automatically follow
+redirects* nas Settings do Postman — com ele ligado o app segue o redirecionamento
+e a evidência some. No terminal:
+
+```bash
+curl -i "https://pncp.gov.br/api/pncp/v1/orgaos/01611858000155/compras/2025/141"
+```
 
 ## Três coisas que vão te surpreender
 

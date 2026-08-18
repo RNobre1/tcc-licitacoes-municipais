@@ -44,7 +44,8 @@ armadilhas que fazem o resultado parecer correto quando está incompleto.
 | Existe busca por descrição do item? | **Não** — em nenhuma interface | §5.5 |
 | A API de Consulta entrega itens? | **Não** — só totais da compra | §5.1 |
 | A API de Consulta serve para varredura? | **Sim** | §5.1 |
-| A fonte é estável? | Queda de ~1h40 observada, com recuperação | §5.1 |
+| A fonte é estável? | **Não** — duas falhas transitórias em dois dias | §5.1 |
+| O contrato da API é estável? | **Não** — um endpoint mudou de lugar em 18/08 | §5.2 |
 
 ## 4. Método
 
@@ -124,6 +125,15 @@ falha era do serviço de consulta, não da infraestrutura do PNCP. **[provado]**
 **A indisponibilidade era transitória.** Às 11h33 o serviço voltou: 200 em
 0,45 s. A queda durou aproximadamente 1h40 no que foi observado. **[provado]**
 
+**Segunda observação, em 18/08/2026.** A mesma consulta de varredura respondeu
+**500 após 65 s** durante a execução da coleção, e voltou a responder **200 em
+5,6 a 7,0 s** em três tentativas cerca de duas horas depois. **[provado]** São
+agora duas observações de falha em dois dias de uso, ambas transitórias. Duas
+observações ainda não estabelecem frequência, mas já bastam para descartar a
+hipótese de incidente isolado — e a latência de 5 a 7 s no caminho feliz é, por
+si, argumento para coleta assíncrona com cache, nunca chamada ao vivo durante a
+geração do documento.
+
 Com o serviço no ar, foi possível verificar o que ele de fato entrega:
 **[provado]**
 
@@ -162,6 +172,24 @@ Mas entre seus serviços estão consultas que a API de Consulta não oferece:
 | — Quantidade de itens | `.../itens/quantidade` |
 
 Base de produção: `https://pncp.gov.br/api/pncp`.
+
+> **A API está sendo migrada, sem versionamento e sem aviso — verificado em
+> 18/08/2026.** O endpoint do **cabeçalho** da contratação
+> (`/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{seq}`), que em 17/08 respondia
+> 200, passou a devolver **301** com o corpo `"Este endpoint foi movido para:
+> https://pncp.gov.br/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}"`.
+> **[provado]**
+>
+> A migração é **parcial**, e isso é o que importa: `/itens`,
+> `/itens/quantidade` e `/itens/{n}/resultados` continuam respondendo 200 na
+> API de Integração, e os mesmos caminhos sob `/api/consulta` devolvem **404**.
+> **[provado]** Ou seja, o preço unitário por item — o dado que sustenta o
+> módulo — permanece acessível apenas pela API de Integração.
+>
+> O achado tem valor além do conserto: mostra que o contrato da API muda em
+> **um dia**, sem número de versão nem changelog. Quem construir sobre ela
+> precisa de teste de contrato rodando com frequência. A coleção Postman pegou
+> a mudança na primeira execução depois dela — foi assim que esta seção nasceu.
 
 **Campos que interessam ao módulo de cotação** — todos confirmados em resposta
 real: **[provado]**
@@ -393,7 +421,7 @@ que foi medido:
 | Orçamento sigiloso zera valores | média | campo `orcamentoSigiloso` | Descartar da cesta, registrando o descarte |
 | Descrição heterogênea entre municípios | média | §5.5 | É o problema de pesquisa, não um defeito a esconder |
 | Dependência de API não documentada (`/api/search/`) | **baixa** | §5.4 — caminho crítico não depende dela | Usar a API de Consulta como caminho principal; isolar a busca atrás de interface própria |
-| Mudança de contrato da API sem aviso | média | não há versionamento anunciado | Teste de contrato no pipeline — a coleção Postman já serve de base |
+| Mudança de contrato da API sem aviso | **alta** | §5.2 — um endpoint mudou de endereço entre 17 e 18/08/2026, com 301 e sem versionamento | Teste de contrato no pipeline — a coleção Postman já serve de base, e foi ela que pegou esta mudança |
 
 **Correção de avaliação.** A dependência da API não documentada foi classificada
 como risco alto na primeira leitura dos achados e foi **rebaixada para baixa**
@@ -412,11 +440,11 @@ Declarado como não verificado, para não virar suposição depois:
    preferência e com quais ressalvas, é leitura pendente. **É a pergunta que
    decide se o dado serve como fundamentação legal do valor estimado.**
 2. **Rate limit real** — não atingido em 15 requisições. Desconhecido.
-3. **Frequência das quedas do serviço de consulta.** Foi observada uma queda de
-   ~1h40 em 17/08/2026, com recuperação. Uma única observação não estabelece
-   frequência nem duração típica. Antes de afirmar qualquer coisa no texto, vale
-   medir em dias diferentes — a coleção Postman traz a requisição que serve de
-   monitor.
+3. **Frequência das quedas do serviço de consulta.** Duas observações: queda de
+   ~1h40 em 17/08/2026 e erro 500 em 18/08/2026, ambas com recuperação. Duas
+   observações não estabelecem frequência nem duração típica. Antes de afirmar
+   qualquer coisa no texto, vale medir em dias diferentes — a coleção Postman
+   traz a requisição que serve de monitor.
 4. **Custo total da varredura** de um município por ano: número de requisições,
    tempo e volume em disco. Estimável a partir dos números de §5.7, não medido.
 5. **Estabilidade do id interno de município** usado por `/api/search/`, que não

@@ -26,11 +26,31 @@
       "value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36",
       "description": "Obrigatório em /api/search — sem User-Agent de navegador o servidor derruba a conexão."
     },
-    { "key": "cnpj", "value": "", "description": "preenchido por '0. Descobrir contratação'" },
-    { "key": "ano", "value": "", "description": "preenchido por '0. Descobrir contratação'" },
-    { "key": "seq", "value": "", "description": "preenchido por '0. Descobrir contratação'" },
-    { "key": "item", "value": "1", "description": "número do item dentro da contratação" },
-    { "key": "total_itens", "value": "", "description": "preenchido por 'Quantidade de itens'" }
+    {
+      "key": "cnpj",
+      "value": "",
+      "description": "preenchido por '0. Descobrir contratação'"
+    },
+    {
+      "key": "ano",
+      "value": "",
+      "description": "preenchido por '0. Descobrir contratação'"
+    },
+    {
+      "key": "seq",
+      "value": "",
+      "description": "preenchido por '0. Descobrir contratação'"
+    },
+    {
+      "key": "item",
+      "value": "1",
+      "description": "número do item dentro da contratação"
+    },
+    {
+      "key": "total_itens",
+      "value": "",
+      "description": "preenchido por 'Quantidade de itens'"
+    }
   ],
   "item": [
     {
@@ -88,23 +108,66 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "User-Agent", "value": "{{ua}}", "description": "OBRIGATÓRIO" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "User-Agent",
+                "value": "{{ua}}",
+                "description": "OBRIGATÓRIO"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_search}}/?q=aquisição&tipos_documento=edital&ufs=PA&anos=2025&status=encerradas&ordenacao=-data&pagina=1&tam_pagina=50",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "search", ""],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "search",
+                ""
+              ],
               "query": [
-                { "key": "q", "value": "aquisição", "description": "OBRIGATÓRIO. Não há curinga: q=a e q=* devolvem zero." },
-                { "key": "tipos_documento", "value": "edital" },
-                { "key": "ufs", "value": "PA", "description": "funciona" },
-                { "key": "anos", "value": "2025", "description": "PLURAL. 'ano' no singular é ignorado." },
-                { "key": "status", "value": "encerradas", "description": "PLURAL. 'encerrada' no singular é ignorado." },
-                { "key": "ordenacao", "value": "-data" },
-                { "key": "pagina", "value": "1" },
-                { "key": "tam_pagina", "value": "50" }
+                {
+                  "key": "q",
+                  "value": "aquisição",
+                  "description": "OBRIGATÓRIO. Não há curinga: q=a e q=* devolvem zero."
+                },
+                {
+                  "key": "tipos_documento",
+                  "value": "edital"
+                },
+                {
+                  "key": "ufs",
+                  "value": "PA",
+                  "description": "funciona"
+                },
+                {
+                  "key": "anos",
+                  "value": "2025",
+                  "description": "PLURAL. 'ano' no singular é ignorado."
+                },
+                {
+                  "key": "status",
+                  "value": "encerradas",
+                  "description": "PLURAL. 'encerrada' no singular é ignorado."
+                },
+                {
+                  "key": "ordenacao",
+                  "value": "-data"
+                },
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "tam_pagina",
+                  "value": "50"
+                }
               ]
             },
             "description": "Descobre uma contratação real e grava cnpj/ano/seq nas variáveis da coleção.\n\nRode esta primeiro. As demais requisições dependem dela."
@@ -133,21 +196,54 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "User-Agent", "value": "{{ua}}" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "User-Agent",
+                "value": "{{ua}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_search}}/?q=aquisição&tipos_documento=edital&ufs=PA&municipios=249&pagina=1&tam_pagina=20",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "search", ""],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "search",
+                ""
+              ],
               "query": [
-                { "key": "q", "value": "aquisição" },
-                { "key": "tipos_documento", "value": "edital" },
-                { "key": "ufs", "value": "PA" },
-                { "key": "municipios", "value": "249", "description": "id INTERNO do PNCP, não código IBGE. Descubra o id lendo municipio_id de uma busca por nome." },
-                { "key": "pagina", "value": "1" },
-                { "key": "tam_pagina", "value": "20" }
+                {
+                  "key": "q",
+                  "value": "aquisição"
+                },
+                {
+                  "key": "tipos_documento",
+                  "value": "edital"
+                },
+                {
+                  "key": "ufs",
+                  "value": "PA"
+                },
+                {
+                  "key": "municipios",
+                  "value": "249",
+                  "description": "id INTERNO do PNCP, não código IBGE. Descubra o id lendo municipio_id de uma busca por nome."
+                },
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "tam_pagina",
+                  "value": "20"
+                }
               ]
             },
             "description": "Prova que o filtro geográfico por município funciona.\n\nATENÇÃO: `municipios` usa o id interno do PNCP, não o código IBGE. Para achar o id de um município, busque pelo nome dele e leia o campo `municipio_id` do retorno."
@@ -213,20 +309,63 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_consulta}}/v1/contratacoes/publicacao?dataInicial=20250801&dataFinal=20250831&codigoModalidadeContratacao=6&uf=PA&pagina=1&tamanhoPagina=50",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "consulta", "v1", "contratacoes", "publicacao"],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "consulta",
+                "v1",
+                "contratacoes",
+                "publicacao"
+              ],
               "query": [
-                { "key": "dataInicial", "value": "20250801", "description": "yyyyMMdd, OBRIGATÓRIO" },
-                { "key": "dataFinal", "value": "20250831", "description": "yyyyMMdd, OBRIGATÓRIO. Um mês inteiro funciona: 821 contratações no PA em 17 páginas, 7,9 s" },
-                { "key": "codigoModalidadeContratacao", "value": "6", "description": "OBRIGATÓRIO. 6=Pregão Eletrônico, 8=Dispensa" },
-                { "key": "uf", "value": "PA" },
-                { "key": "codigoMunicipioIbge", "value": "", "disabled": true, "description": "Código IBGE OFICIAL — melhor que o id interno da /api/search/. Habilite e preencha para filtrar por município" },
-                { "key": "pagina", "value": "1", "description": "OBRIGATÓRIO" },
-                { "key": "tamanhoPagina", "value": "50", "description": "MÍNIMO 10 — menos que isso devolve 400" }
+                {
+                  "key": "dataInicial",
+                  "value": "20250801",
+                  "description": "yyyyMMdd, OBRIGATÓRIO"
+                },
+                {
+                  "key": "dataFinal",
+                  "value": "20250831",
+                  "description": "yyyyMMdd, OBRIGATÓRIO. Um mês inteiro funciona: 821 contratações no PA em 17 páginas, 7,9 s"
+                },
+                {
+                  "key": "codigoModalidadeContratacao",
+                  "value": "6",
+                  "description": "OBRIGATÓRIO. 6=Pregão Eletrônico, 8=Dispensa"
+                },
+                {
+                  "key": "uf",
+                  "value": "PA"
+                },
+                {
+                  "key": "codigoMunicipioIbge",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Código IBGE OFICIAL — melhor que o id interno da /api/search/. Habilite e preencha para filtrar por município"
+                },
+                {
+                  "key": "pagina",
+                  "value": "1",
+                  "description": "OBRIGATÓRIO"
+                },
+                {
+                  "key": "tamanhoPagina",
+                  "value": "50",
+                  "description": "MÍNIMO 10 — menos que isso devolve 400"
+                }
               ]
             },
             "description": "Este é o CAMINHO PRINCIPAL da coleta, e uma alternativa documentada à pasta 0.\n\nVantagens sobre /api/search/: é documentada, dispensa termo de busca, tem envelope de paginação com totalRegistros/totalPaginas, e filtra por código IBGE oficial em vez de id interno.\n\nLimitação: não entrega itens — daí a pasta 1.\n\nSe devolver 5xx, o serviço está fora do ar; use a pasta 0 nesse caso."
@@ -260,12 +399,32 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens/quantidade",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens", "quantidade"]
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "pncp",
+                "v1",
+                "orgaos",
+                "{{cnpj}}",
+                "compras",
+                "{{ano}}",
+                "{{seq}}",
+                "itens",
+                "quantidade"
+              ]
             },
             "description": "O total real de itens. É a ÚNICA forma de saber quantas páginas buscar: /itens devolve array puro, sem envelope de paginação e sem header de total.\n\nRode sempre isto antes de coletar, e confira que o número de itens coletados bate."
           }
@@ -317,15 +476,41 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens?pagina=1&tamanhoPagina=500",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens"],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "pncp",
+                "v1",
+                "orgaos",
+                "{{cnpj}}",
+                "compras",
+                "{{ano}}",
+                "{{seq}}",
+                "itens"
+              ],
               "query": [
-                { "key": "pagina", "value": "1" },
-                { "key": "tamanhoPagina", "value": "500", "description": "Sem isto, volta só 10. Testado: 200 devolve 200; 500 devolve tudo." }
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "tamanhoPagina",
+                  "value": "500",
+                  "description": "Sem isto, volta só 10. Testado: 200 devolve 200; 500 devolve tudo."
+                }
               ]
             },
             "description": "Serviço 10.13 do Manual de Integração.\n\nCampos que interessam: descricao (até 2048 chars), quantidade, unidadeMedida, valorUnitarioEstimado, criterioJulgamentoNome, temResultado, orcamentoSigiloso.\n\nSem Authorization. Não precisa de token."
@@ -370,12 +555,33 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens/{{item}}/resultados",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens", "{{item}}", "resultados"]
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "pncp",
+                "v1",
+                "orgaos",
+                "{{cnpj}}",
+                "compras",
+                "{{ano}}",
+                "{{seq}}",
+                "itens",
+                "{{item}}",
+                "resultados"
+              ]
             },
             "description": "Serviço 10.17 do Manual de Integração. ESTE É O ENDPOINT MAIS IMPORTANTE DO PROJETO.\n\n`valorUnitarioHomologado` é o preço efetivamente contratado por item — o candidato a parâmetro de pesquisa de preços.\n\nTambém traz: nomeRazaoSocialFornecedor, niFornecedor, quantidadeHomologada, dataResultado, porteFornecedorNome, percentualDesconto."
           }
@@ -398,12 +604,32 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens/{{item}}",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens", "{{item}}"]
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "pncp",
+                "v1",
+                "orgaos",
+                "{{cnpj}}",
+                "compras",
+                "{{ano}}",
+                "{{seq}}",
+                "itens",
+                "{{item}}"
+              ]
             },
             "description": "Serviço 10.14. Útil para reconsultar um item já conhecido sem baixar a contratação inteira."
           }
@@ -430,14 +656,32 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}",
+              "raw": "{{base_consulta}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}"]
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "consulta",
+                "v1",
+                "orgaos",
+                "{{cnpj}}",
+                "compras",
+                "{{ano}}",
+                "{{seq}}"
+              ]
             },
-            "description": "Metadados da contratação. Note que só há valores TOTAIS aqui — é por isso que a API de Consulta não resolve o problema."
+            "description": "Metadados da contratação. Só há valores TOTAIS aqui — é por isso que a API de Consulta não resolve o problema de cotar um item.\n\nMUDOU DE ENDEREÇO EM 18/08/2026: até 17/08 este recurso respondia em {{base_integra}}/v1/orgaos/.../compras/{ano}/{seq}. Agora aquele endereço devolve 301 apontando para cá. Ver a prova negativa 'Endpoint movido' na pasta 3."
           }
         }
       ]
@@ -480,12 +724,31 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "pncp", "v1", "orgaos", "{{cnpj}}", "compras", "{{ano}}", "{{seq}}", "itens"]
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "pncp",
+                "v1",
+                "orgaos",
+                "{{cnpj}}",
+                "compras",
+                "{{ano}}",
+                "{{seq}}",
+                "itens"
+              ]
             },
             "description": "Mesma URL da requisição 'Itens — completo', SEM tamanhoPagina.\n\nCompare o número de itens com o que /itens/quantidade informou. A resposta é HTTP 200, JSON válido, sem nenhum sinal de que está incompleta."
           }
@@ -510,20 +773,50 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "User-Agent", "value": "{{ua}}" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "User-Agent",
+                "value": "{{ua}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_search}}/?q=papel&tipos_documento=edital&status=encerrada&pagina=1&tam_pagina=1",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "search", ""],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "search",
+                ""
+              ],
               "query": [
-                { "key": "q", "value": "papel" },
-                { "key": "tipos_documento", "value": "edital" },
-                { "key": "status", "value": "encerrada", "description": "SINGULAR — inválido, ignorado sem erro" },
-                { "key": "pagina", "value": "1" },
-                { "key": "tam_pagina", "value": "1" }
+                {
+                  "key": "q",
+                  "value": "papel"
+                },
+                {
+                  "key": "tipos_documento",
+                  "value": "edital"
+                },
+                {
+                  "key": "status",
+                  "value": "encerrada",
+                  "description": "SINGULAR — inválido, ignorado sem erro"
+                },
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "tam_pagina",
+                  "value": "1"
+                }
               ]
             },
             "description": "`status=encerrada` no singular NÃO filtra nada. A API devolve 200 e o total da busca sem filtro.\n\nMesma coisa com: situacao, situacoes, data_publicacao_inicial, data_inicial, dataFinal, tem_resultado, ano (singular)."
@@ -554,20 +847,50 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "User-Agent", "value": "{{ua}}" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "User-Agent",
+                "value": "{{ua}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_search}}/?q=papel&tipos_documento=edital&status=encerradas&pagina=1&tam_pagina=1",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "search", ""],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "search",
+                ""
+              ],
               "query": [
-                { "key": "q", "value": "papel" },
-                { "key": "tipos_documento", "value": "edital" },
-                { "key": "status", "value": "encerradas", "description": "PLURAL — válido" },
-                { "key": "pagina", "value": "1" },
-                { "key": "tam_pagina", "value": "1" }
+                {
+                  "key": "q",
+                  "value": "papel"
+                },
+                {
+                  "key": "tipos_documento",
+                  "value": "edital"
+                },
+                {
+                  "key": "status",
+                  "value": "encerradas",
+                  "description": "PLURAL — válido"
+                },
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "tam_pagina",
+                  "value": "1"
+                }
               ]
             }
           }
@@ -599,20 +922,49 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "User-Agent", "value": "{{ua}}" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "User-Agent",
+                "value": "{{ua}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_search}}/?q=microscópio digital eletrônico&tipos_documento=edital&ufs=PA&pagina=1&tam_pagina=30",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "search", ""],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "search",
+                ""
+              ],
               "query": [
-                { "key": "q", "value": "microscópio digital eletrônico" },
-                { "key": "tipos_documento", "value": "edital" },
-                { "key": "ufs", "value": "PA" },
-                { "key": "pagina", "value": "1" },
-                { "key": "tam_pagina", "value": "30" }
+                {
+                  "key": "q",
+                  "value": "microscópio digital eletrônico"
+                },
+                {
+                  "key": "tipos_documento",
+                  "value": "edital"
+                },
+                {
+                  "key": "ufs",
+                  "value": "PA"
+                },
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "tam_pagina",
+                  "value": "30"
+                }
               ]
             },
             "description": "O achado que sustenta o recorte de banco de dados do TCC.\n\nUma contratação municipal de 2025 com 223 itens tem um microscópio digital no item 181. Esta busca não a retorna."
@@ -640,19 +992,47 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "User-Agent", "value": "", "disabled": false, "description": "vazio de propósito" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "User-Agent",
+                "value": "",
+                "disabled": false,
+                "description": "vazio de propósito"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_search}}/?q=papel&tipos_documento=edital&pagina=1&tam_pagina=1",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "search", ""],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "search",
+                ""
+              ],
               "query": [
-                { "key": "q", "value": "papel" },
-                { "key": "tipos_documento", "value": "edital" },
-                { "key": "pagina", "value": "1" },
-                { "key": "tam_pagina", "value": "1" }
+                {
+                  "key": "q",
+                  "value": "papel"
+                },
+                {
+                  "key": "tipos_documento",
+                  "value": "edital"
+                },
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "tam_pagina",
+                  "value": "1"
+                }
               ]
             }
           }
@@ -686,12 +1066,31 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_integra}}/v1/orgaos/10000000000003/compras/2021/1/itens",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "pncp", "v1", "orgaos", "10000000000003", "compras", "2021", "1", "itens"]
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "pncp",
+                "v1",
+                "orgaos",
+                "10000000000003",
+                "compras",
+                "2021",
+                "1",
+                "itens"
+              ]
             },
             "description": "CNPJ do exemplo do próprio Manual de Integração — existe só no ambiente de treinamento.\n\nEm produção devolve 400 com erro de validação de CNPJ. Se houvesse exigência de token, devolveria 401 antes de validar."
           }
@@ -730,19 +1129,57 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_consulta}}/v1/contratacoes/publicacao?dataInicial=20250805&dataFinal=20250805&codigoModalidadeContratacao=6&uf=PA&pagina=1&tamanhoPagina=10",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "consulta", "v1", "contratacoes", "publicacao"],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "consulta",
+                "v1",
+                "contratacoes",
+                "publicacao"
+              ],
               "query": [
-                { "key": "dataInicial", "value": "20250805", "description": "yyyyMMdd, OBRIGATÓRIO" },
-                { "key": "dataFinal", "value": "20250805", "description": "yyyyMMdd, OBRIGATÓRIO" },
-                { "key": "codigoModalidadeContratacao", "value": "6", "description": "OBRIGATÓRIO. 6=Pregão Eletrônico, 8=Dispensa" },
-                { "key": "uf", "value": "PA" },
-                { "key": "pagina", "value": "1", "description": "OBRIGATÓRIO" },
-                { "key": "tamanhoPagina", "value": "10", "description": "MÍNIMO 10 — menos que isso devolve 400" }
+                {
+                  "key": "dataInicial",
+                  "value": "20250805",
+                  "description": "yyyyMMdd, OBRIGATÓRIO"
+                },
+                {
+                  "key": "dataFinal",
+                  "value": "20250805",
+                  "description": "yyyyMMdd, OBRIGATÓRIO"
+                },
+                {
+                  "key": "codigoModalidadeContratacao",
+                  "value": "6",
+                  "description": "OBRIGATÓRIO. 6=Pregão Eletrônico, 8=Dispensa"
+                },
+                {
+                  "key": "uf",
+                  "value": "PA"
+                },
+                {
+                  "key": "pagina",
+                  "value": "1",
+                  "description": "OBRIGATÓRIO"
+                },
+                {
+                  "key": "tamanhoPagina",
+                  "value": "10",
+                  "description": "MÍNIMO 10 — menos que isso devolve 400"
+                }
               ]
             },
             "description": "A API que o Swagger anuncia como interface de consulta.\n\nDois problemas: (1) não devolve itens, só totais da compra; (2) respondeu 500/502/503/504 durante toda a janela de teste de 17/08/2026.\n\nEsta requisição serve como monitor: se voltar 200, a nota de pesquisa precisa ser atualizada."
@@ -772,23 +1209,155 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "User-Agent", "value": "{{ua}}" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "User-Agent",
+                "value": "{{ua}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_search}}/?q=*&tipos_documento=edital&ufs=PA&anos=2025&pagina=1&tam_pagina=1",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["api", "search", ""],
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "search",
+                ""
+              ],
               "query": [
-                { "key": "q", "value": "*" },
-                { "key": "tipos_documento", "value": "edital" },
-                { "key": "ufs", "value": "PA" },
-                { "key": "anos", "value": "2025" },
-                { "key": "pagina", "value": "1" },
-                { "key": "tam_pagina", "value": "1" }
+                {
+                  "key": "q",
+                  "value": "*"
+                },
+                {
+                  "key": "tipos_documento",
+                  "value": "edital"
+                },
+                {
+                  "key": "ufs",
+                  "value": "PA"
+                },
+                {
+                  "key": "anos",
+                  "value": "2025"
+                },
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "tam_pagina",
+                  "value": "1"
+                }
               ]
             }
+          }
+        },
+        {
+          "name": "Endpoint movido — o cabeçalho saiu da API de Integração (301)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('devolve 301, não 200', () => pm.response.to.have.status(301));",
+                  "const m = pm.response.json().message || '';",
+                  "console.log(m);",
+                  "pm.test('aponta para a API de Consulta', () => {",
+                  "  pm.expect(m).to.include('/api/consulta/v1/orgaos');",
+                  "});",
+                  "// Observado em 18/08/2026. Em 17/08 este mesmo endereço devolvia 200.",
+                  "// O PNCP move recursos de consulta para /api/consulta sem aviso e sem",
+                  "// versionamento: é a evidência do risco 'mudança de contrato da API'."
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_integra}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}",
+              "protocol": "https",
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "pncp",
+                "v1",
+                "orgaos",
+                "{{cnpj}}",
+                "compras",
+                "{{ano}}",
+                "{{seq}}"
+              ]
+            },
+            "description": "Desligue 'Automatically follow redirects' nas Settings do Postman para ver o 301 — com redirect ligado o Postman segue e some com a evidência."
+          }
+        },
+        {
+          "name": "A migração é PARCIAL — a API de Consulta não tem /itens (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 — itens não existem na API de Consulta', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "// Consequência para o projeto: o cabeçalho migrou, os ITENS não.",
+                  "// Preço unitário por item continua só na API de Integração, que é a",
+                  "// documentada no Manual de Integração e não no Swagger de consulta."
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_consulta}}/v1/orgaos/{{cnpj}}/compras/{{ano}}/{{seq}}/itens",
+              "protocol": "https",
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "api",
+                "consulta",
+                "v1",
+                "orgaos",
+                "{{cnpj}}",
+                "compras",
+                "{{ano}}",
+                "{{seq}}",
+                "itens"
+              ]
+            },
+            "description": "Prova que a migração do cabeçalho não levou junto os itens."
           }
         }
       ]
@@ -827,12 +1396,25 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "https://pncp.gov.br/pncp-consulta/v3/api-docs",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["pncp-consulta", "v3", "api-docs"]
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "pncp-consulta",
+                "v3",
+                "api-docs"
+              ]
             },
             "description": "Spec cru, mais confiável que a página do Swagger UI. Declara 12 endpoints, nenhum de itens.\n\nATENÇÃO: este endpoint faz parte do mesmo serviço que caiu. Se devolver 503, o serviço de consulta está fora — inclusive a documentação."
           }
@@ -841,12 +1423,25 @@
           "name": "OpenAPI — API de Integração",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "https://pncp.gov.br/pncp-api/v3/api-docs",
               "protocol": "https",
-              "host": ["pncp", "gov", "br"],
-              "path": ["pncp-api", "v3", "api-docs"]
+              "host": [
+                "pncp",
+                "gov",
+                "br"
+              ],
+              "path": [
+                "pncp-api",
+                "v3",
+                "api-docs"
+              ]
             },
             "description": "Spec da API de Integração — onde estão os endpoints de itens e resultados. Bem maior que a de consulta."
           }
