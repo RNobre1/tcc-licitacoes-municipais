@@ -18,6 +18,11 @@
 % que o próprio pacote guardou em \ufopaoriginalsection.
 \let\section\ufopaoriginalsection
 
+% Com seção em página nova, espaço zero acima do título é o certo. Em texto
+% corrido, cola o título no parágrafo anterior — daí o respiro antes e a
+% redução depois.
+\titlespacing*{\section}{0pt}{0.8\baselineskip}{0.2\baselineskip}
+
 % Sem cabeçalho nem número de página: o documento não é peça normalizada.
 \pagestyle{empty}
 
