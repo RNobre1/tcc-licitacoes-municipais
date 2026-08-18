@@ -66,12 +66,25 @@
 \RequirePackage{float}
 \RequirePackage[hidelinks]{hyperref}
 
+% --- Citação curta ------------------------------------------------------------
+% A NBR 10520 pede aspas duplas na citação de até três linhas. `\enquote{}`
+% marca a citação pela função e não pelo símbolo: as aspas certas saem do
+% idioma, e o aninhamento vira aspas simples sozinho. Carregado antes do
+% biblatex, que o usa para delimitar títulos.
+\RequirePackage[autostyle=false,style=brazilian]{csquotes}
+
 % --- Bibliografia: ABNT via biblatex -----------------------------------------
 % biblatex-abnt entrega o par exigido pelo guia: citação em caixa e baixa no
 % texto (NBR 10520:2023) e sobrenome em caixa alta na lista (NBR 6023:2018).
 % NÃO ligar a opção `accite`: ela força caixa alta na citação e viola a norma.
 \RequirePackage[backend=biber,style=abnt,repeatfields=false]{biblatex}
 \addbibresource{refs.bib}
+
+% O guia (2.4) tira as referências da regra do espaçamento 1,5: cada uma em
+% espaço simples, separadas entre si por uma linha simples em branco. Sem isto
+% a lista sai em 1,5 como o corpo — compila igual e fica fora da norma.
+\renewcommand*{\bibfont}{\normalfont\singlespacing}
+\setlength{\bibitemsep}{\baselineskip}
 
 % --- Numeração de seções ------------------------------------------------------
 % O guia limita a numeração à seção quinária e proíbe ponto após o indicativo.

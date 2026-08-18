@@ -6,16 +6,26 @@ escrever antes de saber o que ela vai querer mudar.
 
 ## O que levar
 
-Um documento de 2 a 3 páginas, com esta estrutura:
+✅ **Pronto:** [`texto/nota-inicial/main.pdf`](../../texto/nota-inicial/) — duas
+páginas, compiladas no mesmo template do TCC. Fonte em
+`texto/nota-inicial/main.tex`; recompila com `cd texto/nota-inicial && make pdf`.
 
-| Seção | Extensão | O que precisa ter |
-|---|---|---|
-| Problema | 2 parágrafos | O que a lei exige na fase preparatória e onde isso trava num município pequeno. Com citação dos artigos. |
-| Proposta | 1 parágrafo + lista | Os dois módulos, e a característica de não ser invasivo |
-| Recorte de dados | 1 parágrafo | Por que isto é um problema de banco de dados — o gancho com a área dela |
-| Viabilidade | meia página | O que já foi verificado: a lei aponta o PNCP, a API é pública, os dados existem |
-| O que já está feito | 3 linhas | Estrutura do projeto, normas da UFOPA instrumentadas |
-| Perguntas em aberto | lista | O que preciso decidir com ela |
+Não é peça normalizada: não tem capa nem folha de rosto, e a bibliografia sai em
+corpo menor para caber. O que ela precisa entregar é o argumento, não o formato.
+
+A estrutura planejada, e o que sobreviveu ao corte para duas páginas:
+
+| Seção | O que ficou |
+|---|---|
+| 1. O problema | Arts. 6º XX, 18 I/II/IV e 23 §1º I/II, conferidos no Planalto. Fecha com o motivo de a cotação direta ser o parâmetro usado na prática |
+| 2. A proposta | Os dois módulos em um parágrafo, com a cotação nomeada como núcleo, e a escolha de não se conectar ao sistema de compras |
+| 3. Por que é banco de dados | A verificação da API e o achado de que nenhuma interface pesquisa pela descrição do item. Absorveu a seção de viabilidade, que virou parágrafo |
+| 4. Como pretendo avaliar | Tempo por etapa e completude formal. Declarado como estudo de caso |
+| 5. O que preciso decidir | Cinco perguntas, as quatro administrativas fundidas em uma |
+
+Cortado por falta de espaço: a seção "o que já está feito" (estrutura do
+projeto, normas instrumentadas). Isso se conta na conversa; ocupar linha do
+documento com infraestrutura tira espaço do argumento.
 
 Não leve cronograma detalhado nem arquitetura. Nesta reunião os dois viram
 conversa, não compromisso.
@@ -62,8 +72,13 @@ Resumo do que levar para a reunião — detalhamento e evidência na nota de pes
 - **A busca do portal não alcança a descrição do item** — só o objeto da
   contratação. Isto é o achado que sustenta o recorte de banco de dados: sem
   índice próprio sobre as descrições, não há pesquisa de preço por item.
-- **A API de Consulta oficial estava fora do ar** durante toda a janela de
-  teste. Indisponibilidade da fonte é risco medido, não hipotético.
+- **A API de Consulta oficial falhou nos dois dias de teste** — fora do ar por
+  ~1h40 em 17/08, erro 500 em 18/08, ambas transitórias. Indisponibilidade da
+  fonte é risco medido, não hipotético.
+- **O contrato da API mudou entre 17 e 18/08**, sem versão e sem aviso: um
+  endpoint passou a responder 301 apontando para outro serviço. A migração é
+  parcial e não atingiu os itens, então o projeto segue de pé — mas o episódio
+  é a evidência de que teste de contrato não é zelo excessivo aqui.
 - **A paginação falha em silêncio:** o padrão devolve 10 itens de uma
   contratação que tem 223, com HTTP 200 e sem aviso.
 

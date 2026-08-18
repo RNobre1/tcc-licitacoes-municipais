@@ -1,0 +1,134 @@
+% =============================================================================
+% Nota de projeto para a primeira reunião de orientação — 18/08/2026
+% UFOPA / IEG — Bacharelado em Ciência da Computação
+%
+% Não é o pré-projeto. É o documento curto que abre a conversa: o problema, a
+% proposta, o que já foi verificado e o que precisa ser decidido com a
+% orientadora. O pré-projeto nasce depois, com o recorte já acertado.
+%
+% Formatação vem inteira de ../comum/ufopa-tcc.sty. Não configure nada aqui.
+% =============================================================================
+
+\documentclass[12pt,a4paper,oneside]{article}
+
+\usepackage{ufopa-tcc}
+
+% O preâmbulo do TCC abre nova página a cada seção primária, como manda a norma
+% para monografia. Aqui são duas páginas corridas: restauro o \section original,
+% que o próprio pacote guardou em \ufopaoriginalsection.
+\let\section\ufopaoriginalsection
+
+% Sem cabeçalho nem número de página: o documento não é peça normalizada.
+\pagestyle{empty}
+
+\ufopatitulo{Sistemas inteligentes aplicados à gestão pública}
+\ufopasubtitulo{automação da fase preparatória e pesquisa de preços em
+  licitações municipais}
+\ufopaautor{Rafael Nobre de Souza}
+\ufopaorientador{Prof.\textsuperscript{a} Socorro Vânia Lourenço Alves}
+\ufopainstituicao{Universidade Federal do Oeste do Pará}
+\ufopalocal{Santarém --- Pará}
+\ufopaano{2026}
+
+\begin{document}
+
+\begin{center}
+  \begin{singlespace}
+    {\bfseries\MakeUppercase{Sistemas inteligentes aplicados à gestão pública:}}\\
+    {\bfseries automação da fase preparatória e pesquisa de preços em licitações
+     municipais}\\[8pt]
+    {\small Rafael Nobre de Souza \quad$\vert$\quad
+     Orientadora: \ufopaimprimirorientador\\
+     Nota de projeto para a primeira reunião de orientação --- 18 de agosto de 2026}
+  \end{singlespace}
+\end{center}
+
+\section*{1\quad O problema}
+
+A Lei nº 14.133/2021 caracteriza a fase preparatória da licitação como
+planejamento e exige que a necessidade seja fundamentada em estudo técnico
+preliminar, que o objeto seja definido em termo de referência e que o orçamento
+estimado traga as composições dos preços utilizados (art.~18, incisos I, II e
+IV). Em um município pequeno isso recai sobre poucos servidores, sem apoio
+técnico dedicado, que produzem cada documento manualmente e refazem o trabalho
+quando o processo volta com apontamento do controle interno ou do
+assessoramento jurídico.
+
+A etapa mais custosa é a pesquisa de preços. A lei quer o valor estimado
+compatível com o mercado a partir de bancos de dados públicos, e admite entre
+seus parâmetros a mediana do item no painel de preços do Portal Nacional de
+Contratações Públicas (PNCP) e as contratações similares concluídas no ano
+anterior (art.~23, §1º, incisos I e II). Na prática o servidor recorre à cotação
+direta com fornecedores, o parâmetro mais frágil, porque consultar o histórico
+de contratações item a item é hoje trabalho manual inviável.
+
+\section*{2\quad A proposta}
+
+Um sistema de apoio à fase preparatória, com dois módulos sobre a mesma base:
+\textbf{pesquisa de preços} --- o núcleo do trabalho ---, que monta a cesta de
+preços de cada item a partir de contratações públicas já homologadas,
+registrando a procedência de cada valor; e \textbf{apoio à redação}, que gera
+minutas de estudo técnico preliminar e termo de referência a partir dos dados
+já levantados.
+
+O sistema não se conecta ao sistema de compras do município: produz o documento
+e a memória de cálculo, que o servidor revisa, altera e assina. A escolha reduz
+o risco institucional de adoção e mantém a responsabilidade legal onde a lei a
+coloca.
+
+\section*{3\quad Por que isto é um problema de banco de dados}
+
+Verifiquei a API pública do PNCP em 17 e 18 de agosto, com requisições reais.
+O preço unitário homologado por item é público, e a varredura por município e
+período funciona --- um mês inteiro do Pará traz 821 contratações em cerca de
+8 segundos. Mas \textbf{nenhuma das interfaces pesquisa pela descrição do
+item}: a busca do portal casa o termo contra o objeto da contratação. Uma
+contratação com 223 itens, cujo item 181 é um microscópio digital, não aparece
+na busca por \enquote{microscópio digital} no Pará.
+
+A consequência define o trabalho: é preciso percorrer as contratações, baixar
+os itens de cada uma e \emph{construir um índice próprio sobre as descrições}
+--- texto livre de até 2048 caracteres, escrito por servidor diferente em cada
+município, sem catálogo preenchido. \enquote{Papel A4 75~g/m²} e \enquote{resma
+de papel sulfite A4 gramatura 75} são o mesmo produto e não casam por igualdade
+de texto. Modelagem, indexação e busca por similaridade não são acessório
+tecnológico: são a condição do módulo.
+
+Os riscos também foram medidos, e não supostos: a coleta devolve 10 itens de
+uma contratação que tem 223 sem sinalizar erro; filtro escrito errado é
+ignorado em silêncio; o serviço ficou fora do ar por cerca de 1h40 e falhou de
+novo no dia seguinte; um endereço da API mudou de lugar entre 17 e 18 de
+agosto, sem aviso. Caracterizar essas limitações é parte do resultado.
+
+\section*{4\quad Como pretendo avaliar}
+
+Duas medidas, sobre uso real em uma prefeitura de pequeno porte: o
+\textbf{tempo por etapa}, contra uma linha de base medida antes da adoção; e a
+\textbf{completude formal} do documento gerado, verificada automaticamente
+contra os elementos dos arts.~6º e 18. É estudo de caso: um único município.
+
+\section*{5\quad O que preciso decidir com a senhora}
+
+\begin{enumerate}\setlength{\itemsep}{0pt}
+  \item Os dois módulos cabem em dois semestres, ou o trabalho deve se limitar
+    à pesquisa de preços?
+  \item O eixo de banco de dados basta, ou prefere puxar para um lado ---
+    similaridade, modelagem temporal de preços, auditabilidade?
+  \item A contribuição precisa ser uma pergunta de pesquisa com resposta
+    medida, ou um sistema avaliado em campo já atende? O desenho da seção 4
+    serve?
+  \item A Instrução Normativa SEGES/ME nº 65/2021, que regula a pesquisa de
+    preços, é federal --- mas o art.~187 permite que municípios apliquem os
+    regulamentos da União. Adoto a IN 65 como referência metodológica?
+  \item Titulação e natureza do trabalho para a folha de rosto do TCC~I; datas
+    de 2026.2; e se o produto pode ser artigo publicado.
+\end{enumerate}
+
+% Corpo menor só aqui: esta nota não é peça normalizada, e as duas referências
+% legislativas têm URL longa. No TCC vale o tamanho do pacote, sem este ajuste.
+\renewcommand*{\bibfont}{\small\singlespacing}
+
+\nocite{brasil2021lei14133,brasil2021in65}
+\printbibliography[title={Referências}]
+
+\end{document}
