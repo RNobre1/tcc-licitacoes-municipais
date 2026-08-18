@@ -17,12 +17,12 @@ from __future__ import annotations
 
 import re
 import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
 
 from scripts import normas_ufopa
+from tests.execucao import executar
 from tests.leitura_pdffonts import fontes_bitmap, fontes_nao_embutidas
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -45,11 +45,9 @@ def pdf(request) -> Path:
     """Compila o documento e devolve o caminho do PDF."""
     _exige("latexmk")
     projeto = RAIZ / "texto" / request.param
-    resultado = subprocess.run(
+    resultado = executar(
         ["latexmk", "-pdf", "-interaction=nonstopmode", "-halt-on-error", "main.tex"],
         cwd=projeto,
-        capture_output=True,
-        text=True,
     )
     destino = projeto / "main.pdf"
     if resultado.returncode != 0 or not destino.is_file():
@@ -64,17 +62,12 @@ def pdf(request) -> Path:
 
 def _texto(pdf: Path) -> str:
     _exige("pdftotext")
-    return subprocess.run(
-        ["pdftotext", "-layout", str(pdf), "-"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout
+    return executar(["pdftotext", "-layout", str(pdf), "-"], exigir_sucesso=True).stdout
 
 
 def _info(pdf: Path) -> dict[str, str]:
     _exige("pdfinfo")
-    saida = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True, check=True).stdout
+    saida = executar(["pdfinfo", str(pdf)], exigir_sucesso=True).stdout
     return dict(
         (chave.strip(), valor.strip())
         for chave, _, valor in (linha.partition(":") for linha in saida.splitlines())
@@ -96,11 +89,9 @@ def _caixas_de_palavra(pdf: Path, pagina: int) -> list[tuple[float, float, float
     dependência só para ler quatro atributos numéricos.
     """
     _exige("pdftotext")
-    bruto = subprocess.run(
+    bruto = executar(
         ["pdftotext", "-bbox", "-f", str(pagina), "-l", str(pagina), str(pdf), "-"],
-        capture_output=True,
-        text=True,
-        check=True,
+        exigir_sucesso=True,
     ).stdout
     return [
         (float(x0), float(y0), float(x1), float(y1))
@@ -121,9 +112,7 @@ def test_pagina_e_a4(pdf: Path):
 def test_fonte_do_corpo_e_times(pdf: Path):
     """O guia admite Times ou Arial; o projeto usa Times (via Nimbus Roman)."""
     _exige("pdffonts")
-    fontes = subprocess.run(
-        ["pdffonts", str(pdf)], capture_output=True, text=True, check=True
-    ).stdout
+    fontes = executar(["pdffonts", str(pdf)], exigir_sucesso=True).stdout
     assert re.search(r"Times|NimbusRom", fontes, re.IGNORECASE), (
         f"nenhuma fonte Times/Nimbus Roman embutida:\n{fontes}"
     )
@@ -132,9 +121,7 @@ def test_fonte_do_corpo_e_times(pdf: Path):
 def test_todas_as_fontes_estao_embutidas(pdf: Path):
     """PDF de entrega com fonte não embutida troca de tipografia na banca."""
     _exige("pdffonts")
-    saida = subprocess.run(
-        ["pdffonts", str(pdf)], capture_output=True, text=True, check=True
-    ).stdout
+    saida = executar(["pdffonts", str(pdf)], exigir_sucesso=True).stdout
     nao_embutidas = fontes_nao_embutidas(saida)
     assert nao_embutidas == [], f"fontes não embutidas: {nao_embutidas}\n{saida}"
 
@@ -147,9 +134,7 @@ def test_nenhuma_fonte_e_bitmap(pdf: Path):
     embutidas — por isso o teste acima não pega.
     """
     _exige("pdffonts")
-    saida = subprocess.run(
-        ["pdffonts", str(pdf)], capture_output=True, text=True, check=True
-    ).stdout
+    saida = executar(["pdffonts", str(pdf)], exigir_sucesso=True).stdout
     bitmap = fontes_bitmap(saida)
     assert bitmap == [], f"fontes rasterizadas: {bitmap} — falta cm-super?\n{saida}"
 
