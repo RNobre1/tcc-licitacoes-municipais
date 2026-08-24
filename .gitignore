@@ -40,7 +40,14 @@ dados-dominio/
 *.vrb
 
 # PDF é artefato de saída. Versionar só em release (tag), nunca no fluxo normal.
-texto/**/main.pdf
+# PDF de saída fica fora do versionamento. A regra é POSIÇÃO, não nome: qualquer
+# .pdf na raiz de um documento é produto de compilação. A versão anterior desta
+# linha era `texto/**/main.pdf`, e quando o alvo SBC nasceu em 24/08/2026 o
+# main-sbc.pdf caiu fora dela — regra que nomeia o arquivo de hoje deixa o de
+# amanhã entrar sem avisar. Coberto por tests/test_arvore_versionada.py.
+#
+# PDF em subpasta (figuras/, por exemplo) NÃO é atingido: é insumo, não saída.
+texto/*/*.pdf
 
 # --- Vault -------------------------------------------------------------------
 # Fichamentos .md são versionados; os PDFs dos trabalhos, não (volume e direito
