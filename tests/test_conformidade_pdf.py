@@ -16,12 +16,12 @@ E o resto com:
 from __future__ import annotations
 
 import re
-import shutil
 from pathlib import Path
 
 import pytest
 
 from scripts import normas_ufopa
+from tests import leitura_pdf
 from tests.execucao import executar
 from tests.leitura_pdffonts import fontes_bitmap, fontes_nao_embutidas
 
@@ -33,70 +33,20 @@ pytestmark = pytest.mark.lento
 
 
 # --- Infraestrutura -----------------------------------------------------------
+# A leitura do PDF vive em tests/leitura_pdf.py desde que o alvo SBC passou a
+# precisar dos mesmos utilitários. Ver a nota naquele módulo: duas suítes com
+# duas cópias das mesmas funções seria a duplicação que o projeto proíbe.
 
-
-def _exige(binario: str) -> None:
-    if shutil.which(binario) is None:
-        pytest.skip(f"'{binario}' não encontrado no PATH")
+_exige = leitura_pdf.exige
+_texto = leitura_pdf.texto
+_info = leitura_pdf.info
+_caixas_de_palavra = leitura_pdf.caixas_de_palavra
 
 
 @pytest.fixture(scope="session", params=DOCUMENTOS)
 def pdf(request) -> Path:
     """Compila o documento e devolve o caminho do PDF."""
-    _exige("latexmk")
-    projeto = RAIZ / "texto" / request.param
-    resultado = executar(
-        ["latexmk", "-pdf", "-interaction=nonstopmode", "-halt-on-error", "main.tex"],
-        cwd=projeto,
-    )
-    destino = projeto / "main.pdf"
-    if resultado.returncode != 0 or not destino.is_file():
-        log = (projeto / "main.log").read_text(encoding="utf-8", errors="replace")
-        erros = [linha for linha in log.splitlines() if linha.startswith("!")]
-        pytest.fail(
-            f"compilação de texto/{request.param} falhou.\n"
-            + "\n".join(erros[:10] or resultado.stdout.splitlines()[-15:])
-        )
-    return destino
-
-
-def _texto(pdf: Path) -> str:
-    _exige("pdftotext")
-    return executar(["pdftotext", "-layout", str(pdf), "-"], exigir_sucesso=True).stdout
-
-
-def _info(pdf: Path) -> dict[str, str]:
-    _exige("pdfinfo")
-    saida = executar(["pdfinfo", str(pdf)], exigir_sucesso=True).stdout
-    return dict(
-        (chave.strip(), valor.strip())
-        for chave, _, valor in (linha.partition(":") for linha in saida.splitlines())
-        if chave.strip()
-    )
-
-
-_ATRIBUTOS_DA_CAIXA = re.compile(
-    r'xMin="([\d.]+)"\s+yMin="([\d.]+)"\s+xMax="([\d.]+)"\s+yMax="([\d.]+)"'
-)
-
-
-def _caixas_de_palavra(pdf: Path, pagina: int) -> list[tuple[float, float, float, float]]:
-    """Coordenadas (x0, y0, x1, y1) de cada palavra de uma página, em pontos.
-
-    A saída de ``pdftotext -bbox`` é XHTML, mas é lida por expressão regular de
-    propósito: um parser XML da stdlib sobre conteúdo derivado de PDF abriria
-    espaço para XXE e billion-laughs, e a alternativa (defusedxml) seria uma
-    dependência só para ler quatro atributos numéricos.
-    """
-    _exige("pdftotext")
-    bruto = executar(
-        ["pdftotext", "-bbox", "-f", str(pagina), "-l", str(pagina), str(pdf), "-"],
-        exigir_sucesso=True,
-    ).stdout
-    return [
-        (float(x0), float(y0), float(x1), float(y1))
-        for x0, y0, x1, y1 in _ATRIBUTOS_DA_CAIXA.findall(bruto)
-    ]
+    return leitura_pdf.compilar(RAIZ / "texto" / request.param, "main.tex")
 
 
 # --- Página -------------------------------------------------------------------
