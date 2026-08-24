@@ -1,0 +1,78 @@
+% =============================================================================
+% TCC I — alvo SBC (formato de artigo)
+% UFOPA / IEG — Bacharelado em Ciência da Computação
+%
+% Alvo PRINCIPAL do texto, decidido em 24/08/2026. O irmão main.tex produz o
+% mesmo conteúdo no layout do guia do SIBI, exigido pela biblioteca no depósito.
+%
+% As duas SEÇÕES INCLUÍDAS ABAIXO SÃO AS MESMAS, na mesma ordem, e é assim que
+% tem de continuar: tests/test_conformidade_sbc.py compara a lista de \input dos
+% dois alvos e falha se divergirem. Layout duplicado é a decisão; prosa
+% duplicada é o defeito que ela não autoriza.
+%
+% Este arquivo só declara os dados do trabalho e a ordem das seções. Toda a
+% formatação vive em ../comum/sbc-tcc.sty e, abaixo dele, no sbc-template.sty
+% publicado pela SBC. Não configure nada aqui.
+% =============================================================================
+
+\documentclass[12pt]{article}
+
+\usepackage{sbc-tcc}
+
+% --- Dados do trabalho -------------------------------------------------------
+% O formato SBC não leva titulação no nome do autor — só o nome. A pendência da
+% titulação da orientadora, que a folha de rosto do alvo do SIBI ainda carrega,
+% portanto não bloqueia este alvo.
+%
+% Orientadora como coautora segue o Art. 7º, § 2º do regulamento do curso, que
+% exige o discente como autor principal e o orientador como coautor no artigo
+% submetido a evento ou periódico.
+\title{Sistemas inteligentes aplicados à gestão pública: automação da fase
+  preparatória e pesquisa de preços em licitações municipais}
+
+\author{Rafael Nobre de Souza\inst{1}, Socorro Vânia Lourenço Alves\inst{1}}
+
+% A quebra explícita depois de "Geociências" não é estética: o \address do
+% sbc-template centraliza sem quebrar sozinho, e o nome do instituto somado ao da
+% universidade estoura a mancha em 26 pt numa única linha.
+\address{Instituto de Engenharia e Geociências\\
+  Universidade Federal do Oeste do Pará (UFOPA)\\
+  Santarém --- PA --- Brasil
+  \email{\pendente{endereços institucionais, conferidos antes da entrega}}}
+
+\begin{document}
+
+\maketitle
+
+% --- Resumo e abstract --------------------------------------------------------
+% O formato SBC pede resumo e abstract com no máximo 10 linhas cada, ambos na
+% primeira página. É limite mais apertado que as 150 a 500 palavras que a NBR
+% 6028 impõe ao alvo do SIBI: o mesmo conteúdo vai precisar de duas versões de
+% resumo, e essa é a única duplicação de prosa que os dois alvos justificam.
+\begin{resumo}
+  \pendente{Escrever ao fechar a metodologia. No máximo 10 linhas, cobrindo
+  objetivo, método, resultados esperados e contribuição. Não reaproveitar o
+  resumo do alvo do SIBI sem cortar: ele é dimensionado para até 500 palavras.}
+\end{resumo}
+
+\begin{abstract}
+  \pendente{Versão do resumo em inglês, escrita depois que o resumo em
+  português estabilizar. Traduzir o texto final, não escrever um resumo
+  diferente.}
+\end{abstract}
+
+% --- Elementos textuais -------------------------------------------------------
+% Mesma lista, mesma ordem que main.tex. Ver o aviso no cabeçalho.
+\input{secoes/01-introducao}
+\input{secoes/02-objetivos}
+\input{secoes/03-fundamentacao}
+\input{secoes/04-metodologia}
+\input{secoes/05-resultados-esperados}
+\input{secoes/06-cronograma}
+
+% --- Referências --------------------------------------------------------------
+% bibtex com sbc.bst, não biber com biblatex-abnt. Ver a nota em sbc-tcc.sty
+% sobre os campos que o estilo de 2001 não imprime.
+\ufopabibliografiasbc{refs}
+
+\end{document}

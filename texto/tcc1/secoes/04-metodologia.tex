@@ -1,0 +1,79 @@
+\section{Metodologia}
+\label{sec:metodologia}
+
+\pendente{Descrever o percurso metodológico completo, incluindo classificação
+da pesquisa, procedimentos de levantamento de requisitos, processo de
+desenvolvimento e forma de avaliação.}
+
+\subsection{Classificação da pesquisa}
+
+\pendente{Natureza, objetivos e procedimentos técnicos, com a fonte
+metodológica que sustenta a classificação.}
+
+\subsection{Levantamento de requisitos}
+
+\pendente{Entrevistas com servidores do setor de licitações e análise de
+documentos reais de processos já encerrados. Registrar em
+\code{TCC/requisitos/} cada sessão: o que foi dito, o que foi inferido e o que
+ficou em aberto.}
+
+\subsection{Tratamento dos dados de domínio}
+
+Documentos reais de processos licitatórios não são versionados nem reproduzidos
+no texto. Cada documento recebido é mantido fora do repositório e dele se deriva
+uma versão sintética, com a mesma estrutura e nenhum dado verdadeiro, que é a
+única utilizada em testes, exemplos e ilustrações deste trabalho.
+
+\pendente{Detalhar o procedimento de derivação e discutir suas limitações para
+a avaliação da solução.}
+
+\subsection{Arquitetura da solução}
+
+\pendente{Esta subseção recebeu, por decisão de 24/08/2026, o conteúdo técnico
+que antes ocupava o referencial teórico. O motivo: recuperação de informação e
+representação vetorial não são base teórica emprestada de terceiros neste
+trabalho --- são a contribuição, e o modelo do curso é explícito em não admitir
+nova revisão bibliográfica dentro do desenvolvimento.}
+
+\subsubsection{Recuperação de informação sobre a legislação e os modelos}
+
+\pendente{Recuperação aumentada por geração aplicada à legislação e aos modelos
+de documento já aprovados. Descrever a estratégia de fragmentação, o modelo de
+representação escolhido e o critério de recuperação. Há material reaproveitável
+dos fichamentos da Iniciação Científica, mas cada citação precisa ser
+reconferida contra o PDF.}
+
+\pendente{Posicionar contra o contra-argumento levantado no levantamento de
+literatura: há trabalho publicado sustentando que recuperação plana sobre
+documento não estruturado limita raciocínio de múltiplos saltos quando os dados
+são estruturados. Responder explicitamente, não por omissão.}
+
+\subsubsection{Persistência e trilha de auditoria}
+
+\pendente{Modelagem relacional, indexação de dados semiestruturados vindos da
+API do PNCP, e versionamento com trilha que permita reproduzir uma pesquisa de
+preços exatamente como ela era na data em que foi realizada. Este é o eixo de
+maior interesse para a orientação e a lacuna mais defensável do trabalho.}
+
+\pendente{Decisão entre persistência vetorial dedicada e a extensão do
+PostgreSQL. A evidência é a Iniciação Científica em andamento no PET-EG, que
+compara desempenho entre os dois caminhos. Critério acrescentado pela
+orientação: verificar contra a natureza dos dados a tratar, não só o desempenho
+medido. Se a decisão se apoiar em medição própria em vez de literatura, dizer
+isso no texto --- não é evidência revisada por pares.}
+
+\subsection{Desenvolvimento}
+
+\pendente{Processo de desenvolvimento, com testes automatizados como critério
+de conclusão de cada incremento.}
+
+\subsection{Avaliação}
+
+\pendente{Definir como a solução será avaliada e contra o quê. Sem uma linha de
+base medida antes da intervenção, não há como afirmar redução de esforço ---
+planejar a coleta dessa linha de base ainda em TCC I.}
+
+\pendente{A etapa de verificação pelo órgão de controle ficou fora do escopo
+obrigatório por decisão da orientação em 19/08/2026: o tempo de resposta do
+órgão não é previsível e não cabe em planejamento. Reaproveitável no fim, se
+houver tempo.}
