@@ -1,0 +1,113 @@
+% =============================================================================
+% Preâmbulo do alvo SBC, compartilhado por TCC I e TCC II.
+%
+% Este arquivo NÃO redefine geometria, corpo, entrelinha, recuo ou legenda: tudo
+% isso vem de sbc/sbc-template.sty, que é o artefato publicado pela Sociedade
+% Brasileira de Computação e a fonte única do formato. Reescrever uma medida
+% aqui criaria um segundo lugar que precisaria concordar com o primeiro, e o
+% teste tests/test_conformidade_sbc.py mede o PDF contra o .sty, não contra
+% este arquivo — então a divergência apareceria como falha, não como aviso.
+%
+% O que este arquivo faz é só duas coisas:
+%
+%   1. Suprir o que o .sty da SBC, de 2001, não traz: codificação de entrada em
+%      UTF-8, hifenização do português e os pacotes de tabela que as seções usam.
+%   2. Fornecer as macros de autoria do projeto — \pendente, \code e \fonte —
+%      com a mesma assinatura que ufopa-tcc.sty define, para que texto/tcc*/secoes/
+%      compile sob os dois alvos sem uma única linha condicional.
+%
+% O item 2 é o que sustenta a regra de fonte única no texto: dois layouts,
+% um conteúdo.
+% =============================================================================
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{sbc-tcc}[2026/08/24 Alvo SBC do TCC, sobre o sbc-template da SBC]
+
+% --- O formato canônico ------------------------------------------------------
+% Carrega geometry (A4, margens 3,5/2,5/3/3), times, caption2, \normalsize em
+% 12/14 pt, \parindent 1,27cm, \parskip 6pt, \inst, \email, \nextinstitute e a
+% redefinição de thebibliography sem rótulo entre colchetes.
+\RequirePackage{sbc-template}
+
+% O sbc-template.tex de exemplo publicado pela SBC declara \sloppy, e este alvo
+% precisa dele pelo mesmo motivo: sem microtype (ver abaixo) e com margens de
+% 3 cm em coluna única, uma linha com termo técnico longo estoura a mancha.
+% Medido: sem \sloppy, este documento produzia dois `Overfull \hbox`, um deles
+% de 6,9 pt para fora da margem direita.
+%
+% Fica aqui, e não no .tex, porque é decisão de formato — a mesma razão pela qual
+% nenhuma outra configuração mora no documento.
+\sloppy
+
+% --- Codificação e idioma ----------------------------------------------------
+% O sbc-template.tex de exemplo usa latin1, herança de 2001. As seções deste
+% repositório são UTF-8, e mudá-las para acompanhar o exemplo seria deixar o
+% insumo externo ditar a codificação do que é nosso.
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[brazil]{babel}
+
+% --- Pacotes que as seções compartilhadas exigem ------------------------------
+% Mantidos em paridade com ufopa-tcc.sty. Um pacote que exista lá e não aqui
+% aparece como erro de compilação no alvo SBC, não como diferença silenciosa.
+%
+% Ausentes de propósito:
+%   caption   — conflita com o caption2 que o sbc-template já carrega
+%   setspace  — o formato SBC é espaçamento simples; não há 1,5 para excetuar
+%   microtype — a protrusão óptica muda a quebra de linha, e com orçamento de
+%               25 páginas a contagem precisa ser a mesma que o revisor verá
+%   titlesec  — os títulos do formato SBC vêm do article, sem customização
+%   fancyhdr  — o formato SBC não leva cabeçalho corrido
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{url}
+\RequirePackage{array}
+\RequirePackage{tabularx}
+\RequirePackage{booktabs}
+\RequirePackage{longtable}
+\RequirePackage{float}
+\RequirePackage[hidelinks]{hyperref}
+
+% --- Macros de autoria do projeto --------------------------------------------
+% Mesma assinatura e mesma semântica de ufopa-tcc.sty. Divergir aqui faria a
+% mesma seção significar coisas diferentes em cada alvo.
+
+% Marcador de trecho não escrito. Vermelho e explícito de propósito: pendência
+% que não incomoda ao ler é pendência que vai para a banca.
+\newcommand{\pendente}[1]{{\color{red}\textbf{[PENDENTE]} \textit{#1}}}
+
+% Trecho de código, nome de arquivo, endpoint ou parâmetro, em monoespaçada.
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+% Bloco em espaço simples. No alvo do SIBI isto abre um `singlespace` do
+% setspace, porque lá o corpo é 1,5 e o guia excetua tabela, legenda e nota. Aqui
+% é deliberadamente vazio: o formato SBC já é espaço simples de ponta a ponta,
+% então o efeito pedido pela seção já está em vigor.
+%
+% O ambiente existe nos dois alvos com o mesmo nome para que a seção
+% compartilhada peça o efeito sem nomear o mecanismo. Removê-lo daqui volta a
+% quebrar a compilação deste alvo em `secoes/07-cronograma.tex`.
+\newenvironment{ufopaespacosimples}{}{}
+
+% Fonte da ilustração ou tabela, logo abaixo do elemento, em corpo menor.
+% Obrigatória mesmo quando o elemento é do autor. Sem o ambiente singlespace da
+% versão do alvo do SIBI, porque aqui o documento inteiro já é espaço simples.
+\newcommand{\fonte}[1]{%
+  \noindent{\footnotesize Fonte: #1}%
+}
+
+% --- Bibliografia -------------------------------------------------------------
+% O alvo SBC usa bibtex clássico com sbc.bst, e não biblatex com biber como o
+% alvo do SIBI. Não é preferência: sbc.bst é o que os congressos da SBC aceitam,
+% e reimplementar o estilo em biblatex produziria algo parecido que não é ele.
+%
+% Consequência a vigiar: sbc.bst é de 2001 e ignora os campos que o biblatex
+% introduziu. Em refs.bib isso atinge `subtitle` e `urldate`, usados nas entradas
+% de legislação — o dado não desaparece do arquivo, mas não sai impresso neste
+% alvo. Quando essas entradas forem citadas de fato, conferir a saída.
+\newcommand{\ufopabibliografiasbc}[1]{%
+  \bibliographystyle{sbc}%
+  \bibliography{#1}%
+}
+
+\endinput

@@ -358,6 +358,15 @@
 % Trecho de código, nome de arquivo, endpoint ou parâmetro, em monoespaçada.
 \newcommand{\code}[1]{\texttt{\small #1}}
 
+% Bloco em espaço simples, para as exceções do guia (§2.4): tabela, legenda,
+% nota. Existe para que as seções compartilhadas NÃO chamem `singlespace`
+% diretamente — `singlespace` vem do setspace, que só é carregado porque este
+% alvo é 1,5 e precisa da exceção. No alvo SBC o documento inteiro já é espaço
+% simples, e uma seção que nomeasse o mecanismo quebraria a compilação lá.
+%
+% Regra: seção compartilhada pede o efeito, não o mecanismo.
+\newenvironment{ufopaespacosimples}{\begin{singlespace}}{\end{singlespace}}
+
 % Fonte da ilustração ou tabela (2.10 e 2.11): logo abaixo do elemento, em
 % corpo menor e espaço simples. Obrigatória mesmo quando o elemento é do autor.
 \newcommand{\fonte}[1]{%

@@ -1,0 +1,21 @@
+# Configuração de caminhos compartilhada por texto/tcc1 e texto/tcc2.
+#
+# FONTE ÚNICA: os .latexmkrc dos documentos só fazem `do` deste arquivo. Antes de
+# 24/08/2026 cada documento carregava a sua própria cópia destas linhas, e a
+# divergência apareceu na primeira vez que uma delas precisou mudar — o alvo SBC
+# passou a exigir BSTINPUTS, e só um dos dois tinha.
+#
+# Torna texto/comum/ visível para \usepackage e \addbibresource sem caminho
+# relativo embutido no .tex, o que quebraria ao compilar de outro diretório.
+#
+# ../comum/sbc/ entra pelo alvo SBC (main-sbc.tex): o sbc-template.sty e o
+# sbc.bst são insumos externos publicados pela SBC e ficam isolados naquele
+# diretório justamente para não se misturarem ao que é nosso.
+#
+# BSTINPUTS é separado de BIBINPUTS: o bibtex procura o estilo (.bst) em um e a
+# base (.bib) no outro, e omitir o primeiro faz a bibliografia sair vazia sem que
+# o LaTeX reclame — o sintoma é um `[?]` no PDF e um aviso só no .blg.
+
+$ENV{'TEXINPUTS'} = '../comum:../comum/sbc:' . ($ENV{'TEXINPUTS'} // '');
+$ENV{'BIBINPUTS'} = '../comum:' . ($ENV{'BIBINPUTS'} // '');
+$ENV{'BSTINPUTS'} = '../comum/sbc:' . ($ENV{'BSTINPUTS'} // '');
