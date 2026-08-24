@@ -4,6 +4,12 @@
 % FONTE ÚNICA: não crie um .bib por documento. A bibliografia cresce de TCC I
 % para TCC II sem ser recopiada.
 %
+% COMENTÁRIO VAI ANTES DA ENTRADA, NUNCA DENTRO DELA. O alvo SBC usa bibtex
+% clássico, que interrompe a leitura da entrada ao encontrar `%` entre os campos
+% e a descarta inteira — com aviso apenas no `.blg`, que ninguém lê, e um `[?]`
+% no PDF como único sintoma. O biblatex do alvo do SIBI aceita as duas formas, e
+% foi por isso que o defeito ficou dormente até o segundo alvo existir.
+%
 % REGRA DE RIGOR — não fabricar metadados. Antes de usar uma entrada no texto,
 % confira cada campo contra a fonte primária (o PDF do artigo, o portal oficial
 % da norma) e remova o marcador VERIFICAR. Reconstruir dados de citação a
@@ -13,9 +19,9 @@
 
 % --- Legislação e normas ------------------------------------------------------
 
+% Conferido em 18/08/2026 no texto compilado do Planalto:
+% planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14133.htm
 @misc{brasil2021lei14133,
-  % Conferido em 18/08/2026 no texto compilado do Planalto:
-  % planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14133.htm
   author       = {{Brasil}},
   title        = {Lei nº 14.133, de 1º de abril de 2021},
   subtitle     = {Lei de Licitações e Contratos Administrativos},
@@ -27,13 +33,13 @@
   keywords     = {legislacao, licitacoes},
 }
 
+% Conferido em 18/08/2026 na página oficial do Portal de Compras.
+% Ementa, transcrita do Art. 1º e mantida aqui em vez de no campo `note`
+% porque a NBR 6023 não a exige e ela dobra o tamanho da entrada impressa:
+% "Dispõe sobre o procedimento administrativo para a realização de pesquisa
+% de preços para aquisição de bens e contratação de serviços em geral, no
+% âmbito da administração pública federal direta, autárquica e fundacional."
 @misc{brasil2021in65,
-  % Conferido em 18/08/2026 na página oficial do Portal de Compras.
-  % Ementa, transcrita do Art. 1º e mantida aqui em vez de no campo `note`
-  % porque a NBR 6023 não a exige e ela dobra o tamanho da entrada impressa:
-  % "Dispõe sobre o procedimento administrativo para a realização de pesquisa
-  % de preços para aquisição de bens e contratação de serviços em geral, no
-  % âmbito da administração pública federal direta, autárquica e fundacional."
   author       = {{Brasil}},
   title        = {Instrução Normativa SEGES/ME nº 65, de 7 de julho de 2021},
   location     = {Brasília, DF},
