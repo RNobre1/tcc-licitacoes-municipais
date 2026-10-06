@@ -36,6 +36,7 @@ O que destrava mais coisa adiante, em ordem.
 | C3 | Levantar candidatos a modelo de representação e rodar a bateria contra C2 | Autor | aberto | Fecha A2 |
 | C4 | Escrever a seção de resultados esperados | Autor | aberto | Último vazio do texto |
 | C5 | Sessão de julgamento às cegas com a fonte de domínio | Fonte de domínio | aberto | **Condição** para a medição ter conclusão nos dois sentidos |
+| C6 | **Escrever o roteiro da sessão de observação do banco de preços** | Autor | aberto | É o pré-requisito de C5, e precisa existir antes de marcar a sessão |
 
 Sobre C2: foi confirmado em 06/10/2026 que o gabarito pode ser montado do
 material já entregue. Os relatórios de cotação trazem, por item, a descrição do
@@ -44,6 +45,37 @@ que foi pedido e as descrições dos preços escolhidos com procedência. Medido
 pública — 85%. **A antiga pendência "planilha de entrada de cotações encerradas"
 deixou de existir**, e com ela a afirmação de que sem esse par a avaliação não
 existiria.
+
+### Sobre C6: o roteiro que ainda não existe
+
+A sessão de C5 não é entrevista, é **observação de uso** com uma tarefa de
+julgamento ao fim. São dois momentos distintos, e o roteiro precisa separá-los.
+
+**Primeiro momento — observar.** Ela abre o banco de preços e cota alguns itens
+enquanto narra o que está fazendo. O que se registra é o que hoje não existe em
+documento nenhum: que termo ela digitou, quantos candidatos voltaram, quais ela
+olhou, **quais descartou e por quê**, e em que ordem aplicou os filtros. O
+registro do descarte é o que falta no gabarito atual, e é o produto principal.
+
+**Segundo momento — julgar às cegas.** Apresentar a ela uma lista de candidatos
+para alguns itens, misturando resultados de métodos diferentes, embaralhados e
+sem indicar a origem de cada um, e pedir que diga quais aceitaria. É o que
+corrige o viés descrito em C5 — e precisa ser cego, senão repete o viés com o
+sinal trocado.
+
+O que o roteiro precisa resolver antes de ser escrito:
+
+| Questão | Por quê |
+|---|---|
+| Quantos itens cabem na sessão | Observação é lenta; o número realista define o tamanho da amostra |
+| Como registrar sem atrapalhar | Gravar tela, anotar, ou as duas. Interromper a cada descarte muda o comportamento observado |
+| Que itens escolher | Precisam cobrir o fácil e o difícil — o item de consumo cotidiano e o de dezoito atributos técnicos |
+| Como formular a pergunta do descarte | "Por que não esse?" sugere que havia razão. Pergunta aberta descobre quando não havia |
+| De onde vêm os candidatos do segundo momento | Antes da bateria rodar, só há a busca por palavra. Pode ser necessário dividir em duas sessões |
+
+Observação sobre a última linha, que é a que mais pesa: o segundo momento só tem
+sentido completo depois que houver pelo menos dois métodos a comparar. O primeiro
+momento pode acontecer **agora** e já entrega o registro dos descartes.
 
 ### Sobre C5: por que virou condição, e não complemento
 
