@@ -1,0 +1,259 @@
+<mxfile host="app.diagrams.net" version="24.7.17" type="device">
+  <diagram name="N&#237;vel 1 &#8212; Contexto" id="nivel1">
+    <mxGraphModel dx="1100" dy="760" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t1" value="&lt;b&gt;N&#237;vel 1 &#8212; Contexto&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px; color: #666666;&quot;&gt;Quem usa o sistema e com que mundo externo ele conversa&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="70" y="40" width="620" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="operador" value="&lt;b&gt;Servidor do setor&lt;br&gt;de licita&#231;&#245;es&lt;/b&gt;&lt;div style=&quot;font-size: 11px; margin-top: 10px; line-height: 1.4;&quot;&gt;&#218;nico usu&#225;rio do sistema.&lt;br&gt;Importa as demandas, decide&lt;br&gt;os pre&#231;os e revisa as pe&#231;as&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=13;arcSize=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="290" width="250" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sistema" value="&lt;b&gt;Sistema de apoio &#224;&lt;br&gt;fase preparat&#243;ria&lt;/b&gt;&lt;div style=&quot;font-size: 11px; margin-top: 12px; line-height: 1.4;&quot;&gt;Recupera pre&#231;os compar&#225;veis&lt;br&gt;por significado e gera&lt;br&gt;as pe&#231;as do processo&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4884;fontColor=#FFFFFF;fontSize=14;arcSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="520" y="290" width="320" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pncp" value="&lt;b&gt;Portal Nacional de&lt;br&gt;Contrata&#231;&#245;es P&#250;blicas&lt;/b&gt;&lt;div style=&quot;font-size: 11px; margin-top: 8px; line-height: 1.4;&quot;&gt;Base p&#250;blica de itens j&#225; contratados&lt;br&gt;por &#243;rg&#227;os de todo o pa&#237;s&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8C8C8C;strokeColor=#5E5E5E;fontColor=#FFFFFF;fontSize=13;arcSize=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="550" y="620" width="260" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="importa os documentos de demanda&lt;br&gt;recebidos das secretarias" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#3C3C3C;strokeColor=#707070;strokeWidth=1.5;endArrow=blockThin;endFill=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="operador" target="sistema">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2" value="entrega as pe&#231;as em&lt;br&gt;formato edit&#225;vel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#3C3C3C;strokeColor=#707070;strokeWidth=1.5;endArrow=blockThin;endFill=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;verticalAlign=top;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sistema" target="operador">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5" value="consulta itens contratados&lt;br&gt;e sua proced&#234;ncia" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#3C3C3C;strokeColor=#707070;strokeWidth=1.5;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sistema" target="pncp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nota1a" value="&lt;b&gt;Um usu&#225;rio s&#243;, e isso &#233; escolha&lt;/b&gt;&lt;div style=&quot;margin-top:8px; line-height:1.5;&quot;&gt;As secretarias n&#227;o operam o sistema. Elas mandam o documento de demanda pelos meios que j&#225; usam, e quem importa &#233; o operador.&lt;br&gt;&lt;br&gt;O gargalo medido est&#225; inteiramente no setor de licita&#231;&#245;es. Exigir que cinco secretarias usem um sistema novo acrescentaria depend&#234;ncia de ades&#227;o e treinamento sem tocar no que custa caro.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0C46C;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="890" y="270" width="250" height="215" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nota1b" value="&lt;b&gt;E por que autenticar, ent&#227;o&lt;/b&gt;&lt;div style=&quot;margin-top:8px; line-height:1.5;&quot;&gt;A trilha de auditoria precisa nomear quem decidiu cada coisa, e trilha an&#244;nima vale pouco perante o controle externo.&lt;br&gt;&lt;br&gt;O modelo tamb&#233;m admite mais de um usu&#225;rio e mais de um &#243;rg&#227;o, ainda que s&#243; um perfil seja implementado agora.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0C46C;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="890" y="515" width="250" height="195" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nota1c" value="&lt;b&gt;O sistema n&#227;o conversa com nenhum sistema da prefeitura.&lt;/b&gt;&amp;nbsp; A &#250;nica coisa de fora com que ele fala &#233; uma base p&#250;blica. Isso &#233; escolha: a maioria das prefeituras pequenas n&#227;o paga servi&#231;o de pesquisa de pre&#231;os, e &#233; onde o apoio faz mais falta." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#C4C4C4;fontSize=11;align=left;verticalAlign=middle;spacing=10;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="120" y="620" width="380" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leg1" value="&lt;font color=&quot;#08427B&quot;&gt;&#9608;&#9608;&#9608;&lt;/font&gt;&amp;nbsp; pessoa &amp;nbsp;&amp;nbsp;&amp;nbsp; &lt;font color=&quot;#1168BD&quot;&gt;&#9608;&#9608;&#9608;&lt;/font&gt;&amp;nbsp; sistema deste trabalho &amp;nbsp;&amp;nbsp;&amp;nbsp; &lt;font color=&quot;#8C8C8C&quot;&gt;&#9608;&#9608;&#9608;&lt;/font&gt;&amp;nbsp; sistema externo" style="text;html=1;align=left;fontSize=11;fontColor=#777777;" vertex="1" parent="1">
+          <mxGeometry x="120" y="770" width="560" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Nível 2 — Contêineres" id="nivel2">
+    <mxGraphModel dx="1100" dy="760" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t2" value="&lt;b&gt;Nível 2 — Contêineres&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px; color: #666666;&quot;&gt;O que existe dentro do sistema, e por que cada parte é separada&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="70" y="30" width="640" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p2" value="&lt;b&gt;Servidor do setor de licita&#231;&#245;es&lt;/b&gt;&lt;div style=&quot;font-size: 11px; margin-top: 6px;&quot;&gt;&#218;nico usu&#225;rio do sistema&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="125" y="110" width="260" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fronteira" value="Sistema de apoio à fase preparatória" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 8;fillColor=none;strokeColor=#AAAAAA;fontSize=12;fontColor=#888888;verticalAlign=bottom;align=left;spacingLeft=14;spacingBottom=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="250" width="700" height="500" as="geometry" />
+        </mxCell>
+
+        <mxCell id="web" value="&lt;b&gt;Aplicação web&lt;/b&gt;&lt;div style=&quot;font-size: 11px; margin-top: 8px; line-height: 1.4;&quot;&gt;Interface, regras de negócio,&lt;br&gt;triagem dos candidatos a preço&lt;br&gt;e montagem das peças&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=13;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="300" width="270" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ingestao" value="&lt;b&gt;Serviço de ingestão&lt;/b&gt;&lt;div style=&quot;font-size: 11px; margin-top: 8px; line-height: 1.4;&quot;&gt;Baixa, normaliza e indexa&lt;br&gt;itens contratados.&lt;br&gt;Roda em segundo plano&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=13;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="450" y="300" width="270" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="relacional" value="&lt;b&gt;Banco relacional&lt;/b&gt;&lt;div style=&quot;font-size: 11px; margin-top: 6px; line-height: 1.4;&quot;&gt;Processo, demandas,&lt;br&gt;documentos nas duas versões,&lt;br&gt;seleções e trilha de auditoria&lt;/div&gt;" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=14;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=13;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="545" width="250" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="vetorial" value="&lt;b&gt;Índice semântico&lt;/b&gt;&lt;div style=&quot;font-size: 11px; margin-top: 6px; line-height: 1.4;&quot;&gt;Representação das descrições&lt;br&gt;de itens contratados,&lt;br&gt;para busca por significado&lt;/div&gt;" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=14;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=13;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="450" y="545" width="250" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pncp2" value="&lt;b&gt;Portal Nacional de&lt;br&gt;Contratações Públicas&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8C8C8C;strokeColor=#5E5E5E;fontColor=#FFFFFF;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="850" y="305" width="220" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="f2" value="conduz o processo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#3C3C3C;strokeColor=#707070;strokeWidth=1.5;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="p2" target="web">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f3" value="lê e grava" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#3C3C3C;strokeColor=#707070;strokeWidth=1.5;endArrow=blockThin;endFill=1;exitX=0.333;exitY=1;exitDx=0;exitDy=0;entryX=0.36;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="web" target="relacional">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f4" value="grava a representação&lt;br&gt;da descrição" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#3C3C3C;strokeColor=#707070;strokeWidth=1.5;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.54;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ingestao" target="vetorial">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f5" value="busca item comparável,&lt;br&gt;sempre com filtro" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#3C3C3C;strokeColor=#707070;strokeWidth=1.5;endArrow=blockThin;endFill=1;exitX=0.852;exitY=1;exitDx=0;exitDy=0;entryX=0.12;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="web" target="vetorial">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="350" y="480" />
+              <mxPoint x="480" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="f6" value="grava o item e a procedência" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#3C3C3C;strokeColor=#707070;strokeWidth=1.5;endArrow=blockThin;endFill=1;exitX=1;exitY=0.773;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ingestao" target="relacional">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="745" y="385" />
+              <mxPoint x="745" y="720" />
+              <mxPoint x="245" y="720" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="f7" value="consulta periodicamente" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#3C3C3C;strokeColor=#707070;strokeWidth=1.5;endArrow=blockThin;endFill=1;exitX=1;exitY=0.273;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;verticalAlign=bottom;" edge="1" parent="1" source="ingestao" target="pncp2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nota2a" value="&lt;b&gt;Por que a ingestão fica separada&lt;/b&gt;&lt;div style=&quot;margin-top:8px; line-height:1.5;&quot;&gt;Percorrer e indexar a base pública leva horas. Isso não cabe no tempo de uma página abrir.&lt;br&gt;&lt;br&gt;Se estivesse junto, a primeira carga derrubaria a aplicação, e reiniciar a aplicação interromperia a carga.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0C46C;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="850" y="450" width="250" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nota2b" value="&lt;b&gt;Por que dois bancos&lt;/b&gt;&lt;div style=&quot;margin-top:8px; line-height:1.5;&quot;&gt;Medido na iniciação científica: com filtro restritivo, a extensão vetorial do relacional recupera menos de 6% do esperado. O banco dedicado passa de 99%.&lt;br&gt;&lt;br&gt;E buscar preço é sempre com filtro: categoria, região e janela de doze meses. É o caso normal, não a exceção.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0C46C;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="850" y="625" width="250" height="185" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nota2c" value="&lt;b&gt;O que ainda não está aqui, de propósito:&lt;/b&gt;&amp;nbsp; fila de mensagens entre a ingestão e a aplicação &amp;nbsp;·&amp;nbsp; memória intermediária de resultados de busca &amp;nbsp;·&amp;nbsp; geração de documento como parte própria. Nenhuma tem medição que a justifique ainda, e camada nova aparece quando a medição mostra o limite." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#C4C4C4;fontSize=11;align=left;verticalAlign=middle;spacing=10;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="70" y="768" width="700" height="48" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Caminho de um processo" id="fluxo">
+    <mxGraphModel dx="1100" dy="760" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t3" value="&lt;b&gt;O caminho de um processo&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px; color: #666666;&quot;&gt;As etapas em losango podem ou n&#227;o acontecer, conforme o caso&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="70" y="35" width="620" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s1" value="Operador importa os&lt;br&gt;documentos de demanda" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#5B8DD6;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="80" y="130" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d1" value="Mais de uma&#10;secretaria pediu&#10;o mesmo item?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0C46C;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="320" y="115" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s2" value="Sistema prop&#245;e&lt;br&gt;descri&#231;&#227;o de consenso" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#5B8DD6;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="580" y="130" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s3" value="Operador alinha com&lt;br&gt;as secretarias&lt;br&gt;&lt;i&gt;(fora do sistema)&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEEEEE;strokeColor=#9E9E9E;dashed=1;dashPattern=6 6;fontColor=#555555;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="830" y="130" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s4" value="Lista &#250;nica, com os&lt;br&gt;quantitativos somados" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#5B8DD6;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="830" y="310" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s5" value="Minuta do estudo&lt;br&gt;t&#233;cnico preliminar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#5B8DD6;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="580" y="310" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d2" value="O pre&#231;o j&#225; vem de&#10;ata ou contrato&#10;vigente?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0C46C;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="320" y="295" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s6" value="Busca de candidatos&lt;br&gt;a pre&#231;o de refer&#234;ncia" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#5B8DD6;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="80" y="310" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s7" value="&lt;b&gt;Triagem assistida,&lt;br&gt;item a item&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E08C2E;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="80" y="490" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s8" value="Valor estimado e&lt;br&gt;mapa de cota&#231;&#227;o" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#5B8DD6;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="330" y="490" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s9" value="Estudo final e&lt;br&gt;termo de refer&#234;ncia" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#5B8DD6;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="580" y="490" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s10" value="&lt;b&gt;Exporta&#231;&#227;o em&lt;br&gt;formato edit&#225;vel&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#5FA463;fontSize=12;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="830" y="490" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="g1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s1" target="d1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g2" value="sim" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;fontSize=11;fontColor=#3C3C3C;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="d1" target="s2"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s2" target="s3"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="s3" target="s4"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s4" target="s5"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g6" value="n&#227;o, uma s&#243;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;fontSize=11;fontColor=#3C3C3C;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="d1" target="s5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="260" />
+              <mxPoint x="670" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="g7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s5" target="d2"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g8" value="n&#227;o" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;fontSize=11;fontColor=#3C3C3C;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="d2" target="s6"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;exitX=0.833;exitY=1;exitDx=0;exitDy=0;entryX=0.833;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="s6" target="s7"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s7" target="s8"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s8" target="s9"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="g12" value="sim, o valor j&#225; existe" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;fontSize=11;fontColor=#3C3C3C;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="d2" target="s9">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="440" />
+              <mxPoint x="670" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="g13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#707070;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s9" target="s10"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="nota3a" value="&lt;b&gt;O recorte deste trabalho:&lt;/b&gt;&amp;nbsp; material de consumo, material permanente e servi&#231;o comum, ou seja, o que tem o valor estimado montado por pesquisa de pre&#231;os. &lt;b&gt;Obras e servi&#231;os de engenharia ficam de fora&lt;/b&gt;, porque o or&#231;amento deles sai de planilha de custos sobre tabela de refer&#234;ncia, que &#233; outro mecanismo inteiro." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#C4C4C4;fontSize=11;align=left;verticalAlign=middle;spacing=10;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="80" y="610" width="930" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nota3b" value="&lt;b&gt;Por que mirar o caminho longo, se ele n&#227;o &#233; o mais frequente.&lt;/b&gt;&amp;nbsp; Por contagem, a maior parte dos processos do setor &#233; de outro tipo: dispensa, inexigibilidade, ades&#227;o a ata. Mas por tempo consumido a rela&#231;&#227;o se inverte: uma cota&#231;&#227;o consolidada de 150 itens levou 28 dias corridos, e uma ades&#227;o a ata n&#227;o tem cota&#231;&#227;o nenhuma. &lt;b&gt;A propor&#231;&#227;o entre os tipos ainda n&#227;o foi medida&lt;/b&gt;, e est&#225; na lista do que perguntar." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0C46C;fontSize=11;align=left;verticalAlign=middle;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="80" y="690" width="930" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ancora" value="&lt;b&gt;Pre&#231;o esperado&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;informado pelo operador&lt;/font&gt;" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;size=18;fillColor=#E3F2E1;strokeColor=#6BA96F;fontSize=11;fontColor=#33513A;" vertex="1" parent="1">
+          <mxGeometry x="60" y="400" width="150" height="62" as="geometry" />
+        </mxCell>
+
+        <mxCell id="g14" value="ancora o ranqueamento" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=blockThin;endFill=1;strokeColor=#6BA96F;strokeWidth=1.5;fontSize=10;fontColor=#33513A;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.306;entryY=1;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;verticalAlign=middle;align=left;" edge="1" parent="1" source="ancora" target="s6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
