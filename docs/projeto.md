@@ -43,6 +43,15 @@ a busca semântica, indexação de dados semiestruturados vindos da API, e trilh
 de auditoria que permita reproduzir uma pesquisa de preços exatamente como ela
 era na data em que foi realizada.
 
+> **O levantamento de requisitos de 06/09/2026 reformulou o módulo 2.** O
+> município já usa um banco de preços comercial que resolve coleta, cálculo e
+> registro de procedência. O gargalo medido não é obter preço — é decidir, item
+> por item, se um preço candidato é comparável ao item demandado, porque a busca
+> desses sistemas é por palavra. Isso reforça o recorte de banco de dados em vez
+> de enfraquecê-lo: recuperação semântica com filtro estruturado obrigatório é
+> exatamente o cenário medido na iniciação científica. O escopo exato do módulo
+> segue em aberto — ver `docs/requisitos/README.md`.
+
 ## Estrutura do repositório
 
 ```
@@ -50,6 +59,7 @@ era na data em que foi realizada.
 ├── docs/
 │   ├── projeto.md      # este arquivo
 │   ├── normas/         # guia da UFOPA + destilado operacional (gerado)
+│   ├── requisitos/     # requisitos funcionais, não funcionais e regras de negócio
 │   ├── tasks/          # decomposição de trabalho em andamento
 │   └── pesquisas/      # investigações que sustentam decisões
 ├── TCC/                # vault Obsidian — notas, fichamentos, decisões, logs
@@ -134,6 +144,10 @@ cd texto/tcc2 && make pdf
 
 # normas
 python scripts/gerar_normas.py     # regera .sty e docs/normas/README.md
+
+# requisitos
+python scripts/gerar_requisitos.py # regera .docx e .pdf a partir do README.md
+
 pytest -m "not lento"              # manifesto e guardas de frescor
 pytest                             # inclui conformidade do PDF compilado
 ```
@@ -174,8 +188,38 @@ plataformas, com as duas dependências que só o macOS exige (`libthai` para o
 
 ## Pendências abertas
 
+**Da instituição e da orientação**
+
 - Titulação da orientadora, para a folha de rosto.
 - Texto exato da natureza do trabalho para TCC I, conforme o colegiado.
 - Datas do calendário acadêmico de 2026.2 e 2027.1.
-- Pilha tecnológica do sistema.
 - Protocolo do levantamento de trabalhos relacionados.
+
+**Do sistema**
+
+- Pilha tecnológica.
+- Volume de itens de um processo típico, que dimensiona a persistência.
+
+**Do domínio, a conferir em fonte oficial**
+
+- **Nome exato do órgão de controle externo** competente para municípios do
+  estado. A pergunta foi feita à fonte de domínio e não chegou a ser respondida;
+  o Tribunal de Contas foi citado de passagem, sem designação precisa. Não
+  preencher de memória.
+- **Texto** da instrução normativa que ampara a pesquisa de preços. A norma está
+  identificada com evidência primária — um relatório de cotação real a nomeia e
+  cita dois dispositivos —, mas o texto dela ainda não foi lido na fonte oficial,
+  e sem isso nada dela pode ser citado.
+- Se o município usa o catálogo federal de materiais e serviços.
+
+**Da fonte de domínio**
+
+- Planilha de itens de entrada de cotações encerradas, com o relatório de saída
+  correspondente. É o par sem o qual a avaliação planejada não existe.
+- Um Documento de Formalização de Demanda, que é a entrada do sistema e ainda
+  não foi visto.
+- O modelo em branco de ETP e TR, com a marcação do que é fixo.
+
+O detalhamento de cada uma está em `docs/requisitos/README.md`. As decisões de
+escopo dos dois módulos e do desenho da avaliação foram fechadas em 06/09/2026 e
+estão registradas em `TCC/decisões/`.
