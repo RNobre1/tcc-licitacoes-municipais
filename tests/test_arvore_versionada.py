@@ -225,6 +225,40 @@ def test_nada_que_a_politica_exclui_esta_no_indice():
     )
 
 
+def test_nenhuma_excecao_do_gitignore_desfaz_a_politica_local():
+    """O ``.gitignore`` tem precedência sobre ``.git/info/exclude``.
+
+    Consequência: uma linha de exceção — ``!algum/padrão`` — pode ressuscitar um
+    caminho que a política local mantinha fora, e nada avisa. O arquivo volta a
+    aparecer como não rastreado, e entra no primeiro ``git add -A`` distraído.
+
+    Aconteceu: a exceção que liberava o guia normativo sob ``docs/normas/`` foi
+    escrita como curinga e arrastou junto um PDF de bastidor que mora na mesma
+    pasta. O teste do índice não pegou, porque o arquivo ainda não estava nele.
+
+    Esta guarda fecha a janela entre as duas coisas: confere que todo caminho em
+    disco coberto pela política continua de fato ignorado. Lê os padrões do
+    arquivo não versionado, como o resto desta suíte, e por isso continua sendo
+    regra e não lista.
+    """
+    padroes = _padroes_de_exclusao_local()
+    if not padroes:
+        pytest.skip("sem exclusões locais declaradas — ver o teste anterior")
+    vazados = sorted(
+        caminho.relative_to(RAIZ).as_posix()
+        for caminho in RAIZ.rglob("*")
+        if caminho.is_file()
+        and ".git/" not in caminho.relative_to(RAIZ).as_posix()
+        and any(_casa(caminho.relative_to(RAIZ).as_posix(), p) for p in padroes)
+        and not _ignorado(caminho)
+    )
+    assert vazados == [], (
+        f"{len(vazados)} caminho(s) que a política local exclui deixaram de ser "
+        f"ignorados: {vazados}. Alguma exceção do .gitignore passou por cima do "
+        ".git/info/exclude — estreitar a exceção para o arquivo nomeado."
+    )
+
+
 def test_a_guarda_de_exclusao_reconhece_os_padroes_que_usa():
     """Contraprova do casador: teste que passa dos dois lados não testa nada.
 

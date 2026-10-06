@@ -74,7 +74,11 @@ docs/**/*.pdf
 docs/**/_build/
 
 # Insumo baixado do portal da instituição: o manifesto de normas é derivado dele.
-!docs/normas/*.pdf
+# Nomeia o arquivo e NÃO usa curinga de propósito. `docs/normas/*.pdf` liberava a
+# pasta inteira, e como o .gitignore tem precedência sobre .git/info/exclude,
+# ressuscitava material de bastidor que mora ali e que a política mantém fora.
+# Insumo é raro e entra por decisão; enumerar aqui é o lado certo de errar.
+!docs/normas/guia-ufopa-producao-academica-3ed-2025.pdf
 
 # --- Vault -------------------------------------------------------------------
 # Fichamentos .md são versionados; os PDFs dos trabalhos, não (volume e direito
