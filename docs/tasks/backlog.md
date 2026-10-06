@@ -35,7 +35,7 @@ O que destrava mais coisa adiante, em ordem.
 | C2 | Montar o conjunto de avaliação a partir dos relatórios de cotação já recebidos | Autor | aberto | Decisão A2, que é a que mais afeta o resultado |
 | C3 | Levantar candidatos a modelo de representação e rodar a bateria contra C2 | Autor | aberto | Fecha A2 |
 | C4 | Escrever a seção de resultados esperados | Autor | aberto | Último vazio do texto |
-| C5 | Sessão de tela com a fonte de domínio, registrando candidatos **descartados** | Fonte de domínio | aberto | Permite medir precisão, não só recuperação |
+| C5 | Sessão de julgamento às cegas com a fonte de domínio | Fonte de domínio | aberto | **Condição** para a medição ter conclusão nos dois sentidos |
 
 Sobre C2: foi confirmado em 06/10/2026 que o gabarito pode ser montado do
 material já entregue. Os relatórios de cotação trazem, por item, a descrição do
@@ -44,6 +44,36 @@ que foi pedido e as descrições dos preços escolhidos com procedência. Medido
 pública — 85%. **A antiga pendência "planilha de entrada de cotações encerradas"
 deixou de existir**, e com ela a afirmação de que sem esse par a avaliação não
 existiria.
+
+### Sobre C5: por que virou condição, e não complemento
+
+Levantado em 06/10/2026, antes de qualquer medição.
+
+Os preços que formam o gabarito foram escolhidos pela servidora **dentro de uma
+ferramenta que busca por palavra**. Os relevantes anotados são, por construção,
+os que uma busca por palavra alcança. Um método por significado que encontre
+item comparável descrito com outras palavras será contado como erro.
+
+| Desfecho na medição | Leitura permitida |
+|---|---|
+| Busca por significado ganha | Resultado conservador — ganhou em desvantagem |
+| Empata ou perde | **Não refuta.** Não se distingue "é pior" de "achou comparáveis que o gabarito não registra" |
+| Dois modelos diferem por pouco | Não se lê: com poucos relevantes por consulta, só diferença grande sobrevive |
+
+**Forma que a sessão precisa ter:** reunir os primeiros resultados de todos os
+métodos comparados, inclusive a busca por palavra; embaralhar; pedir o julgamento
+sem indicar a origem. Julgar os resultados de um método só repetiria o viés com
+o sinal trocado.
+
+Decorre daí mais quatro exigências de desenho: busca por palavra é linha de base
+obrigatória, sabendo-se que parte em vantagem; a lista curta que ela marca antes
+de filtrar deve ser guardada, porque cada relevante a mais estabiliza a
+comparação; o teste é pareado sobre os itens, com intervalo, declarando empate
+quando for empate; e qualquer limiar é ajustado em subconjunto separado daquele
+em que se mede.
+
+A avaliação em duas condições, com e sem o preço esperado, não é afetada: ela
+compara cada método consigo mesmo.
 
 ---
 
