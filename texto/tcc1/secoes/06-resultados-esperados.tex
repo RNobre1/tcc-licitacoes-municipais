@@ -1,5 +1,87 @@
 \section{Resultados esperados}
 
-\pendente{Enunciar o que se espera obter, em termos verificáveis, sem antecipar
-conclusão. Um resultado esperado é uma entrega mais um critério de aceitação,
-não uma promessa de sucesso.}
+Um resultado esperado é uma entrega somada a um critério que permita dizer, ao
+fim, se ela se sustentou. Os enunciados abaixo seguem esse par, e nenhum deles
+antecipa conclusão: o critério existe justamente para que o resultado contrário
+também seja reportável.
+
+\subsection{Entregas previstas}
+
+\begin{enumerate}
+  \item \textbf{Especificação e desenho validados em campo.} Já entregues e
+    apresentados na seção~\ref{sec:requisitos-arquitetura}. O critério de
+    aceitação foi a validação junto à servidora que executa o processo, e ela
+    corrigiu três afirmações do diagnóstico inicial. Esta entrega está
+    concluída.
+
+  \item \textbf{Aplicação que recupera preços de referência por proximidade de
+    significado}, sob os filtros de categoria, abrangência geográfica e janela
+    temporal que a norma impõe.
+
+  \item \textbf{Geração das peças da fase preparatória em formato editável},
+    preservando a estrutura de seções vinculada aos dispositivos legais e o
+    ciclo de vida em duas fases do estudo técnico.
+
+  \item \textbf{Trilha de auditoria que permita reconstituir uma pesquisa de
+    preços passada}, no sentido de recuperar o que foi apresentado ao operador e
+    o que ele decidiu.
+\end{enumerate}
+
+\subsection{Critérios de verificação}
+
+\begin{table}[H]
+  \centering
+  \caption{Resultados esperados e critério de verificação de cada um}
+  \label{tab:resultados-esperados}
+  \begin{ufopaespacosimples}
+  \small
+  \begin{tabularx}{\textwidth}{@{}lXX@{}}
+    \toprule
+    \textbf{\#} & \textbf{Resultado} & \textbf{Como se verifica} \\
+    \midrule
+    R1 & A recuperação traz, entre os primeiros resultados, os preços que a
+      servidora de fato utilizou & Medição contra pesquisas já realizadas, com
+      gabarito extraído dos relatórios de cotação de processos encerrados \\
+    R2 & O ganho não decorre apenas de o operador já conhecer o preço & A mesma
+      medição executada em duas condições, com e sem a estimativa de preço
+      esperado, e as duas reportadas \\
+    R3 & As peças geradas contêm todas as seções exigidas, com o vínculo legal
+      declarado & Verificação automatizada da estrutura do documento gerado \\
+    R4 & A revisão manual de um estudo técnico gerado cabe em duas horas &
+      Medição cronometrada com a usuária, contra a linha de base que ela
+      declarou \\
+    R5 & Uma pesquisa passada pode ser reconstituída tal como foi apresentada &
+      Demonstração de reconstituição a partir da trilha \\
+    \bottomrule
+  \end{tabularx}
+  \end{ufopaespacosimples}
+  \fonte{Elaborado pelo autor.}
+\end{table}
+
+\subsection{O que estes resultados não permitirão afirmar}
+
+Três limites são conhecidos desde já, e declará-los agora evita que sejam
+apresentados depois como se fossem conclusões.
+
+O primeiro diz respeito ao que se mede em R1. Os relatórios de cotação registram
+os preços escolhidos, nunca os descartados. Mede-se portanto \emph{recuperação},
+e não precisão: um candidato que o sistema traga e que a servidora não tenha
+utilizado pode ser igualmente aceitável, e o registro não permite distinguir.
+Uma sessão de validação apresentando candidatos e perguntando quais ela aceitaria
+está prevista para reduzir essa lacuna, e seu resultado será reportado
+separadamente.
+
+O segundo é de alcance. O caminho modelado não é o mais frequente entre os tipos
+de processo que o setor conduz, e a proporção entre eles não foi medida.
+Qualquer ganho demonstrado vale para o tipo de processo modelado, e não para a
+rotina do setor como um todo.
+
+O terceiro é de generalização. Trata-se de um único município, com uma única
+usuária. O que se obtém é evidência sobre um caso, descrito em detalhe
+suficiente para que outro município julgue a semelhança — e não uma afirmação
+sobre prefeituras de pequeno porte em geral.
+
+\pendente{Acrescentar, quando a linha de base de esforço for coletada, o valor
+medido contra o qual R4 será comparado. Sem linha de base medida antes da
+intervenção não há como afirmar redução, apenas descrever o esforço restante ---
+e a coleta precisa acontecer ainda nesta etapa.}
