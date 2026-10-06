@@ -179,8 +179,8 @@ devolução formal é rara e o parecer sai no mesmo dia.
 
 ### 2.3 Onde o trabalho se concentra
 
-O município já utiliza um banco de preços comercial que agrega bases públicas e
-privadas. Esse serviço resolve a coleta dos preços, calcula a média, gera memória
+O município já utiliza um banco de preços comercial, o Banco de Preços, que
+agrega bases públicas e privadas. Esse serviço resolve a coleta dos preços, calcula a média, gera memória
 de cálculo, monta o mapa comparativo, registra a procedência de cada preço e
 emite relatório com certificado de autenticidade. A coleta, portanto, é um
 problema resolvido.

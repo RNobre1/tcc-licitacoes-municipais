@@ -38,9 +38,7 @@ delimitam o espaço ocupado aqui.
 pretendidos. Todos foram lidos integralmente e tiveram os metadados conferidos
 na fonte primária. Outros sete estão conferidos e fichados, e entram nas
 próximas semanas --- a limitação é deliberada, para que cada trabalho citado
-possa ser discutido em profundidade. Falta ainda a comparação com \emph{sistemas}
-em operação, de governo e comerciais, que não são literatura e exigem fonte
-documental distinta.}
+possa ser discutido em profundidade.}
 
 \begin{table}[H]
   \centering
@@ -120,15 +118,85 @@ uso real por seis meses, com medida de tempo e de aceitação. O domínio é out
 preço, mas a arquitetura de revisão obrigatória com autoria humana preservada é
 a mesma adotada aqui.
 
-\paragraph{A lacuna ocupada.} Dos trabalhos acima, nenhum apoia a decisão, item
-por item, de quem monta a pesquisa de preços. Os correlatos brasileiros de preço
-ou partem das cotações já reunidas, ou analisam sobrepreço depois da
-contratação; o precedente de busca semântica em compras públicas não trata
-preço; e o de geração de peça em prefeitura atua em outro domínio documental.
-Soma-se a isso que nenhum deles dispõe de gabarito das escolhas reais de quem
-cotou, que este trabalho possui.
+\subsection{Sistemas em operação}
+\label{subsec:sistemas-em-operacao}
 
-\pendente{Esta afirmação de lacuna vale para os quatro trabalhos do quadro e para
-os sete já fichados. Ela não é afirmação de inexistência: enquanto a varredura
-não incluir teses e dissertações brasileiras e sistemas em operação, o enunciado
-correto é que a lacuna não foi preenchida pelos trabalhos examinados.}
+Trabalho acadêmico não é o único ponto de comparação, e para um sistema que se
+propõe a apoiar uma rotina administrativa talvez nem seja o principal. Esta
+subseção examina ferramentas em uso, de governo e comerciais, cuja fonte é
+documentação do mantenedor, norma, tutorial oficial ou observação direta da
+interface pública --- e não literatura.
+
+\begin{table}[H]
+  \centering
+  \caption{Ferramentas em operação e o mecanismo de busca de cada uma}
+  \label{tab:sistemas-em-operacao}
+  \begin{ufopaespacosimples}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}XXXl@{}}
+    \toprule
+    \textbf{Ferramenta} & \textbf{Etapa atendida} & \textbf{Como encontra o
+      item} & \textbf{Acesso} \\
+    \midrule
+    Módulo federal de estudo técnico preliminar & Redação da peça, por
+      formulário & Código de catálogo & Órgãos federais \\
+    Módulo federal de termo de referência & Redação da peça, por formulário &
+      Código de catálogo & Órgãos federais \\
+    Assistente federal de normas & Dúvida sobre legislação de contratações &
+      Recuperação sobre normas, não sobre item & Órgãos federais \\
+    Pesquisa de preços federal & Composição do valor estimado & Texto casado por
+      caracteres sobre o catálogo & Público e com login \\
+    Portal nacional de contratações & Consulta a contratações publicadas & Texto
+      por palavra; devolve a contratação, não o item & Público \\
+    Bancos de preços comerciais & Coleta, cálculo e relatório & Texto por
+      palavra & Assinatura \\
+    Geradores comerciais de peça & Redação com modelo de linguagem & Não
+      declarado & Assinatura \\
+    \midrule
+    \textbf{Este trabalho} & \textbf{Triagem de preço e redação das peças} &
+      \textbf{Significado, sob filtro estruturado} & --- \\
+    \bottomrule
+  \end{tabularx}
+  \end{ufopaespacosimples}
+  \fonte{Elaborado pelo autor a partir de documentação oficial, tutoriais dos
+    mantenedores e observação das interfaces públicas em outubro de 2026.}
+\end{table}
+
+Três constatações decorrem desse levantamento, e duas delas limitam o que este
+trabalho pode reivindicar.
+
+A primeira é que **gerar as peças da fase preparatória com modelo de linguagem
+já é produto de prateleira**. Há ao menos oito produtos comerciais que o
+anunciam. Nenhum deles publica método, modelo, base de recuperação ou avaliação,
+mas a ausência de publicação não torna a função inédita. A contribuição deste
+trabalho, portanto, não está em gerar o documento, e sim em que cada afirmação
+do documento gerado tenha origem declarada e conferível.
+
+A segunda é que **filtro estruturado sobre item já existe** nas ferramentas
+federais, que filtram por unidade de medida, quantidade, localização e data. O
+diferencial não é o filtro: é combiná-lo com recuperação por significado e
+registrar a decisão de quem escolheu.
+
+A terceira abre espaço em vez de fechá-lo. **Nenhuma das ferramentas consultadas
+documenta guardar o candidato descartado com o motivo do descarte, nem
+reconstituir uma pesquisa tal como ela era em uma data.** A norma federal de
+pesquisa de preços exige justificar a desconsideração de valores
+\cite{brasil2021in65}, e nenhuma ferramenta examinada descreve onde essa
+justificativa fica registrada.
+
+\paragraph{A lacuna ocupada.} Dos trabalhos e sistemas acima, nenhum apoia a
+decisão, item por item, de quem monta a pesquisa de preços. Os correlatos
+brasileiros de preço ou partem das cotações já reunidas, ou analisam sobrepreço
+depois da contratação; o precedente de busca semântica em compras públicas não
+trata preço; o de geração de peça em prefeitura atua em outro domínio
+documental; e nenhuma ferramenta em operação busca o item por significado ---
+todas casam caracteres, código de catálogo ou código de barras. Soma-se a isso
+que nenhum deles dispõe de gabarito das escolhas reais de quem cotou, que este
+trabalho possui.
+
+\pendente{Esta afirmação de lacuna vale para os quatro trabalhos citados, os sete
+já fichados e as ferramentas examinadas. Ela não é afirmação de inexistência:
+dez páginas do portal federal de compras e os dois bancos comerciais exigem
+acesso autenticado e não puderam ser verificados, e um tutorial oficial declara
+conteúdo retirado do ar por período eleitoral até 25/10/2026. Repetir a consulta
+depois dessa data.}

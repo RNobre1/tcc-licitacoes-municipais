@@ -92,12 +92,12 @@ exatamente a transformação que o sistema precisa reproduzir.
 \subsection{Onde o esforço se concentra}
 \label{subsec:onde-doi}
 
-O município já utiliza um banco de preços comercial que agrega bases públicas e
-privadas. Esse serviço resolve a coleta dos preços, calcula a média, gera memória
-de cálculo, monta o mapa comparativo, registra a procedência de cada preço e
-emite relatório com mecanismo de verificação de autenticidade. A coleta,
-portanto, é problema resolvido, e qualquer proposta que se apresente como
-solução para ela chega tarde.
+O município já utiliza um banco de preços comercial, o Banco de Preços, que
+agrega bases públicas e privadas. Esse serviço resolve a coleta dos preços,
+calcula a média, gera memória de cálculo, monta o mapa comparativo, registra a
+procedência de cada preço e emite relatório com mecanismo de verificação de
+autenticidade. A coleta, portanto, é problema resolvido, e qualquer proposta que
+se apresente como solução para ela chega tarde.
 
 O que esse serviço não faz é interpretar o item. A busca é por palavra: o
 operador digita um termo e o sistema devolve todo registro cuja descrição o
@@ -107,6 +107,43 @@ erro que isso produz. Uma busca por alface devolveu preços de sanduíche natura
 porque a descrição do sanduíche menciona alface. Uma busca por urna funerária
 devolveu também serviços de translado. Uma busca por trator de esteira devolveu
 locações cobradas por hora, que são serviço e não equipamento.
+
+Esses relatos foram reproduzidos em ferramenta pública. O catálogo da
+ferramenta federal de pesquisa de preços, consultável sem autenticação, foi
+submetido a onze consultas em outubro de 2026, e o comportamento observado é o
+mesmo descrito pela servidora.
+
+\begin{table}[H]
+  \centering
+  \caption{Consultas ao catálogo da ferramenta federal de pesquisa de preços}
+  \label{tab:consultas-catalogo}
+  \begin{ufopaespacosimples}
+  \small
+  \begin{tabularx}{\textwidth}{@{}llX@{}}
+    \toprule
+    \textbf{Texto digitado} & \textbf{Sugestões} & \textbf{As primeiras} \\
+    \midrule
+    alface & 10 & Alfacalcidol; Alfacipermetrina; Verdura in natura \\
+    alfase & 0 & --- \\
+    hortaliça folhosa & 0 & --- \\
+    hortaliça & 10 & Sopa infantil; Mistura para suplementação; Substrato
+      agrícola \\
+    papel sulfite A4 & 10 & Papel abrasivo; Papel alfa cheque; Papel almaço \\
+    sulfite & 10 & Sulfito de sódio; Papel para correspondência \\
+    resma papel ofício & 0 & --- \\
+    caneta esferográfica azul & 10 & Caneta esferográfica; Caneta indicador \\
+    \bottomrule
+  \end{tabularx}
+  \end{ufopaespacosimples}
+  \fonte{Consultas realizadas pelo autor em outubro de 2026, na interface
+    pública da ferramenta.}
+\end{table}
+
+A leitura é direta: o casamento é de caracteres. Quem procura alface recebe
+primeiro um fármaco e um agrotóxico cujos nomes começam com as mesmas letras;
+quem erra uma letra, ou usa expressão sinônima para a mesma coisa, não recebe
+nada. O comportamento é reproduzível por qualquer leitor, sem credencial, e é o
+que converte o relato da servidora em evidência verificável.
 
 É nesse ponto que o sistema atua. Ele recupera candidatos a preço de referência
 por proximidade de significado, aplica os filtros que hoje a pessoa aplica de
