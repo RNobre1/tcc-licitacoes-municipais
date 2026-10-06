@@ -337,8 +337,13 @@ sem ressalva depois da demonstração de reconstituição.
   orientação falou em "sistemas existentes", o que também abrange sistema de
   governo e produto comercial — o módulo federal de elaboração de estudo
   técnico, o painel federal de preços, os bancos de preços comerciais. Isso
-  pede outra fonte, que é documentação oficial e não artigo, e não foi feito
-  nesta rodada.
+  pede outra fonte, que é documentação oficial e não artigo. Foi tentado em
+  06/10/2026 e **não foi possível conferir**: as páginas do portal federal de
+  compras com o manual do módulo de estudo técnico e com a descrição do módulo
+  de pesquisa de preços responderam "conteúdo restrito", exigindo autenticação.
+  Nada sobre esses sistemas entra no quadro enquanto a documentação oficial não
+  for lida — descrevê-los de memória seria o mesmo erro que a regra de metadado
+  existe para evitar.
 
 ## 11. Referências
 
