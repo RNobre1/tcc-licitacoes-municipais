@@ -49,6 +49,33 @@ dados-dominio/
 # PDF em subpasta (figuras/, por exemplo) NÃO é atingido: é insumo, não saída.
 texto/*/*.pdf
 
+# Entregáveis gerados a partir de um README.md sob docs/, que é sempre a fonte.
+# Saem de `python scripts/gerar_requisitos.py` e se regeneram em um comando.
+# Ficam fora por serem binários: o .docx e o .pdf mudam de bytes a cada geração
+# mesmo sem mudança de conteúdo, e isso sujaria o histórico sem informar nada.
+#
+# A versão anterior desta regra nomeava `docs/requisitos/` e se gabava, no
+# comentário, de cobrir a posição e não o nome. Não cobria: quando
+# `docs/arquitetura/` nasceu em 22/09/2026, os dois binários dela passaram a
+# entrar no índice em silêncio. Regra que enumera a pasta de hoje deixa a de
+# amanhã passar — o mesmo erro do PDF do alvo SBC, cometido de novo.
+#
+# O desenho agora inverte o padrão: sob docs/, binário de escritório é ignorado
+# por omissão e insumo é liberado por exceção nomeada. Errar para este lado é
+# barato — o arquivo novo nasce fora e alguém precisa decidir incluí-lo. Errar
+# para o outro publica sem ninguém perceber. A exceção enumera, e tudo bem:
+# insumo é raro e entra por decisão; saída nasce sozinha.
+#
+# Vem depois da exceção `!docs/**/*.docx` lá em cima de propósito: em
+# .gitignore, a última regra que casa é a que vale.
+# Coberto por tests/test_arvore_versionada.py.
+docs/**/*.docx
+docs/**/*.pdf
+docs/**/_build/
+
+# Insumo baixado do portal da instituição: o manifesto de normas é derivado dele.
+!docs/normas/*.pdf
+
 # --- Vault -------------------------------------------------------------------
 # Fichamentos .md são versionados; os PDFs dos trabalhos, não (volume e direito
 # autoral).

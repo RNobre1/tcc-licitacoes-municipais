@@ -130,6 +130,55 @@ def test_insumo_em_subpasta_de_documento_nao_e_ignorado():
     )
 
 
+# --- Entregável gerado sob docs/ ----------------------------------------------
+
+
+@pytest.mark.parametrize("pasta", ["requisitos", "arquitetura", "pasta-que-ainda-nao-existe"])
+@pytest.mark.parametrize("gerado", ["requisitos.docx", "arquitetura.pdf", "outro-nome.docx"])
+def test_entregavel_gerado_sob_docs_ja_esta_ignorado(pasta: str, gerado: str):
+    """``gerar_requisitos.py`` emite ``.docx`` e ``.pdf`` ao lado do markdown fonte.
+
+    São binários que mudam de bytes a cada geração mesmo sem mudança de conteúdo,
+    e por isso ficam fora do versionamento. A regra tem de valer para a pasta que
+    nascer amanhã: a primeira versão dela nomeava ``docs/requisitos/``, e quando
+    ``docs/arquitetura/`` nasceu em 22/09/2026 os dois binários dela passaram a
+    entrar no índice em silêncio — o mesmo erro que o comentário daquela regra
+    dizia estar evitando.
+
+    O desenho que corrige isso inverte o padrão: sob ``docs/``, binário de
+    escritório é ignorado por omissão, e insumo é liberado por exceção explícita.
+    Errar para esse lado é barato — o arquivo novo nasce fora e alguém precisa
+    decidir incluí-lo. Errar para o outro publica sem ninguém perceber.
+    """
+    assert _ignorado(RAIZ / "docs" / pasta / gerado), (
+        f"docs/{pasta}/{gerado} NÃO está ignorado — a regra do .gitignore voltou "
+        "a enumerar pastas em vez de cobrir a posição."
+    )
+
+
+def test_markdown_fonte_sob_docs_continua_versionado():
+    """Contraprova: a regra cobre o gerado, não a fonte que o gera."""
+    fonte = RAIZ / "docs" / "requisitos" / "README.md"
+    assert not _ignorado(fonte), (
+        f"{fonte.relative_to(RAIZ)} está sendo ignorado. A regra passou a excluir "
+        "a fonte única junto com o que ela gera."
+    )
+
+
+def test_insumo_normativo_sob_docs_continua_versionado():
+    """Segunda contraprova: nem todo PDF sob ``docs/`` é saída.
+
+    O guia do SIBI é insumo baixado do portal da instituição e precisa viajar com
+    o repositório, porque o manifesto de normas é derivado dele. Uma regra que
+    varresse ``docs/**/*.pdf`` sem exceção o levaria junto.
+    """
+    insumo = RAIZ / "docs" / "normas" / "guia-ufopa-producao-academica-3ed-2025.pdf"
+    assert not _ignorado(insumo), (
+        f"{insumo.relative_to(RAIZ)} está sendo ignorado. A regra ficou ampla "
+        "demais e passou a excluir insumo normativo, não só produto gerado."
+    )
+
+
 # --- Política de exclusão local -----------------------------------------------
 
 
