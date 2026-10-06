@@ -27,13 +27,16 @@ uma versão sintética, com a mesma estrutura e nenhum dado verdadeiro, que é a
 \pendente{Detalhar o procedimento de derivação e discutir suas limitações para
 a avaliação da solução.}
 
-\subsection{Arquitetura da solução}
+\subsection{Desenho da solução}
 
-\pendente{Esta subseção recebeu, por decisão de 24/08/2026, o conteúdo técnico
-que antes ocupava o referencial teórico. O motivo: recuperação de informação e
-representação vetorial não são base teórica emprestada de terceiros neste
-trabalho --- são a contribuição, e o modelo do curso é explícito em não admitir
-nova revisão bibliográfica dentro do desenvolvimento.}
+O desenho que resultou do levantamento --- requisitos, regras de negócio e
+arquitetura --- é apresentado na seção~\ref{sec:requisitos-arquitetura}, e não
+aqui. A separação é deliberada: ele é resultado do percurso metodológico e não
+etapa dele, e tratá-lo como procedimento esconderia que boa parte das escolhas
+foi determinada por evidência de campo, não por preferência técnica.
+
+Duas escolhas, porém, pertencem à metodologia, porque dizem respeito à natureza
+da evidência que as sustenta.
 
 \subsubsection{Recuperação de informação sobre a legislação e os modelos}
 
@@ -48,19 +51,20 @@ literatura: há trabalho publicado sustentando que recuperação plana sobre
 documento não estruturado limita raciocínio de múltiplos saltos quando os dados
 são estruturados. Responder explicitamente, não por omissão.}
 
-\subsubsection{Persistência e trilha de auditoria}
+\subsubsection{Natureza da evidência que sustenta a escolha da persistência}
 
-\pendente{Modelagem relacional, indexação de dados semiestruturados vindos da
-API do PNCP, e versionamento com trilha que permita reproduzir uma pesquisa de
-preços exatamente como ela era na data em que foi realizada. Este é o eixo de
-maior interesse para a orientação e a lacuna mais defensável do trabalho.}
+A separação entre banco relacional e índice semântico, descrita na
+subseção~\ref{subsec:arquitetura}, apoia-se em medição realizada pelo autor em
+iniciação científica anterior a este trabalho, e não em literatura revisada por
+pares. O texto registra isso onde a medição é invocada, e a distinção é mantida
+deliberadamente: medição própria é evidência, com força menor que a de resultado
+publicado e submetido a revisão.
 
-\pendente{Decisão entre persistência vetorial dedicada e a extensão do
-PostgreSQL. A evidência é a Iniciação Científica em andamento no PET-EG, que
-compara desempenho entre os dois caminhos. Critério acrescentado pela
-orientação: verificar contra a natureza dos dados a tratar, não só o desempenho
-medido. Se a decisão se apoiar em medição própria em vez de literatura, dizer
-isso no texto --- não é evidência revisada por pares.}
+\pendente{Descrever o protocolo daquela medição --- conjunto de dados,
+seletividade do filtro, métrica de recuperação e número de repetições --- em
+detalhe suficiente para que o leitor julgue se ela transfere para o caso deste
+trabalho. Critério acrescentado pela orientação: verificar contra a natureza dos
+dados a tratar, não só o desempenho medido.}
 
 \subsection{Desenvolvimento}
 

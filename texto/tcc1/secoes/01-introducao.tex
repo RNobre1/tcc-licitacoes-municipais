@@ -1,37 +1,87 @@
 \section{Introdução}
 
-\pendente{Contextualizar a fase preparatória das contratações públicas
-municipais sob a Lei nº 14.133/2021 e apresentar o problema a partir de fontes
-verificáveis. Estrutura pretendida: contexto → problema → justificativa →
-organização do trabalho.}
-
 \subsection{Contextualização}
 
-A Lei nº 14.133/2021 organiza o processo de contratação pública em fases, entre
-elas a fase preparatória, na qual se inserem o Estudo Técnico Preliminar (ETP),
-o Termo de Referência (TR) e a pesquisa de preços que fundamenta o valor
-estimado da contratação \cite{brasil2021lei14133}.
+A Lei nº 14.133, de 2021, organiza a contratação pública em fases e condiciona a
+abertura de qualquer licitação ao cumprimento de uma fase preparatória. Nela se
+inserem o estudo técnico preliminar, que analisa a necessidade e dimensiona a
+solução, o termo de referência, que estabelece as regras da contratação, e a
+pesquisa de preços que fundamenta o valor estimado \cite{brasil2021lei14133}. A
+pesquisa de preços tem procedimento próprio, com parâmetros admitidos e
+tratamento estatístico definidos em norma \cite{brasil2021in65}.
 
-\pendente{Sustentar com fonte cada afirmação sobre a duração e o custo dessa
-fase em municípios de pequeno porte. Não usar número sem origem — a percepção
-de quem trabalha no setor entra como evidência qualitativa levantada em
-entrevista, registrada no diário de requisitos, e não como estatística.}
+O desenho normativo supõe estrutura administrativa que nem todo município
+possui. Em prefeituras de pequeno porte, a mesma equipe reduzida acumula a
+redação das peças, a cotação item a item e o acompanhamento de processos
+simultâneos, sem apoio técnico especializado e sem sistema que dê suporte a essa
+etapa.
+
+\pendente{Sustentar a afirmação sobre a situação dos municípios de pequeno porte
+com fonte publicada --- normativa, relatório de órgão de controle ou literatura
+de administração pública. Enquanto não houver fonte, a frase vale apenas para o
+caso estudado e precisa ser reescrita nesses termos. A busca está delegada e a
+restrição de escopo fixada pela orientação é administração pública, prefeituras
+e licitação.}
 
 \subsection{Problema de pesquisa}
 
-\pendente{Formular a pergunta em uma frase, no formato "em que medida ...".
-Rascunho a validar com a orientadora: em que medida a geração assistida de
-minutas e a automação da pesquisa de preços a partir de dados públicos reduzem
-o esforço da fase preparatória em uma prefeitura de pequeno porte, sem
-comprometer a conformidade legal dos documentos produzidos?}
+No caso estudado neste trabalho --- o setor de licitações de uma prefeitura no
+oeste do Pará ---, a fase preparatória concentra a maior parte do tempo do
+processo, e o esforço não está distribuído por igual entre suas etapas. A
+medição sobre processos encerrados, descrita na
+seção~\ref{sec:requisitos-arquitetura}, situa o custo na triagem dos preços
+candidatos: processos de cento e vinte e de cento e cinquenta itens levaram,
+respectivamente, nove e vinte e oito dias corridos entre a abertura da pesquisa e
+o relatório final.
+
+O município já dispõe de serviço comercial que coleta preços, calcula o valor
+estimado e registra a procedência de cada parâmetro. O que esse serviço não faz
+é interpretar o item: sua busca é textual, de modo que uma consulta por um termo
+devolve todo registro cuja descrição o contenha, cabendo à pessoa decidir, um a
+um, se o que apareceu corresponde ao que foi pedido. O problema prático, portanto,
+não é obter preços --- é decidir quais deles são comparáveis.
+
+Daí a pergunta que este trabalho persegue: em que medida a recuperação de preços
+de referência por proximidade de significado, combinada à geração assistida das
+peças da fase preparatória a partir de dados públicos de contratações, reduz o
+esforço dessa fase em uma prefeitura de pequeno porte, sem comprometer a
+conformidade legal dos documentos produzidos?
 
 \subsection{Justificativa}
 
-\pendente{Articular três eixos: relevância prática (gargalo real em municípios
-do interior), relevância acadêmica (aplicação de recuperação de informação e
-modelagem de dados a um domínio pouco explorado) e viabilidade (acesso a
-especialista do domínio e a dados públicos).}
+A justificativa se apoia em três eixos.
+
+O primeiro é prático. O gargalo descrito não é hipótese de projeto: foi medido
+sobre documentos de processos encerrados, e a servidora responsável pela etapa
+declarou que a supressão da pesquisa prévia de preços, prevista em lei, decorre
+exclusivamente do custo de executá-la manualmente duas vezes. Perguntada se
+voltaria a realizá-la caso a cotação passasse a custar cerca de uma hora,
+respondeu afirmativamente. O ganho pretendido, nesse caso, não é apenas de tempo:
+é de aderência ao rito que a norma estabelece.
+
+O segundo é acadêmico. A recuperação de itens por significado sob filtro
+estruturado obrigatório --- categoria, faixa geográfica e janela temporal, por
+força da norma --- é um cenário de recuperação de informação com restrições
+específicas, aplicado a um domínio documental pouco explorado. A exigência de
+reproduzir uma pesquisa de preços exatamente como ela era na data em que foi
+realizada acrescenta um requisito de versionamento e procedência que não é usual
+em sistemas de busca.
+
+\pendente{Este parágrafo afirma que o domínio é pouco explorado. A afirmação não
+pode permanecer sem o levantamento de trabalhos relacionados que a sustente ou a
+derrube. Enquanto o quadro comparativo da
+subseção~\ref{subsec:trabalhos-relacionados} não estiver fechado, reescrever como
+observação, e não como lacuna comprovada.}
+
+O terceiro é de viabilidade. O trabalho conta com acesso continuado a servidora
+do setor de licitações como fonte de domínio, o que permitiu entrevista,
+validação da especificação e cessão de documentos de processos encerrados. As
+fontes de dados são públicas e dispõem de interface de programação. A avaliação
+ao fim do trabalho, portanto, pode ser feita contra material real do próprio
+município, e não contra cenário construído.
 
 \subsection{Organização do trabalho}
 
-\pendente{Escrever por último, quando as seções estiverem estáveis.}
+\pendente{Escrever por último, quando as seções estiverem estáveis. A ordem atual
+é: objetivos, fundamentos e trabalhos relacionados, requisitos e arquitetura,
+metodologia, resultados esperados e cronograma.}
