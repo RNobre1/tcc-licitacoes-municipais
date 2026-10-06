@@ -188,38 +188,18 @@ plataformas, com as duas dependências que só o macOS exige (`libthai` para o
 
 ## Pendências abertas
 
-**Da instituição e da orientação**
+A lista vive em **`docs/tasks/backlog.md`**, que é a fonte única. Cada item diz
+quem resolve — autor, fonte de domínio, orientação, instituição ou terceiro —,
+porque é isso que separa o que pode andar agora do que está bloqueado em alguém.
 
-- Titulação da orientadora, para a folha de rosto.
-- Texto exato da natureza do trabalho para TCC I, conforme o colegiado.
-- Datas do calendário acadêmico de 2026.2 e 2027.1.
-- Protocolo do levantamento de trabalhos relacionados.
+Esta seção não repete a lista de propósito. Pendência copiada em dois lugares
+envelhece num deles, e quem lê não descobre qual.
 
-**Do sistema**
+O caminho crítico de hoje, só para orientar a leitura:
 
-- Pilha tecnológica.
-- Volume de itens de um processo típico, que dimensiona a persistência.
+1. Medir volume e descrições da base pública, que dimensiona o índice.
+2. Montar o conjunto de avaliação a partir dos relatórios de cotação recebidos.
+3. Rodar a bateria de modelos de representação contra ele.
 
-**Do domínio, a conferir em fonte oficial**
-
-- **Nome exato do órgão de controle externo** competente para municípios do
-  estado. A pergunta foi feita à fonte de domínio e não chegou a ser respondida;
-  o Tribunal de Contas foi citado de passagem, sem designação precisa. Não
-  preencher de memória.
-- **Texto** da instrução normativa que ampara a pesquisa de preços. A norma está
-  identificada com evidência primária — um relatório de cotação real a nomeia e
-  cita dois dispositivos —, mas o texto dela ainda não foi lido na fonte oficial,
-  e sem isso nada dela pode ser citado.
-- Se o município usa o catálogo federal de materiais e serviços.
-
-**Da fonte de domínio**
-
-- Planilha de itens de entrada de cotações encerradas, com o relatório de saída
-  correspondente. É o par sem o qual a avaliação planejada não existe.
-- Um Documento de Formalização de Demanda, que é a entrada do sistema e ainda
-  não foi visto.
-- O modelo em branco de ETP e TR, com a marcação do que é fixo.
-
-O detalhamento de cada uma está em `docs/requisitos/README.md`. As decisões de
-escopo dos dois módulos e do desenho da avaliação foram fechadas em 06/09/2026 e
-estão registradas em `TCC/decisões/`.
+As decisões de escopo dos dois módulos e do desenho da avaliação foram fechadas
+em 06/09/2026 e estão registradas em `TCC/decisões/`.
