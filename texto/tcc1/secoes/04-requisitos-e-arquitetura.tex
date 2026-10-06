@@ -282,10 +282,14 @@ caixa. Há níveis mais profundos, e eles ficam deliberadamente de fora por
 enquanto: descer antes de ter certeza do que cada parte faz produz desenho que
 não sobrevive ao primeiro incremento de implementação.
 
-\pendente{Inserir as três figuras exportadas de \code{docs/arquitetura/arquitetura.drawio}
---- contexto, contêineres e caminho de um processo. Exportar cada página em PDF
-para \code{texto/tcc1/figuras/} pelo próprio editor, em Arquivo > Exportar como >
-PDF, com a opção de recortar à seleção ligada.}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/arquitetura-nivel1-contexto.pdf}
+  \caption{Nível 1 --- contexto: quem usa o sistema e com que mundo externo ele
+    conversa}
+  \label{fig:nivel1-contexto}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
 
 No primeiro nível há três participantes. O operador do setor de licitações, o
 sistema de apoio, e a base pública de contratações, consultada por interface de
@@ -294,6 +298,15 @@ sistema da prefeitura, e a única fonte externa com que fala é essa base públi
 Isso é escolha, não limitação. O município estudado paga por um serviço comercial
 de pesquisa de preços, mas a maior parte das prefeituras de pequeno porte não
 tem esse recurso, e é justamente onde o apoio faz mais falta.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/arquitetura-nivel2-conteineres.pdf}
+  \caption{Nível 2 --- contêineres: o que existe dentro do sistema, e por que
+    cada parte é separada}
+  \label{fig:nivel2-conteineres}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
 
 No segundo nível há quatro partes: a aplicação web, um serviço de ingestão, um
 banco relacional e um índice semântico. Duas separações estruturam o desenho, e
@@ -321,6 +334,15 @@ A condição que torna essa medição pertinente é que a busca de preço é sem
 filtrada. Procura-se dentro de uma categoria, numa faixa geográfica e numa janela
 de doze meses, por força das regras RN07 e RN17. O cenário medido é o caso
 normal de uso deste sistema, e não uma exceção construída.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/arquitetura-fluxo-processo.pdf}
+  \caption{O caminho de um processo pelo sistema. As etapas em losango podem ou
+    não acontecer, conforme o caso}
+  \label{fig:fluxo-processo}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
 
 O caminho de um processo pelo sistema tem duas etapas condicionais, e isso
 precisa ficar explícito porque delimita o alcance do que se promete. A

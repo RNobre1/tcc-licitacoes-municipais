@@ -90,7 +90,9 @@ def test_todo_comando_de_citacao_existe_nos_dois_alvos(alvo: str):
     }
     assert faltando == {}, (
         f"comando(s) de citação ausente(s) no alvo {alvo}: "
-        + "; ".join(f"\\{nome} em {', '.join(sorted(set(arqs)))}" for nome, arqs in faltando.items())
+        + "; ".join(
+            f"\\{nome} em {', '.join(sorted(set(arqs)))}" for nome, arqs in faltando.items()
+        )
         + ". Conteúdo é compartilhado pelos dois alvos: o que só existe em um "
         "aborta a compilação do outro."
     )
