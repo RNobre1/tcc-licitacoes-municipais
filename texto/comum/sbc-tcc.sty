@@ -105,6 +105,16 @@
 % introduziu. Em refs.bib isso atinge `subtitle` e `urldate`, usados nas entradas
 % de legislação — o dado não desaparece do arquivo, mas não sai impresso neste
 % alvo. Quando essas entradas forem citadas de fato, conferir a saída.
+% Citação com o autor integrado à frase. Par da definição em ufopa-tcc.sty — ver
+% lá o motivo de o comando existir.
+%
+% Aqui a implementação é \cite mesmo: o sbc.bst não oferece forma textual, e a
+% chamada que ele produz, "[Autor et al. 2023]", é a convenção do próprio
+% formato. A frase fica com a chamada entre colchetes no lugar do nome, que é
+% como os artigos da SBC se leem. O comando existe para que o conteúdo não
+% precise saber disso.
+\newcommand{\citaautor}[1]{\cite{#1}}
+
 \newcommand{\ufopabibliografiasbc}[1]{%
   \bibliographystyle{sbc}%
   \bibliography{#1}%

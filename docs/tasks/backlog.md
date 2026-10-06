@@ -106,12 +106,15 @@ Há dois, e custam coisas diferentes:
    versionado no tempo. Caro, e a literatura resolve isso para busca por palavra,
    declarando a busca por significado como trabalho futuro.
 
-**Posição atual: forma 1**, e os requisitos já apontam para ela. O que o órgão de
-controle cobra — que o preço existia, veio de onde se diz e estava válido — é
-inteiramente respondido por ela.
+**DECIDIDO em 06/10/2026: forma 1**, guardar o resultado. Decisão do autor, com
+dois motivos. O que o órgão de controle cobra — que o preço existia, veio de onde
+se diz e estava válido — é inteiramente respondido por ela. E a orientação
+recomendou não ampliar escopo, por o trabalho já ser complexo.
 
-A forma 2 é pergunta de pesquisa, não de conformidade. Fica registrada como
-desdobramento possível, e como limite conhecido do que foi entregue.
+A forma 2 fica como **trabalho futuro**, declarada no texto como limite conhecido
+do que foi entregue. Não é omissão: a literatura resolve a reexecução no tempo
+apenas para busca por palavra, e declara a busca por significado como problema
+em aberto. Dizer isso no texto é mais forte que silenciar.
 
 ### Q2 — Critério de avaliação da recuperação
 

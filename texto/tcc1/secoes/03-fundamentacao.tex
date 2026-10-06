@@ -27,28 +27,108 @@ SEGES/ME nº 65/2021, já conferida no portal oficial.}
 \subsection{Trabalhos relacionados}
 \label{subsec:trabalhos-relacionados}
 
-\pendente{Quadro comparativo enxuto, não levantamento sistemático. A restrição
-de 20 a 25 páginas não acomoda protocolo de revisão com bases, string de busca,
-critérios de inclusão e janela temporal --- e o produto de um protocolo desses
-não caberia em duas páginas. O protocolo e o resultado bruto ficam em
-\code{docs/pesquisas/}, fora do texto.}
+O quadro a seguir é comparativo e não exaustivo. A restrição de extensão não
+acomoda protocolo de revisão sistemática com bases, expressão de busca,
+critérios de inclusão e janela temporal, e o produto de um protocolo desses não
+caberia em duas páginas. O protocolo e o resultado bruto do levantamento ficam
+registrados fora do texto principal, e esta subseção apresenta os trabalhos que
+delimitam o espaço ocupado aqui.
 
-\pendente{Cinco a oito trabalhos, com uma coluna por característica que
-distingue este trabalho: objeto documental, etapa do processo atendida, país e
-norma de referência, tratamento de preço, e existência de trilha de auditoria
-reproduzível. Fechar com um parágrafo explicitando a lacuna que este trabalho
-ocupa.}
+\pendente{O quadro abaixo traz quatro trabalhos, e não os cinco a oito
+pretendidos. Todos foram lidos integralmente e tiveram os metadados conferidos
+na fonte primária. Outros sete estão conferidos e fichados, e entram nas
+próximas semanas --- a limitação é deliberada, para que cada trabalho citado
+possa ser discutido em profundidade. Falta ainda a comparação com \emph{sistemas}
+em operação, de governo e comerciais, que não são literatura e exigem fonte
+documental distinta.}
 
-\pendente{A primeira rodada do levantamento está em
-\code{docs/pesquisas/levantamento-literatura-primeira-rodada.md} e trouxe dois
-trabalhos que o quadro \textbf{tem} de posicionar: um de 2026 que aplica
-recuperação aumentada por geração a documentos de licitação pública, e um
-brasileiro sobre construção de preço de referência que critica a média
-aritmética. Nenhum dos metadados foi conferido na fonte primária, e por isso
-nenhum pode ser citado ainda.}
+\begin{table}[H]
+  \centering
+  \caption{Trabalhos relacionados e posição deste trabalho}
+  \label{tab:trabalhos-relacionados}
+  \begin{ufopaespacosimples}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}lXXl@{}}
+    \toprule
+    \textbf{Trabalho} & \textbf{Etapa atendida} & \textbf{Tratamento de preço} &
+      \textbf{País} \\
+    \midrule
+    \cite{siciliani2023apoio} & Ciclo inteiro; consulta a editais e contratos &
+      Não trata & Itália \\
+    \cite{brum2024agrupamento} & Agrupamento de itens de compra pública &
+      Não trata preço; agrupa descrições & Brasil \\
+    \cite{faria2025precos} & Fase preparatória; cálculo do valor estimado &
+      Tratamento estatístico sobre cotações já reunidas & Brasil \\
+    \cite{vandermeer2026legalcheck} & Fora de compras; parecer jurídico
+      municipal & Não trata & Países Baixos \\
+    \midrule
+    \textbf{Este trabalho} & \textbf{Fase preparatória; peças e triagem de
+      preço} & \textbf{Recuperação por significado sob filtro estruturado} &
+      \textbf{Brasil} \\
+    \bottomrule
+  \end{tabularx}
+  \end{ufopaespacosimples}
+  \fonte{Elaborado pelo autor.}
+\end{table}
 
-\pendente{Dois eixos do levantamento não foram executados: geração assistida de
-documento administrativo, e comparação de desempenho entre persistência
-vetorial dedicada e extensão do PostgreSQL. Enquanto o primeiro não rodar, a
-ausência de trabalhos sobre \emph{geração} de minuta é observação, não lacuna
-comprovada --- e não deve ser afirmada como tal aqui.}
+O sistema de apoio à decisão descrito por \citaautor{siciliani2023apoio},
+desenvolvido com uma região italiana, é o precedente mais direto do emprego de
+busca por significado em compras públicas: reúne dados estruturados da base
+nacional de contratos e documentos de editais, e oferece busca que combina
+palavra e proximidade semântica, com sugestão de conceitos relacionados para
+cobrir o vocabulário que o usuário não domina. O alvo, porém, é a consulta a
+processos e empresas, não a composição do valor estimado, e o preço não é
+tratado.
+
+\citaautor{brum2024agrupamento} atacam o problema de representação que está no
+centro deste trabalho, ainda que com outro objetivo. Para agrupar itens de
+compra pública que são o mesmo produto escrito de formas diferentes, comparam
+oito representações de texto sobre mais de dois milhões de descrições em
+português, e propõem uma variante que pondera os componentes que definem um
+item: substantivo, unidade de medida e número. Dois achados deles orientam o
+desenho adotado aqui. O primeiro é que o sinal lexical é forte nesse tipo de
+descrição, a ponto de uma heurística simples organizar a maior parte do conjunto
+--- sem ela, de 43\% a 45\% dos itens ficam sem grupo. O segundo é que método
+simples fica próximo de modelo sofisticado, o que desaconselha fixar a
+representação antes de medir. A diferença de objetivo importa: agrupar é
+operação sobre o acervo inteiro, enquanto este trabalho precisa recuperar
+candidatos para um item específico, sob filtro, e com decisão humana ao fim.
+
+\citaautor{faria2025precos} são o correlato brasileiro mais próximo quanto ao
+preço. Desenvolvem software que calcula o preço de referência a partir das
+cotações já coletadas, criticando os três critérios usuais e selecionando entre
+tratamentos estatísticos alternativos. A diferença de escopo é o ponto: o
+trabalho deles começa onde as cotações já estão reunidas, e é exatamente a etapa
+anterior --- decidir, item por item, quais preços são comparáveis ao item
+demandado --- que concentra o esforço medido aqui.
+
+Há ainda uma divergência de critério que precisa ser registrada, porque afeta a
+avaliação. Aquele trabalho mede sucesso pela proximidade entre o preço de
+referência calculado e o preço efetivamente homologado. No setor estudado, o
+valor estimado funciona como teto, e a servidora preserva margem acima do preço
+praticado de propósito. Adotar aquela métrica mediria este sistema contra um
+alvo que a prática do domínio considera indesejável, e por isso ela não é
+adotada.
+
+\citaautor{vandermeer2026legalcheck} descrevem sistema em uso no departamento
+jurídico de uma prefeitura europeia, que recupera pareceres anteriores e
+legislação, gera minuta e a submete a revisão obrigatória de um jurista, que
+permanece autor do documento. É o precedente mais próximo quanto à geração
+assistida de peça administrativa em prefeitura, inclusive por trazer avaliação em
+uso real por seis meses, com medida de tempo e de aceitação. O domínio é outro
+--- resposta a objeção de cidadão, não contratação ---, e não há tratamento de
+preço, mas a arquitetura de revisão obrigatória com autoria humana preservada é
+a mesma adotada aqui.
+
+\paragraph{A lacuna ocupada.} Dos trabalhos acima, nenhum apoia a decisão, item
+por item, de quem monta a pesquisa de preços. Os correlatos brasileiros de preço
+ou partem das cotações já reunidas, ou analisam sobrepreço depois da
+contratação; o precedente de busca semântica em compras públicas não trata
+preço; e o de geração de peça em prefeitura atua em outro domínio documental.
+Soma-se a isso que nenhum deles dispõe de gabarito das escolhas reais de quem
+cotou, que este trabalho possui.
+
+\pendente{Esta afirmação de lacuna vale para os quatro trabalhos do quadro e para
+os sete já fichados. Ela não é afirmação de inexistência: enquanto a varredura
+não incluir teses e dissertações brasileiras e sistemas em operação, o enunciado
+correto é que a lacuna não foi preenchida pelos trabalhos examinados.}

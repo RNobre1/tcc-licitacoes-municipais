@@ -358,6 +358,21 @@
 % Trecho de código, nome de arquivo, endpoint ou parâmetro, em monoespaçada.
 \newcommand{\code}[1]{\texttt{\small #1}}
 
+% Citação com o autor integrado à frase — "Siciliani et al. (2023) descrevem".
+%
+% EXISTE NOS DOIS ALVOS, com implementações diferentes, e é por isso que ela
+% existe. O conteúdo de secoes/ é compartilhado, mas os motores de bibliografia
+% não são: aqui roda biblatex, que oferece \textcite; no alvo da SBC roda bibtex
+% clássico com o sbc.bst, que não oferece equivalente nenhum.
+%
+% Usar \textcite direto no conteúdo compila neste alvo e aborta no outro, com
+% "Undefined control sequence" — defeito assimétrico, que quem compila só um dos
+% alvos não enxerga. Aconteceu em 06/10/2026.
+%
+% Coberto por tests/test_citacao_nos_dois_alvos.py, que varre o conteúdo e exige
+% que todo comando de citação esteja definido nos dois pacotes.
+\newcommand{\citaautor}[1]{\textcite{#1}}
+
 % Bloco em espaço simples, para as exceções do guia (§2.4): tabela, legenda,
 % nota. Existe para que as seções compartilhadas NÃO chamem `singlespace`
 % diretamente — `singlespace` vem do setspace, que só é carregado porque este
