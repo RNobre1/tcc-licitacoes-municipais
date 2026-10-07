@@ -1,5 +1,8 @@
-\section{Requisitos e arquitetura da solução}
+\section{Desenvolvimento}
 \label{sec:requisitos-arquitetura}
+
+\subsection{Requisitos}
+\label{subsec:bloco-requisitos}
 
 Esta seção reúne o que foi levantado em campo e o desenho que dele decorre. A
 ordem é deliberada: primeiro como o processo acontece hoje, depois onde o esforço
@@ -8,40 +11,7 @@ para fazê-lo. Requisito sem o processo que o origina é afirmação sem lastro,
 avaliação ao fim do trabalho vai ser feita contra esse processo, não contra o
 desenho.
 
-\subsection{Procedimento de levantamento}
-\label{subsec:procedimento-levantamento}
-
-O levantamento combinou três fontes de evidência, com pesos diferentes.
-
-A primeira foi uma entrevista estruturada com a servidora responsável pela fase
-preparatória no setor de licitações do município estudado, seguida de uma sessão
-de validação na qual a especificação já redigida foi lida bloco a bloco para que
-ela a corrigisse. A segunda foi a análise de documentos de processos encerrados
-cedidos pelo setor: documentos de formalização de demanda, estudos técnicos
-preliminares, termos de referência e relatórios de cotação. A terceira foi a
-medição desses documentos, descrita adiante.
-
-A distinção entre as três importa e é mantida ao longo do texto. O que a
-servidora declarou aparece como declaração; o que os documentos mostram aparece
-como medida; e o que foi inferido de um pelo outro aparece como inferência,
-sempre identificada. A sessão de validação existiu precisamente para separar
-essas camadas, e derrubou três afirmações que até então figuravam como
-diagnóstico.
-
-A mais consequente das três merece registro, porque ilustra o risco do método.
-A comparação entre as datas de assinatura sugeria que o estudo técnico
-preliminar era assinado depois da cotação e ainda assim se referia a ela como
-evento futuro, o que foi lido como prova documental de inversão da ordem legal.
-A leitura estava errada: existe uma minuta assinada antes, e é dela que vem o
-tempo verbal futuro. O desvio real é outro e menor, e está descrito na
-subseção~\ref{subsec:processo-hoje}. Anomalia de documento só vira evidência
-depois de verificado quantas versões daquele documento existem.
-
-\pendente{Detalhar, quando a avaliação for desenhada por completo, o tamanho e o
-critério de seleção do conjunto de documentos analisados, e explicitar que ele é
-de conveniência.}
-
-\subsection{O processo de contratação hoje}
+\subsubsection{O processo de contratação hoje}
 \label{subsec:processo-hoje}
 
 O processo começa quando uma secretaria identifica uma necessidade e a formaliza
@@ -89,7 +59,7 @@ mecanismo: das doze seções numeradas, onze são idênticas, e apenas a estimat
 de valor difere. É dado de projeto, e não só de diagnóstico, porque descreve
 exatamente a transformação que o sistema precisa reproduzir.
 
-\subsection{Onde o esforço se concentra}
+\subsubsection{Onde o esforço se concentra}
 \label{subsec:onde-doi}
 
 O município já utiliza um banco de preços comercial, o Banco de Preços, que
@@ -162,7 +132,7 @@ validade quando a seção de avaliação definir como a medição será reportad
 valores existem e estão registrados; falta decidir o nível de detalhe que cabe
 no artigo.}
 
-\subsection{Regras de negócio}
+\subsubsection{Regras de negócio}
 \label{subsec:regras-de-negocio}
 
 As regras a seguir decorrem da legislação e da prática do setor. Valem
@@ -225,7 +195,7 @@ limitada pela qualidade das descrições publicadas, que o sistema não controla
 isso precisa constar dos resultados como limitação e não como falha de
 implementação.
 
-\subsection{Requisitos}
+\subsubsection{Requisitos funcionais e não funcionais}
 \label{subsec:requisitos}
 
 A especificação completa reúne vinte e duas regras de negócio, trinta e nove
@@ -309,7 +279,30 @@ declarando qual dispositivo atende, e a ordem adotada pelo município não coinc
 com a ordem dos incisos, de modo que as duas convenções precisam ser respeitadas
 ao mesmo tempo.
 
-\subsection{Arquitetura da solução}
+\subsubsection{Alcance do que foi modelado}
+\label{subsec:alcance}
+
+O setor conduz cerca de dez contratações por semana somando todas as
+modalidades, e o caminho modelado não é o mais frequente entre elas. Contratações
+de obras e serviços de engenharia ficam fora do escopo, porque seu orçamento é
+montado por planilha de custos sobre tabela de referência, que é mecanismo
+distinto da pesquisa de preços tratada aqui. Adesões a ata e contratações diretas
+também não percorrem o caminho inteiro.
+
+O recorte se justifica pelo tempo, não pela contagem: um processo consolidado de
+cento e cinquenta itens consumiu vinte e oito dias corridos, enquanto uma adesão
+a ata não tem cotação alguma. A escolha é atacar onde o esforço se concentra.
+
+Registra-se, porém, uma limitação ainda não resolvida: a proporção entre os tipos
+de processo não foi medida. Enquanto ela for desconhecida, qualquer ganho que
+este trabalho venha a demonstrar vale para o tipo de processo modelado, e não
+para a rotina do setor como um todo. A afirmação a ser sustentada nos resultados
+precisa carregar essa qualificação.
+
+\subsection{Projeto}
+\label{subsec:bloco-projeto}
+
+\subsubsection{Arquitetura da solução}
 \label{subsec:arquitetura}
 
 A arquitetura é apresentada em dois níveis de ampliação, no estilo do modelo
@@ -397,27 +390,7 @@ não uma: semelhança do item e proximidade do preço esperado. Elas são exibid
 separadas, e não fundidas em escore único, para que o operador saiba qual das
 duas puxou cada candidato para cima.
 
-\subsection{Alcance do que foi modelado}
-\label{subsec:alcance}
-
-O setor conduz cerca de dez contratações por semana somando todas as
-modalidades, e o caminho modelado não é o mais frequente entre elas. Contratações
-de obras e serviços de engenharia ficam fora do escopo, porque seu orçamento é
-montado por planilha de custos sobre tabela de referência, que é mecanismo
-distinto da pesquisa de preços tratada aqui. Adesões a ata e contratações diretas
-também não percorrem o caminho inteiro.
-
-O recorte se justifica pelo tempo, não pela contagem: um processo consolidado de
-cento e cinquenta itens consumiu vinte e oito dias corridos, enquanto uma adesão
-a ata não tem cotação alguma. A escolha é atacar onde o esforço se concentra.
-
-Registra-se, porém, uma limitação ainda não resolvida: a proporção entre os tipos
-de processo não foi medida. Enquanto ela for desconhecida, qualquer ganho que
-este trabalho venha a demonstrar vale para o tipo de processo modelado, e não
-para a rotina do setor como um todo. A afirmação a ser sustentada nos resultados
-precisa carregar essa qualificação.
-
-\subsection{Decisões ainda abertas}
+\subsubsection{Decisões ainda abertas}
 \label{subsec:decisoes-abertas}
 
 As decisões a seguir estão abertas por falta de informação, e não por omissão.
