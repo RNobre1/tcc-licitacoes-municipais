@@ -74,7 +74,9 @@
 
 % Marcador de trecho não escrito. Vermelho e explícito de propósito: pendência
 % que não incomoda ao ler é pendência que vai para a banca.
-\newcommand{\pendente}[1]{{\color{red}\textbf{[PENDENTE]} \textit{#1}}}
+% Marcador de pendência: fonte única em pendencia.sty, que também implementa o
+% modo limpo usado na versão apresentável.
+\RequirePackage{pendencia}
 
 % Trecho de código, nome de arquivo, endpoint ou parâmetro, em monoespaçada.
 \newcommand{\code}[1]{\texttt{\small #1}}

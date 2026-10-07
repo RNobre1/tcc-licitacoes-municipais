@@ -353,7 +353,9 @@
 % Marcador de pendência editorial. O texto "PENDENTE" é o que os testes de
 % conformidade procuram para saber que uma seção ainda não pode ser avaliada —
 % não troque a palavra sem atualizar tests/test_conformidade_pdf.py.
-\newcommand{\pendente}[1]{{\color{red}\textbf{[PENDENTE]} \textit{#1}}}
+% Marcador de pendência: fonte única em pendencia.sty, que também implementa o
+% modo limpo usado na versão apresentável.
+\RequirePackage{pendencia}
 
 % Trecho de código, nome de arquivo, endpoint ou parâmetro, em monoespaçada.
 \newcommand{\code}[1]{\texttt{\small #1}}

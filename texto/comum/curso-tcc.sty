@@ -137,7 +137,9 @@
 % Mesma semântica dos outros alvos: o que falta aparece em vermelho e não
 % atravessa a entrega despercebido.
 \RequirePackage{xcolor}
-\providecommand{\pendente}[1]{{\color{red}\textbf{[PENDENTE]} \textit{#1}}}
+% Marcador de pendência: fonte única em pendencia.sty, que também implementa o
+% modo limpo usado na versão apresentável.
+\RequirePackage{pendencia}
 \providecommand{\code}[1]{\texttt{\small #1}}
 \providecommand{\fonte}[1]{%
   \par\vspace{0.3em}{\footnotesize\textbf{Fonte:} #1}}

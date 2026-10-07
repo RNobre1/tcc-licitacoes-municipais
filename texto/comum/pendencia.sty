@@ -1,0 +1,54 @@
+% =============================================================================
+% O marcador de pendência, e o modo limpo que o suprime.
+%
+% FONTE ÚNICA. Antes deste arquivo, `\pendente` era definido três vezes — uma em
+% cada pacote de layout — com o mesmo corpo copiado. Três cópias do mesmo
+% comportamento são três lugares para divergir, e o modo limpo teria de ser
+% implementado em cada uma.
+%
+% COMO FUNCIONA
+%
+% Por padrão, `\pendente{...}` imprime o texto em vermelho, precedido de
+% [PENDENTE]. É o que se quer enquanto o documento está sendo escrito: o que
+% falta precisa doer aos olhos de quem lê.
+%
+% Definindo `\ufopalimpo` ANTES de o documento carregar este pacote, o marcador
+% passa a não imprimir nada. É o modo usado para gerar a versão apresentável, que
+% vai para quem lê o trabalho e não deve ver bilhete de trabalho interno:
+%
+%     latexmk -pdf -usepretex='\def\ufopalimpo{}' main.tex
+%
+% POR QUE SUPRIMIR, E NÃO APAGAR
+%
+% O conteúdo do marcador é instrução para quem escreve, e ela precisa continuar
+% existindo no fonte. Gerar a versão limpa apagando os marcadores produziria dois
+% fontes a manter, e o segundo envelheceria. Aqui há um fonte só, e dois modos de
+% compilá-lo.
+%
+% Coberto por tests/test_entregas_apresentaveis.py, que confere que nenhum PDF
+% apresentável contém a palavra que o marcador imprime.
+% =============================================================================
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{pendencia}[2026/10/07 Marcador de pendência e modo limpo]
+
+\RequirePackage{xcolor}
+
+\newif\ifufopa@limpo
+\ifdefined\ufopalimpo
+  \ufopa@limpotrue
+\fi
+
+\ifufopa@limpo
+  % Engole o argumento sem imprimir nada. O `\ignorespaces` evita que o espaço
+  % que vinha antes do marcador vire espaço duplo no parágrafo.
+  \newcommand{\pendente}[1]{\ignorespaces}
+\else
+  \newcommand{\pendente}[1]{{\color{red}\textbf{[PENDENTE]} \textit{#1}}}
+\fi
+
+% Disponível para o texto perguntar em que modo está, quando precisar — por
+% exemplo, para omitir uma seção inteira que só existe de marcador.
+\newcommand{\semodolimpo}[2]{\ifufopa@limpo#1\else#2\fi}
+
+\endinput

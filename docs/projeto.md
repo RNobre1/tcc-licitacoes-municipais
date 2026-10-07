@@ -67,6 +67,7 @@ era na data em que foi realizada.
 │   ├── comum/          # preâmbulo e bibliografia compartilhados
 │   ├── tcc1/           # projeto (2026.2)
 │   └── tcc2/           # monografia (2027.1)
+├── entregas/           # os três layouts sem marcador de pendência (gerado)
 ├── code/               # o sistema desenvolvido
 ├── scripts/            # manifesto de normas e geradores
 └── tests/              # testes de conformidade do texto
@@ -139,8 +140,12 @@ marcada com `VERIFICAR` e não pode ser citada no texto.
 
 ```bash
 # texto
-cd texto/tcc1 && make pdf          # compila; `make watch` recompila ao salvar
+cd texto/tcc1 && make pdf          # compila os três layouts; `make watch` ao salvar
 cd texto/tcc2 && make pdf
+
+# versão apresentável, sem os marcadores de pendência
+python scripts/gerar_entregas.py   # regera entregas/
+python scripts/gerar_figuras.py    # regera as figuras dos diagramas
 
 # normas
 python scripts/gerar_normas.py     # regera .sty e docs/normas/README.md
