@@ -1,0 +1,58 @@
+% =============================================================================
+% TCC I — alvo de layout do modelo do curso.
+%
+% Terceiro destino do MESMO conteúdo, que vive uma vez só em secoes/:
+%
+%   main-curso.tex  → modelo cedido pela orientação. É o que o curso recebe.
+%   main-sbc.tex    → padrão da SBC. É o que um congresso aceita sem retrabalho.
+%   main.tex        → guia do SIBI. É o que a biblioteca exige no depósito.
+%
+% Este arquivo só declara os dados do trabalho e a ordem das seções. Toda a
+% formatação vive em ../comum/curso-tcc.sty, e a origem das medidas está
+% documentada no cabeçalho de lá.
+% =============================================================================
+
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{curso-tcc}
+
+\addbibresource{refs.bib}
+
+\cursotitulo{Sistemas inteligentes aplicados à gestão pública: automação da
+  fase preparatória e pesquisa de preços em licitações municipais}
+
+\cursoautores{Rafael Nobre de Souza\textsuperscript{1} \&
+  Socorro Vânia Lourenço Alves\textsuperscript{2}}
+
+\cursoafiliacoes{%
+  \textsuperscript{1}Bacharelado em Ciência da Computação / UFOPA;
+  \pendente{e-mail institucional}\\
+  \textsuperscript{2}Programa de Computação / UFOPA;
+  \pendente{e-mail da orientadora}}
+
+\cursorodape{Bacharelado em Ciência da Computação, 2026}
+
+\begin{document}
+
+\cursocabecalho
+
+\cursoresumo{%
+  \pendente{Escrever ao fechar a metodologia, cobrindo objetivo, método,
+  resultados esperados e contribuição. O modelo do curso traz resumo de cerca de
+  quinze linhas, em parágrafo único.}%
+}{%
+  \pendente{quatro a seis termos, separados por ponto e vírgula}%
+}
+
+\input{secoes/01-introducao}
+\input{secoes/02-fundamentacao}
+\input{secoes/03-metodologia}
+\input{secoes/04-desenvolvimento}
+\input{secoes/05-resultados-esperados}
+\input{secoes/06-cronograma}
+
+\cursobibliografia
+
+\cursofim
+
+\end{document}

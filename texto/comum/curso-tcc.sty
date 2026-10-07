@@ -1,0 +1,155 @@
+% =============================================================================
+% Layout do modelo do curso — terceiro alvo do mesmo conteúdo.
+%
+% ORIGEM DAS MEDIDAS, E O LIMITE DELAS.
+%
+% Ao contrário do alvo da SBC, cujo `.sty` é publicado e pode ser lido, o modelo
+% do curso chegou apenas como PDF, cedido pela orientação em 07/10/2026. Não há
+% especificação normativa para seguir — há um documento impresso, do qual se
+% mediu.
+%
+% Toda medida abaixo foi inferida com `scripts/medir_geometria_pdf.py` sobre as
+% páginas 3 a 14 do modelo, e carrega o erro de quem mede régua em papel: a
+% caixa de uma palavra não coincide com a margem tipográfica, porque depende da
+% letra que abre e fecha cada linha.
+%
+% Medido:
+%   margem esquerda  2,70 cm        entrelinha      16,2 pt
+%   margem direita   2,73 cm        altura de letra 12,25 pt
+%   margem superior  2,74 cm        fonte           Palatino Linotype
+%   margem inferior  2,01 cm
+%
+% Adotado: 2,70 cm nas laterais e no topo, 2,00 cm na base. A diferença de três
+% centésimos entre esquerda e direita é ruído de medição, não assimetria de
+% projeto — nenhum editor produz margens diferentes por 0,3 mm de propósito.
+%
+% Isto NÃO substitui o guia do SIBI, que continua sendo a norma de formatação do
+% projeto e o alvo de depósito na biblioteca. São três destinos do mesmo texto:
+% este para a entrega ao curso, a SBC para submissão a congresso, o SIBI para o
+% depósito.
+% =============================================================================
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{curso-tcc}[2026/10/07 Layout do modelo do curso]
+
+% --- Codificação e idioma ----------------------------------------------------
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[brazil]{babel}
+
+% Palatino. O modelo usa Palatino Linotype; adota-se o Palatino livre (URW
+% Palladio), que é o distribuído com o TeX e metricamente compatível.
+%
+% A troca é só da fonte de TEXTO, por `\rmdefault`, e não do conjunto
+% matemático. `mathpazo` faria as duas, e exigiria as métricas da matemática
+% Palatino, que não vêm na instalação mínima — dependência que este documento
+% não usa, porque não tem fórmula nenhuma. Se um dia tiver, trocar por
+% `mathpazo` e instalar `fpl`.
+%
+% Requer o pacote `palatino` do TeX Live. No macOS, com TinyTeX:
+%     tlmgr install palatino
+\renewcommand{\rmdefault}{ppl}
+
+% --- Geometria ---------------------------------------------------------------
+\RequirePackage[
+  a4paper,
+  left=2.70cm,
+  right=2.70cm,
+  top=2.70cm,
+  bottom=2.00cm,
+]{geometry}
+
+% --- Entrelinha --------------------------------------------------------------
+% Medido 16,2 pt sobre corpo de 12 pt. O padrão do LaTeX é 1,2 vezes o corpo,
+% ou seja 14,4 pt; o fator abaixo é a razão entre os dois.
+\RequirePackage{setspace}
+\setstretch{1.125}
+
+% Parágrafo sem recuo e com respiro, como no modelo.
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+
+% --- Pacotes de conteúdo -----------------------------------------------------
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{url}
+\RequirePackage{array}
+\RequirePackage{tabularx}
+\RequirePackage{booktabs}
+\RequirePackage{longtable}
+\RequirePackage{float}
+\RequirePackage[hidelinks]{hyperref}
+
+% --- Títulos de seção --------------------------------------------------------
+% O modelo numera com ponto — "1. Introdução" — e usa negrito sem caixa alta.
+\RequirePackage{titlesec}
+\renewcommand{\thesection}{\arabic{section}.}
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}.}
+\renewcommand{\thesubsubsection}{%
+  \arabic{section}.\arabic{subsection}.\arabic{subsubsection}.}
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.5em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\itshape}{\thesubsubsection}{0.5em}{}
+
+% --- Cabeçalho e rodapé ------------------------------------------------------
+% O modelo traz, no rodapé, o curso e o ano à esquerda, o endereço da
+% instituição ao centro e "página de total" à direita.
+% O total de páginas sai de um rótulo posto no fim do documento, e não do pacote
+% `lastpage`, que não está nesta instalação. São duas linhas de LaTeX puro
+% contra uma dependência a instalar — e dependência nova é custo que viaja para
+% toda máquina que for compilar isto depois.
+\RequirePackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\newcommand{\cursotcc@rodape}{}
+\newcommand{\cursorodape}[1]{\renewcommand{\cursotcc@rodape}{#1}}
+\newcommand{\cursofim}{\label{cursotcc:fim}}
+\fancyfoot[L]{\footnotesize\cursotcc@rodape}
+\fancyfoot[C]{\footnotesize\url{www.ufopa.edu.br}}
+\fancyfoot[R]{\footnotesize\thepage{} de \pageref*{cursotcc:fim}}
+
+% --- Capa do artigo ----------------------------------------------------------
+% Título, autores com afiliação numerada e e-mail, resumo e palavras-chave —
+% a mesma disposição do modelo.
+\newcommand{\cursotitulo}[1]{\def\cursotcc@titulo{#1}}
+\newcommand{\cursoautores}[1]{\def\cursotcc@autores{#1}}
+\newcommand{\cursoafiliacoes}[1]{\def\cursotcc@afiliacoes{#1}}
+
+\newcommand{\cursocabecalho}{%
+  {\raggedright\large\bfseries\cursotcc@titulo\par}%
+  \vspace{0.8em}%
+  {\raggedright\cursotcc@autores\par}%
+  \vspace{0.4em}%
+  {\raggedright\footnotesize\cursotcc@afiliacoes\par}%
+  \vspace{1.2em}%
+}
+
+\newcommand{\cursoresumo}[2]{%
+  \begin{singlespace}%
+  \noindent\textbf{Resumo:} #1\par\vspace{0.6em}%
+  \noindent\textbf{Palavras-chave:} #2\par%
+  \end{singlespace}%
+  \vspace{1.2em}%
+}
+
+% --- Marcador de pendência ---------------------------------------------------
+% Mesma semântica dos outros alvos: o que falta aparece em vermelho e não
+% atravessa a entrega despercebido.
+\RequirePackage{xcolor}
+\providecommand{\pendente}[1]{{\color{red}\textbf{[PENDENTE]} \textit{#1}}}
+\providecommand{\code}[1]{\texttt{\small #1}}
+\providecommand{\fonte}[1]{%
+  \par\vspace{0.3em}{\footnotesize\textbf{Fonte:} #1}}
+\newenvironment{ufopaespacosimples}{\begin{singlespace}}{\end{singlespace}}
+
+% Citação com o autor integrado à frase. Par das definições em ufopa-tcc.sty e
+% sbc-tcc.sty — ver lá o motivo de o comando existir. Aqui roda biblatex, como
+% no alvo do SIBI.
+\providecommand{\citaautor}[1]{\textcite{#1}}
+
+% --- Bibliografia ------------------------------------------------------------
+\RequirePackage[backend=biber,style=abnt,repeatfields=false]{biblatex}
+\newcommand{\cursobibliografia}{\printbibliography[title=Referências]}
+
+\endinput

@@ -102,12 +102,18 @@ export PATH="$HOME/Library/TinyTeX/bin/universal-darwin:$PATH"   # ponha no ~/.z
 
 tlmgr install biber biblatex biblatex-abnt babel-portuges psnfss cm-super \
   geometry titlesec fancyhdr setspace microtype booktabs float longtable \
-  tabularx xcolor hyperref indentfirst csquotes xpatch l3packages rsfs
+  tabularx xcolor hyperref indentfirst csquotes xpatch l3packages rsfs \
+  palatino mathpazo
 
 brew install poppler libthai
 ```
 
-Duas armadilhas específicas do macOS, ambas encontradas na prática:
+`palatino` e `mathpazo` servem ao alvo de layout do curso, que usa essa fonte.
+Se o `tlmgr` recusar a instalação pedindo que ele próprio seja atualizado, rode
+`tlmgr update --self` antes — a instalação mínima do TinyTeX envelhece, e a
+mensagem aparece anos depois de instalado.
+
+Três armadilhas específicas do macOS, todas encontradas na prática:
 
 - **`libthai`** não é opcional. O `biber` do TeX Live para macOS é um binário
   empacotado que carrega `Unicode::LineBreak`, compilado contra a `libthai` do
@@ -118,6 +124,11 @@ Duas armadilhas específicas do macOS, ambas encontradas na prática:
   saem como fontes Type 3, isto é, bitmaps rasterizados em 600 dpi: o PDF
   compila, as fontes ficam embutidas e o texto serrilha na tela e na impressão.
   Há um teste que pega isso.
+- **O Palatino do TeX vem em duas metades.** `palatino` traz as métricas do
+  texto; `mathpazo`, as da matemática. O alvo do curso troca só a fonte de
+  texto e não usa fórmula alguma, mas o LaTeX carrega o conjunto matemático de
+  qualquer maneira ao fechar a página — e falha com `fplmr not loadable` se a
+  segunda metade faltar. Instalar as duas.
 
 ## Contexto
 
