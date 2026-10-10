@@ -246,6 +246,85 @@ escolha muda.
 
 ---
 
+## Top 10, com o estágio do trabalho em cada prazo
+
+Ordenado por estrato, filtrado por duas perguntas que a lista anterior não
+fazia: **o que o trabalho terá naquele prazo**, e **o aceite chega antes da
+defesa**.
+
+A segunda pergunta depende do calendário acadêmico de 2027.1, que é pendência
+aberta. Tudo abaixo supõe defesa em **julho de 2027** — se o semestre terminar
+antes ou depois, a coluna de notificação muda e a ordem com ela.
+
+### A assimetria que organiza a lista
+
+Periódico e evento se comportam de formas opostas quanto ao prazo.
+
+**Periódico tem fluxo contínuo, mas decisão lenta.** Submeter quando o sistema
+estiver pronto significa receber resposta depois da defesa. Para o aceite chegar
+a tempo, a submissão precisa sair **cedo** — com requisitos, arquitetura e
+validação, que é o que já existe.
+
+**Evento tem prazo fixo, mas decisão rápida.** Dá para esperar o trabalho
+amadurecer e submeter com resultado.
+
+Daí a regra prática: **periódico agora, evento depois.**
+
+### Periódicos — submeter entre novembro de 2026 e janeiro de 2027
+
+| # | Veículo | Estrato | Formato que cabe | Decisão | Endereço |
+|---|---|---|---|---|---|
+| 1 | **Revista de Administração Pública** (FGV) | **A2** · A2 | Perspectivas práticas, até 4.000 palavras | 2 meses até a primeira | `periodicos.fgv.br/rap` |
+| 2 | Cadernos Gestão Pública e Cidadania (FGV) | **A3** · A4 | Artigo tecnológico, até 4.000 palavras | 8 semanas; 28 até a final | `periodicos.fgv.br/cgpc` |
+| 3 | Administração Pública e Gestão Social (UFV) | **A3** · A3 | 7.000 a 9.000 palavras | cerca de 4 meses | `periodicos.ufv.br/apgs` |
+| 4 | *iSys* (SBC) | B2 · A4 | Comunicação curta, em português | 8 a 12 semanas | `journals-sol.sbc.org.br/index.php/isys` |
+| 5 | Revista da CGU | B2 · A4 | Relato de pesquisa, até 2.000 palavras | cerca de 6 meses até publicar | `revista.cgu.gov.br` |
+
+Os quatro primeiros cabem no material de hoje. A extensão de 4.000 palavras das
+duas primeiras é aproximadamente o que o texto já tem de prosa.
+
+### Eventos — cada um encontra o trabalho num ponto
+
+| # | Veículo | Estrato | Prazo | O que você terá | Onde | Endereço |
+|---|---|---|---|---|---|---|
+| 6 | **dg.o** | **A3** | **17/01/2027** (artigo) ou **31/01/2027** (pôster e demonstração) | Requisitos, arquitetura, validação. Sem sistema | Seul | `dgsociety.org/dg-o-2027/` |
+| 7 | EGOV-CeDEM-ePart | **B1** | *estimado março/2027* | Sistema em construção. Há categoria de pesquisa em andamento, 12 páginas | Europa | `dgsociety.org/egov-2026/` |
+| 8 | **SBBD — trilha principal** | A4 | *estimado fim de março* | Sistema funcional, avaliação iniciada | Brasil | `sbbd.org.br` |
+| 9 | SBBD — workshop de graduação | A4 — *ver ressalva* | *estimado 11–18/05/2027* | O mesmo, com formato que aceita resultado parcial por escrito | Brasil | `sbbd.org.br` |
+| 10 | CSBC — simpósio de governo digital | B4 | *estimado março/2027* | Sistema em construção. Relato prático de 6 a 8 páginas, em português | **Manaus** | `sbc.org.br/eventos/` |
+
+### O que mudou em relação à lista anterior
+
+| Veículo | Antes | Agora | Por quê |
+|---|---|---|---|
+| SBBD — trilha principal | fora | **8º** | Em maio há sistema funcional; a trilha principal não carrega a ressalva de estrato do workshop |
+| SBBD — workshop | 1º dos eventos | 9º | Continua valendo como alternativa, e o estrato dele é o que está em dúvida |
+| Periódicos | depois dos eventos | **antes** | Decisão lenta: submeter com o sistema pronto faz a resposta chegar depois da defesa |
+
+### Fora do top 10, e por quê
+
+**HICSS — A1, o maior estrato da lista.** O prazo de junho de 2027 encontraria o
+trabalho avaliado, que é o estágio ideal. Mas a conferência é em janeiro de 2028
+e a notificação costuma sair em agosto de 2027 — depois da defesa. Vale publicar
+por si; não serve para substituir o trabalho de conclusão.
+
+**Os três periódicos A1 internacionais** — *Government Information Quarterly*,
+*Information Polity* e *Transforming Government*. Ficam de fora porque as
+condições não foram confirmadas: as páginas de instruções aos autores respondem
+com acesso negado, e não se sabe formato, prazo nem taxa. Se algum tiver seção
+curta e isenção de taxa para autor de país de renda média, entra em primeiro
+lugar.
+
+**Journal of Public Procurement — A3, escopo exatamente igual ao do trabalho.**
+Mesma razão: condições desconhecidas. É o que mais pode subir quando o
+levantamento fechar.
+
+**Computer on the Beach** — única chamada confirmada ainda em 2026, prazo
+15/11/2026. Não tem estrato, então não pontua. Serve para experiência de
+submissão e revisão por pares, não para substituir o TCC.
+
+---
+
 ## 6. Revistas
 
 | Revista | Fluxo | Extensão exigida | Idioma | Tempo informado | Estrato 2017-2020 (2021-2024) | Taxa | Aderência |
