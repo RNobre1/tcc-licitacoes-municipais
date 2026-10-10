@@ -132,6 +132,84 @@ ministério público de contas, e o prazo já venceu. O simpósio de mineração
 dados tem prazo vencido e aderência baixa. O workshop de transparência em
 sistemas não tem edição nos anais desde 2019.
 
+## 5A. Tabela de conferência
+
+Uma linha por veículo, com tudo que é preciso para conferir sem reabrir o
+levantamento: prazo, onde acontece, se exige comparecimento, estrato e o
+endereço oficial.
+
+**Leia a coluna de prazo com cuidado.** `confirmado` significa que a chamada de
+2027 saiu e traz a data. `estimado` significa que a chamada ainda não foi
+publicada e a data vem da edição anterior — serve para planejar, não para se
+comprometer.
+
+### Eventos
+
+| Veículo | Prazo | Quando e onde | Comparecer é obrigatório? | Estrato | Endereço |
+|---|---|---|---|---|---|
+| Computer on the Beach 2027 | **confirmado** 15/11/2026 | 13–17/04/2027, Florianópolis-SC | **Sim.** Apresentação por um autor é condição para entrar nos anais. Taxa de R$ 240 | sem estrato | `computeronthebeach.com.br` |
+| SBSI 2027 — novas ideias | **confirmado** 11/12 e 18/12/2026 | 17–20/05/2027, Campo Grande-MS | **Sim** | A4 (do SBSI) | `sbsi.sbc.org.br/2027/` |
+| dg.o 2027 | chamada sai 16/10/2026; prazo *estimado* jan–fev | 28/06–01/07/2027, **Seul, Coreia do Sul** | Não confirmado | **A3** | `dgsociety.org/dg-o-2027/` |
+| Congresso Consad 2027 | *estimado* fev (resumo) e abr (completo) | *estimado* maio, sede a confirmar | **Sim**, presencial | não classificado | `congressoconsad.org.br` |
+| Encontro Brasileiro de Administração Pública 2027 | *estimado* dez/2026 a 08/03/2027 | *estimado* junho, Brasília | **Não.** Admite apresentação virtual | não classificado | `sbap.org.br` |
+| Escola Regional de Banco de Dados 2027 | *estimado* 06/03/2027 | *estimado* abril, região Sul | **Sim** | não consta | `erbd2026.dv.utfpr.edu.br` |
+| EGOV-CeDEM-ePart 2027 | *estimado* 16/03/2027 | *estimado* agosto, sede europeia | Não confirmado | **B1** | `dgsociety.org/egov-2026/` |
+| SBBD 2027 — trilha principal | *estimado* fim de março | *estimado* setembro | **Sim** | A4 | `sbbd.org.br` |
+| CSBC 2027 — governo digital | *estimado* 30/03/2027 | **01–05/08/2027, Manaus-AM** (confirmado) | Não confirmado | B4 | `sbc.org.br/eventos/` |
+| EnANPAD 2027 | *estimado* meados de abril | *estimado* setembro | **Sim.** Faltar impede nova submissão até o fim do ano seguinte | B3 | `eventos.anpad.org.br` |
+| **SBBD 2027 — workshop de graduação** | *estimado* 11–18/05/2027 | *estimado* setembro | **Sim**, um autor presente | A4 do SBBD — **ver ressalva abaixo** | `sbbd.org.br` |
+| HICSS-61 | *estimado* meados de junho | janeiro/2028, Havaí | **Sim** | **A1** | `hicss.hawaii.edu` |
+| SEMEAD 2027 | *estimado* maio a 20/07/2027 | *estimado* novembro, São Paulo | **Não.** Há sessões on-line | não classificado | `semead.com.br` |
+
+### Periódicos
+
+Periódico não tem prazo nem comparecimento: publica em fluxo contínuo ou em
+edições, e a submissão é por sistema.
+
+| Veículo | Fluxo | Extensão que cabe hoje | Estrato | Endereço |
+|---|---|---|---|---|
+| Revista de Administração Pública | contínuo | Perspectivas práticas, até 4.000 palavras | **A2** | `periodicos.fgv.br/rap` |
+| Cadernos Gestão Pública e Cidadania | trimestral | Artigo tecnológico, até 4.000 palavras | **A3** | `periodicos.fgv.br/cgpc` |
+| Revista do Serviço Público | contínuo | 6.000 a 8.000 palavras | A3 | `revista.enap.gov.br` |
+| Administração Pública e Gestão Social | contínuo | 7.000 a 9.000 palavras | A3 | `periodicos.ufv.br/apgs` |
+| *iSys* (SBC) | contínuo | Comunicação curta | A4 | `journals-sol.sbc.org.br/index.php/isys` |
+| Revista da CGU | contínuo | Relato de pesquisa, até 2.000 palavras | A4 | `revista.cgu.gov.br` |
+| Revista do TCU | contínuo | Até 25 páginas; admite produto técnico | B3 | `revista.tcu.gov.br` |
+| Revista Controle (TCE-CE) | contínuo | 10 a 20 páginas | B2 | `revistacontrole.tce.ce.gov.br` |
+
+### Como conferir o estrato
+
+São duas listas distintas, e confundi-las dá resposta errada.
+
+**Evento de Computação** é classificado pela própria área, em relatório próprio
+— não pela plataforma da Capes, que cobre periódicos. O documento vigente é o
+relatório de classificação de eventos da Computação do quadriênio 2017-2020:
+
+`https://www.ppgia.pucpr.br/pt/arquivos/secretaria/RelatorioQualisEventos2017-2020-Computacao.pdf`
+
+Procure pela sigla do evento. Os estratos de evento desta tabela vieram de lá.
+
+**Periódico** é classificado na plataforma da Capes, por área de avaliação. O
+mesmo periódico recebe estratos diferentes em áreas diferentes, e o que vale é o
+da área em que o trabalho é avaliado:
+
+`https://sucupira-legado.capes.gov.br/sucupira/public/consultas/coleta/veiculoPublicacaoQualis/listaConsultaGeralPeriodicos.jsf`
+
+**Evento de administração pública não tem estrato**, e isso não é omissão desta
+tabela: a área não classifica eventos, só periódicos.
+
+### A ressalva que vale mais que a tabela inteira
+
+O estrato na coluna de workshop e trilha satélite é o do **evento principal**.
+Se ele se transfere para quem publica em anais estendidos é pergunta em aberto, e
+está na seção 8 como a primeira a fazer à orientação.
+
+Isso importa porque a melhor aposta desta lista — o workshop de graduação do
+SBBD — é justamente uma trilha satélite. Se o estrato não se transferir, a
+escolha muda.
+
+---
+
 ## 6. Revistas
 
 | Revista | Fluxo | Extensão exigida | Idioma | Tempo informado | Estrato 2017-2020 (2021-2024) | Taxa | Aderência |
