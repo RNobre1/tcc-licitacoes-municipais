@@ -194,7 +194,7 @@ texto.
 |---|---|---|---|
 | Titulação da orientadora, para a folha de rosto | Orientação | aberto | Pedido mais de uma vez |
 | Texto da natureza do trabalho conforme o colegiado | Instituição | aberto | |
-| Datas do calendário acadêmico de 2026.2 e 2027.1 | Instituição | aberto | Trava o cronograma do texto |
+| **Datas do calendário acadêmico de 2026.2 e 2027.1** | Instituição | aberto | Trava o cronograma do texto **e decide quais prazos de publicação servem**: para substituir o TCC, o aceite precisa sair antes da defesa |
 | Modelo de TCC usado por orientando anterior | Orientação | em andamento | Pedido de novo em 06/10. Até chegar, segue o alvo atual |
 | Designação exata do órgão de controle externo competente | Autor | aberto | Conferir em fonte oficial. Nunca preencher de memória |
 | Texto da instrução normativa que ampara a pesquisa de preços | Autor | aberto | Identificada com evidência primária; o texto não foi lido na fonte |
