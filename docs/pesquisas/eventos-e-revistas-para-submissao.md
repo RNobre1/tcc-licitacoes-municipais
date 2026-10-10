@@ -149,7 +149,7 @@ comprometer.
 |---|---|---|---|---|---|
 | Computer on the Beach 2027 | **confirmado** 15/11/2026 | 13–17/04/2027, Florianópolis-SC | **Sim.** Apresentação por um autor é condição para entrar nos anais. Taxa de R$ 240 | sem estrato | `computeronthebeach.com.br` |
 | SBSI 2027 — novas ideias | **confirmado** 11/12 e 18/12/2026 | 17–20/05/2027, Campo Grande-MS | **Sim** | A4 (do SBSI) | `sbsi.sbc.org.br/2027/` |
-| dg.o 2027 | chamada sai 16/10/2026; prazo *estimado* jan–fev | 28/06–01/07/2027, **Seul, Coreia do Sul** | Não confirmado | **A3** | `dgsociety.org/dg-o-2027/` |
+| dg.o 2027 | **artigo 17/01/2027**; pôster, demonstração e workshop **31/01/2027**, ambos 23:59 AoE. Calendário final sai com a chamada de 16/10/2026 | 28/06–01/07/2027, **Seul, Coreia do Sul** | Não confirmado | **A3** | `dgsociety.org/dg-o-2027/` |
 | Congresso Consad 2027 | *estimado* fev (resumo) e abr (completo) | *estimado* maio, sede a confirmar | **Sim**, presencial | não classificado | `congressoconsad.org.br` |
 | Encontro Brasileiro de Administração Pública 2027 | *estimado* dez/2026 a 08/03/2027 | *estimado* junho, Brasília | **Não.** Admite apresentação virtual | não classificado | `sbap.org.br` |
 | Escola Regional de Banco de Dados 2027 | *estimado* 06/03/2027 | *estimado* abril, região Sul | **Sim** | não consta | `erbd2026.dv.utfpr.edu.br` |
@@ -176,6 +176,42 @@ edições, e a submissão é por sistema.
 | Revista da CGU | contínuo | Relato de pesquisa, até 2.000 palavras | A4 | `revista.cgu.gov.br` |
 | Revista do TCU | contínuo | Até 25 páginas; admite produto técnico | B3 | `revista.tcu.gov.br` |
 | Revista Controle (TCE-CE) | contínuo | 10 a 20 páginas | B2 | `revistacontrole.tce.ce.gov.br` |
+
+### O estágio do trabalho não é fixo — e isso reordena a lista
+
+Erro cometido na primeira versão deste levantamento: tratar o estágio como
+estático, filtrando veículos por "aceita trabalho sem sistema pronto". O
+trabalho avança, e cada prazo encontra o projeto num ponto diferente.
+
+| Prazo | Estágio previsto | Veículos que ele alcança |
+|---|---|---|
+| Janeiro/2027 | Requisitos, arquitetura e validação; sem sistema | dg.o, nas duas categorias |
+| Março/2027 | Sistema em construção | EGOV, CSBC |
+| Maio/2027 | Sistema funcional, avaliação iniciada | SBBD — **trilha principal**, não só o workshop |
+| Junho/2027 | Sistema avaliado, resultado medido | HICSS |
+
+Duas consequências.
+
+A primeira é que o **SBBD de maio pode ir à trilha principal**, que é A4 sem a
+ressalva de estrato que pesa sobre o workshop.
+
+A segunda é que o **HICSS deixa de estar fora de alcance**. Ele foi descartado na
+primeira análise por exigir trabalho concluído, o que valia para o estágio de
+então e não para o de junho de 2027. É A1, o estrato mais alto da lista.
+
+### A restrição que vale para todos: o aceite tem de chegar antes da defesa
+
+Para que a publicação substitua o trabalho de conclusão, não basta submeter a
+tempo — o **aceite** precisa sair antes da defesa.
+
+O HICSS ilustra o problema: realiza em janeiro de 2028 e costuma notificar em
+agosto de 2027. Se o semestre 2027.1 terminar em julho, o aceite chega tarde
+para esse fim, ainda que o artigo valha por si.
+
+Isso transforma uma pendência que parecia burocrática na mais decisiva desta
+lista: **as datas do calendário acadêmico de 2027.1**. Sem elas não há como saber
+quais prazos de notificação chegam a tempo, e qualquer ordenação de prioridade
+fica provisória.
 
 ### Como conferir o estrato
 
