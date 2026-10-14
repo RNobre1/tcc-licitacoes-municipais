@@ -37,6 +37,9 @@ O que destrava mais coisa adiante, em ordem.
 | C4 | Escrever a seção de resultados esperados | Autor | aberto | Último vazio do texto |
 | C5 | Sessão de julgamento às cegas com a fonte de domínio | Fonte de domínio | aberto | **Condição** para a medição ter conclusão nos dois sentidos |
 | C6 | **Escrever o roteiro da sessão de observação do banco de preços** | Autor | aberto | É o pré-requisito de C5, e precisa existir antes de marcar a sessão |
+| C7 | **Decidir a classificação da pesquisa: Design Science Research ou estudo de caso** | Autor | aberto | Fecha a lacuna que a orientação apontou, e muda o que a avaliação precisa entregar |
+| C8 | **Modelar o processo de licitação em BPMN** | Autor | aberto | Pedido da orientação; vale para o texto, para a revista e para o evento |
+| C9 | **Conferir o prazo do simpósio de sistemas de informação** | Autor | em andamento | Há divergência entre o levantamento e o que a orientação informou |
 
 Sobre C2: foi confirmado em 06/10/2026 que o gabarito pode ser montado do
 material já entregue. Os relatórios de cotação trazem, por item, a descrição do
@@ -106,6 +109,60 @@ em que se mede.
 
 A avaliação em duas condições, com e sem o preço esperado, não é afetada: ela
 compara cada método consigo mesmo.
+
+### Sobre C7, C8 e C9: o que a reunião de 09/10/2026 mudou
+
+A orientação leu o texto e não pediu alteração nele. O foco sai da redação e vai
+para três coisas.
+
+**C7 — classificação da pesquisa.** O texto não declara a classificação, e a
+orientação sugeriu Design Science Research, com estudo de caso como alternativa
+mais simples. A razão dada: o trabalho gera um artefato para intervir num
+problema real, e DSR descreve exatamente isso; além disso, dá mais força para
+aceitação em evento.
+
+Antes de adotar, é preciso saber **o que DSR cobra**: que seções, que rigor de
+avaliação, que forma de relatar a contribuição. Adotar uma metodologia é assumir
+as exigências dela, e o custo precisa ser conhecido antes da escolha.
+
+**C8 — BPMN.** O argumento da orientação é de público: administração pública e
+governo digital falam em "processos", e o diagrama do processo de compras
+valoriza o artigo nos dois destinos. A ferramenta indicada foi o Bizagi; o
+diagrama precisa ser versionável, então o formato de saída importa.
+
+**C9 — divergência de prazo.** A orientação e outro orientando afirmaram que a
+submissão do simpósio de sistemas de informação está aberta, com prorrogação
+provável. O levantamento registra que a trilha principal venceu em 30/09/2026.
+Se houve prorrogação, há uma chance A4 dada por perdida, no evento que ela mesma
+indicou.
+
+### A lacuna da tabela de verificação
+
+Apontada na mesma reunião, e distinta das três acima porque é conserto de texto,
+não trabalho novo.
+
+A pergunta de pesquisa promete reduzir esforço sem comprometer conformidade, e o
+objetivo específico 5 fala em esforço de triagem, conformidade e usabilidade. A
+tabela de verificação **não mede nenhum dos três diretamente** — mede
+recuperação, estrutura do documento, valor estimado, desempenho, esforço
+residual e trilha.
+
+O argumento de que a melhora é implícita não se sustenta num texto avaliado:
+implícito não é medido. Conserta-se acrescentando linhas à tabela.
+
+### Contribuição científica, e por que ela precisa ficar explícita
+
+A orientação foi enfática: evento científico recusa trabalho que apresenta
+sistema. Citou um TCC recusado por isso, com os pareceristas perguntando qual
+era a contribuição científica.
+
+As três candidatas deste trabalho, nenhuma dependente de o sistema existir:
+
+| Candidata | Por que é científica |
+|---|---|
+| O viés do gabarito e o protocolo de julgamento às cegas que o corrige | Achado metodológico sobre avaliação de recuperação, não implementação |
+| Recuperação sob filtro restritivo em descrição curta e ruidosa | Mediana de seis palavras sobre doze milhões de itens |
+| Avaliação em duas condições, com e sem a âncora de preço | Separa compreender o item de já conhecer o preço |
 
 ---
 
