@@ -39,7 +39,7 @@ O que destrava mais coisa adiante, em ordem.
 | C6 | **Escrever o roteiro da sessão de observação do banco de preços** | Autor | aberto | É o pré-requisito de C5, e precisa existir antes de marcar a sessão |
 | C7 | **Decidir a classificação da pesquisa: Design Science Research ou estudo de caso** | Autor | aberto | Fecha a lacuna que a orientação apontou, e muda o que a avaliação precisa entregar |
 | C8 | **Modelar o processo de licitação em BPMN** | Autor | aberto | Pedido da orientação; vale para o texto, para a revista e para o evento |
-| C9 | **Conferir o prazo do simpósio de sistemas de informação** | Autor | em andamento | Há divergência entre o levantamento e o que a orientação informou |
+| C9 | ~~Conferir o prazo do simpósio de sistemas de informação~~ | Autor | **fechado 14/10** | Não houve prorrogação; apareceu a trilha de indústria, com prazo em 11/12/2026 |
 
 Sobre C2: foi confirmado em 06/10/2026 que o gabarito pode ser montado do
 material já entregue. Os relatórios de cotação trazem, por item, a descrição do
@@ -130,11 +130,23 @@ governo digital falam em "processos", e o diagrama do processo de compras
 valoriza o artigo nos dois destinos. A ferramenta indicada foi o Bizagi; o
 diagrama precisa ser versionável, então o formato de saída importa.
 
-**C9 — divergência de prazo.** A orientação e outro orientando afirmaram que a
-submissão do simpósio de sistemas de informação está aberta, com prorrogação
-provável. O levantamento registra que a trilha principal venceu em 30/09/2026.
-Se houve prorrogação, há uma chance A4 dada por perdida, no evento que ela mesma
-indicou.
+**C9 — divergência de prazo, fechada em 14/10/2026.** Não houve prorrogação: a
+trilha principal venceu em 30/09, com prazo marcado como rígido na própria
+chamada. O "até fevereiro" lido na reunião vem do resumo da página inicial, que
+diverge da chamada da trilha de novas ideias — ali 22/02/2027 é a **notificação**,
+e o prazo de arquivos é 18/12/2026. Essa trilha também exclui graduação em
+andamento.
+
+Em compensação apareceu a **trilha de indústria e inovação**, que não estava no
+levantamento: submissão em **11/12/2026**, texto de duas a quatro páginas sobre
+experiência prática, com estudantes de graduação no público declarado. É o único
+formato aberto do evento que acolhe o estágio atual.
+
+**A decisão não é só de prazo.** Pela própria descrição, aquela trilha é vitrine
+de experiência e não de contribuição científica — o oposto do que a orientação
+recomendou buscar, com o caso concreto de um trabalho recusado por apresentar
+sistema. Levar a ela, junto da pergunta sobre o estrato valer para anais
+estendidos, que é a mesma dúvida do workshop do simpósio de banco de dados.
 
 ### A lacuna da tabela de verificação
 
