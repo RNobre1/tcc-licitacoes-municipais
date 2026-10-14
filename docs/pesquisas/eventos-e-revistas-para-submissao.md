@@ -365,12 +365,43 @@ mínimo de 15 páginas num caso, faixa de 6.000 a 9.000 palavras na maioria, e
 quatro seções curtas, de 2.000 a 4.000 palavras, que são as que casam com o
 estágio atual.
 
-**Internacionais, sem condições confirmadas.** As páginas de instrução aos
-autores de cinco periódicos responderam com acesso negado, e deles só se tem o
-estrato: *Government Information Quarterly* (A1), *Information Polity* (A1),
-*Transforming Government: People, Process and Policy* (A1), *Journal of Public
-Procurement* (A3) e *Digital Government: Research and Practice* (B3 em 2017-2020;
-A2 em 2021-2024).
+### 6.1 Internacionais
+
+> **Levantado em 14/10/2026.** As condições abaixo vieram das páginas de
+> instrução aos autores e de taxas de cada editora, abertas no navegador quando
+> o acesso automatizado foi recusado. Duas foram conferidas uma segunda vez —
+> a portaria da agência de fomento e a revista europeia de democracia
+> eletrônica —; as demais estão marcadas como **(coleta)**. Antes de submeter,
+> reabrir a página.
+
+**O achado que muda a conta de custo.** Os acordos da agência federal de
+pós-graduação com editoras pagam a taxa de acesso aberto só para autor
+correspondente registrado na plataforma da agência como docente ativo,
+pós-doutorando, aluno ou egresso recente de mestrado ou doutorado (Portaria nº
+224, de 15/05/2026, que dá nova redação ao art. 10 da Portaria nº 120/2024).
+**Graduando não se qualifica.** Para usar um acordo, a autora correspondente
+teria de ser a orientadora.
+
+| Periódico | Fluxo | Formato que caberia hoje | Idioma | Tempo informado | Estrato 2017-2020 (2021-2024) | Taxa | Aderência |
+|---|---|---|---|---|---|---|---|
+| ***Digital Government: Research and Practice*** (ACM) | Contínuo | **Estudo de caso**, "relato de campo" sobre política, plataforma ou software, cerca de 2.000 a 4.000 palavras; **nota técnica**, que aceita protótipo ainda não plenamente desenvolvido, 2.000 a 4.000 palavras; artigo de pesquisa, 8.000 a 12.000 **(coleta)** | Inglês | Não informado | B3 (A2) | Acesso aberto desde 01/01/2026: US$ 1.450 para não membro; isenta se o autor correspondente é de instituição participante do acordo da editora, e a UFOPA consta da lista **(coleta)**. Pela portaria, a correspondente teria de ser a orientadora | **A mais alta.** Escopo inclui aquisição e contratação de tecnologia em governo; os dois formatos curtos descrevem o estágio atual |
+| ***JeDEM – eJournal of eDemocracy and Open Government*** | Duas edições por ano, submissão contínua | **Pesquisa em andamento ou concluída**, revisão anônima; **estudo de caso**, revisão anônima; descrição de projeto, revisão editorial | Inglês | Meta de um mês de revisão | Não conferido | **Nenhuma**: "free of charge (no processing charges or APCs)" | **Alta.** Gratuita sem depender de acordo, e aceita pesquisa em andamento. Estrato a conferir |
+| ***Government Information Quarterly*** (Elsevier) | Contínuo | Só artigo completo; sem limite declarado **(coleta)** | Inglês | 3 dias até a primeira decisão; 104 até a decisão após revisão; 307 até o aceite **(coleta)** | A1 (A1) | Via assinatura sem taxa; acesso aberto US$ 5.770. O acordo da agência com a editora cobre a revista, com a restrição da portaria **(coleta)** | Baixa no estágio atual: pede pesquisa concluída |
+| ***Information Polity*** (Sage com IOS Press) | Não declarado | Só artigo original de pesquisa; exige "pontos-chave para profissionais" **(coleta)** | Inglês | Não informado | A1 (A1) | Assinatura, sem taxa para submeter ou publicar **(coleta)** | Baixa no estágio atual |
+| ***Transforming Government: People, Process and Policy*** (Emerald) | Contínuo | Artigo até 8.500 palavras; **estudo de caso**, sem limite declarado; artigo técnico **(coleta)** | Inglês | Não informado | A1 (A1) | Híbrida: via assinatura ou depósito sem custo; acesso aberto £ 3.222. Sem acordo com o Brasil; isenção da editora não alcança o país **(coleta)** | Média: o estudo de caso cabe, o escopo é amplo |
+| ***Journal of Public Procurement*** (Emerald) | Contínuo | Artigo até 10.000 palavras; **único formato curto: opinião informada, até 2.500** **(coleta)** | Inglês | Não informado | A3 (A3) | Como a anterior | **Baixa no estágio atual**, apesar do escopo exato: não tem formato para proposta com validação. Volta a ser candidata com resultado medido |
+| *Public Money & Management* (Taylor & Francis) | Não verificado | "New development", até 3.500 palavras, sobre gestão ou prática **(coleta)** | Inglês | Não informado | Não conferido | Sem taxa na via de assinatura **(coleta)** | Média: pede texto de gestão, não de sistema |
+| *Electronic Government, an International Journal* (Inderscience) | Seis edições por ano | Artigo, relatório técnico, estudo de caso; extensão não verificada **(coleta)** | Inglês | Não informado | Não conferido | Sem taxa fora do acesso aberto **(coleta)** | Média: escopo cita compras públicas eletrônicas |
+
+**Sobre os dois ciclos de estrato.** A tabela traz os dois, e há casos em que a
+classificação mudou entre eles, para cima ou para baixo — a revista da ACM
+passou de B3 para A2. Qual dos dois vale para a avaliação é pergunta para a
+orientação, e continua aberta.
+
+**Leitura para a decisão.** Com custo zero garantido e formato que acolhe o
+estágio atual, sobram duas internacionais: a revista europeia de democracia
+eletrônica, sem nenhuma condição, e a da ACM, se a orientadora for a autora
+correspondente. As de estrato A1 pedem pesquisa concluída.
 
 **Não recomendadas.** Uma revista eletrônica de sistemas de informação aceita
 submissão, mas a última edição é de 2018. Uma revista de gestão pública de
