@@ -29,34 +29,76 @@ também seja reportável.
 
 \subsection{Critérios de verificação}
 
+A pergunta de pesquisa compromete o trabalho com três grandezas: esforço,
+conformidade e usabilidade. Cada uma precisa de medição própria, e a coluna de
+dimensão existe para tornar esse vínculo verificável — um resultado que não
+estivesse ligado a nenhuma delas seria medição sem pergunta, e uma dimensão sem
+resultado seria promessa sem medida.
+
 \begin{table}[H]
   \centering
-  \caption{Resultados esperados e critério de verificação de cada um}
+  \caption{Resultados esperados, dimensão da pergunta e critério de verificação}
   \label{tab:resultados-esperados}
   \begin{ufopaespacosimples}
-  \small
-  \begin{tabularx}{\textwidth}{@{}lXX@{}}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}llXX@{}}
     \toprule
-    \textbf{\#} & \textbf{Resultado} & \textbf{Como se verifica} \\
+    \textbf{\#} & \textbf{Dimensão} & \textbf{Resultado} &
+      \textbf{Como se verifica} \\
     \midrule
-    R1 & A recuperação traz, entre os primeiros resultados, os preços que a
-      servidora de fato utilizou & Medição contra pesquisas já realizadas, com
-      gabarito extraído dos relatórios de cotação de processos encerrados \\
-    R2 & O ganho não decorre apenas de o operador já conhecer o preço & A mesma
-      medição executada em duas condições, com e sem a estimativa de preço
-      esperado, e as duas reportadas \\
-    R3 & As peças geradas contêm todas as seções exigidas, com o vínculo legal
-      declarado & Verificação automatizada da estrutura do documento gerado \\
-    R4 & A revisão manual de um estudo técnico gerado cabe em duas horas &
-      Medição cronometrada com a usuária, contra a linha de base que ela
+    R1 & Recuperação & A recuperação traz, entre os primeiros resultados, os
+      preços que a servidora de fato utilizou & Medição contra pesquisas já
+      realizadas, com gabarito extraído de processos encerrados \\
+    R2 & Recuperação & O ganho não decorre apenas de o operador já conhecer o
+      preço & A mesma medição em duas condições, com e sem a estimativa de preço
+      esperado, ambas reportadas \\
+    R3 & \textbf{Esforço} & O tempo de decisão por item cai em relação ao
+      processo atual & Cronometragem pareada sobre os mesmos itens, com e sem o
+      sistema, contando o número de candidatos examinados até a escolha \\
+    R4 & \textbf{Esforço} & A revisão manual de um estudo técnico gerado cabe em
+      duas horas & Cronometragem com a usuária, contra a linha de base que ela
       declarou \\
-    R5 & Uma pesquisa passada pode ser reconstituída tal como foi apresentada &
-      Demonstração de reconstituição a partir da trilha \\
+    R5 & \textbf{Conformidade} & As peças contêm todas as seções exigidas, com o
+      vínculo legal declarado & Verificação automatizada da estrutura do
+      documento gerado \\
+    R6 & \textbf{Conformidade} & A pesquisa composta pelo sistema satisfaz os
+      requisitos normativos & Checagem de quantidade mínima de preços por item,
+      validade da coleta, procedência resolvível e método de cálculo declarado,
+      sobre as pesquisas produzidas \\
+    R7 & \textbf{Usabilidade} & O sistema é operável pela servidora sem apoio de
+      equipe de tecnologia & Execução de tarefa completa sob observação, com
+      registro de travamentos e pedidos de ajuda, seguida de instrumento
+      padronizado de avaliação \\
+    R8 & Auditoria & Uma pesquisa passada pode ser reconstituída tal como foi
+      apresentada & Demonstração de reconstituição a partir da trilha \\
     \bottomrule
   \end{tabularx}
   \end{ufopaespacosimples}
   \fonte{Elaborado pelo autor.}
 \end{table}
+
+Três observações sobre o que mudou nesta tabela, porque cada uma fecha uma
+lacuna que a leitura anterior expôs.
+
+O esforço era medido apenas na revisão do documento, em R4, e a triagem dos
+preços — que é onde o tempo se concentra, conforme a
+seção~\ref{subsec:onde-doi} — não tinha medição própria. R3 a acrescenta, e
+mede duas coisas: tempo e número de candidatos examinados até a decisão. A
+segunda importa porque é menos sensível a interrupção do que o relógio.
+
+A conformidade era verificada apenas na estrutura do documento. R6 acrescenta a
+aderência aos requisitos que a norma impõe à própria pesquisa de preços, que é
+objeto distinto: um documento pode ter todas as seções e ainda assim registrar
+preço fora da janela de validade.
+
+A usabilidade não era medida. R7 a mede, e o critério não é opinião sobre a
+interface: é a servidora completar a tarefa sem apoio técnico, que é exatamente
+o que o requisito não funcional correspondente exige.
+
+\pendente{Escolher e citar o instrumento padronizado de avaliação de usabilidade
+que R7 menciona. A escolha precisa de referência conferida na fonte primária, e
+a aplicação com uma única participante limita o que o resultado permite afirmar
+--- o que deve constar junto do número, e não depois dele.}
 
 \subsection{O que estes resultados não permitirão afirmar}
 

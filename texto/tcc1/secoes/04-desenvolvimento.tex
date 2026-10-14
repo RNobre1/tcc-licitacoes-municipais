@@ -201,9 +201,10 @@ implementação.
 A especificação completa reúne vinte e duas regras de negócio, trinta e nove
 requisitos funcionais e onze não funcionais, com critérios de aceitação, método
 de verificação e matriz de rastreabilidade ligando cada requisito à evidência que
-o originou. Reproduzi-la aqui ocuparia o artigo inteiro. Esta subseção apresenta
-o que o sistema faz, em prosa, e tabula apenas os requisitos classificados como
-essenciais.
+o originou. Reproduzi-la aqui ocuparia o artigo inteiro, e por isso esta
+subseção descreve o que o sistema faz e tabula apenas os requisitos
+classificados como essenciais — vinte e quatro funcionais e oito não
+funcionais.
 
 O sistema tem um único perfil de usuário: o servidor do setor de licitações, que
 conduz a fase preparatória e responde pela cotação. Ele domina o processo
@@ -231,6 +232,90 @@ significado, apresenta-os com a evidência que os sustenta, registra a triagem
 feita pelo operador, calcula o valor estimado com memória de cálculo e gera o
 mapa de cotação, o estudo técnico em versão final e o termo de referência, todos
 em formato editável.
+
+\begin{table}[H]
+  \centering
+  \caption{Requisitos funcionais essenciais, por módulo}
+  \label{tab:rf-essenciais}
+  \begin{ufopaespacosimples}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}lX@{}}
+    \toprule
+    \textbf{Código} & \textbf{Requisito} \\
+    \midrule
+    \multicolumn{2}{@{}l}{\textit{Entrada e consolidação da demanda}} \\
+    RF01 & Importar os documentos de formalização de demanda no formato em que
+      chegam ao setor, extraindo objeto, justificativa, itens, quantidades,
+      unidades e secretaria de origem \\
+    RF39 & Permitir que o operador corrija e complemente o que foi extraído,
+      antes de a demanda entrar no processo \\
+    RF02 & Validar a descrição de cada item, conferindo a unidade contra
+      vocabulário fechado, detectando item composto e sinalizando descrição
+      insuficiente para cotação \\
+    RF03 & Consolidar demandas de mesmo objeto vindas de secretarias distintas,
+      somando quantitativos e preservando a quantidade de cada uma \\
+    RF36 & Identificar itens equivalentes com descrições divergentes, propor
+      descrição de consenso e submetê-la à decisão do operador \\
+    RF38 & Preservar a restrição de entrega mais estrita entre as secretarias
+      participantes, ou sinalizar quando ela for descartada \\
+    \midrule
+    \multicolumn{2}{@{}l}{\textit{Pesquisa de preços}} \\
+    RF16 & Recuperar candidatos a preço de referência por proximidade de
+      significado da descrição, e não por coincidência de palavras \\
+    RF17 & Filtrar e ordenar candidatos por compatibilidade de unidade, ordem de
+      grandeza da quantidade, recorte geográfico e janela temporal \\
+    RF18 & Distinguir produto de serviço e excluir candidatos cuja natureza não
+      corresponda à do item demandado \\
+    RF20 & Exibir, para cada candidato, a evidência que sustenta a decisão:
+      descrição integral, unidade, quantidade, órgão, data, fonte e valor \\
+    RF21 & Sinalizar quais especificações exigidas pelo item demandado não podem
+      ser verificadas na descrição disponível \\
+    RF23 & Aceitar estimativa de preço esperado e ordenar os candidatos pelas
+      duas dimensões — comparabilidade e proximidade de valor —, exibidas
+      separadamente \\
+    RF25 & Calcular o valor estimado pelo critério escolhido, produzindo memória
+      de cálculo exportável \\
+    RF26 & Gerar o mapa de cotação com a procedência de cada preço resolvida até
+      o registro de origem, recusando preço cuja procedência não se resolva \\
+    RF31 & Coletar e indexar itens contratados a partir da interface pública da
+      base nacional de contratações \\
+    \midrule
+    \multicolumn{2}{@{}l}{\textit{Geração das peças}} \\
+    RF04 & Gerar minuta de estudo técnico preliminar com as seções previstas, na
+      ordem adotada pelo município, indicando o dispositivo legal que cada uma
+      atende \\
+    RF05 & Gerar minuta de termo de referência derivada do mesmo conjunto de
+      dados que originou o estudo técnico \\
+    RF37 & Emitir o estudo técnico em duas versões a partir do mesmo estado: a
+      minuta, com a estimativa redigida como providência futura, e a final, com
+      o valor apurado \\
+    RF06 & Verificar a consistência entre os dois documentos nos campos pareados
+      e apontar divergência antes da exportação \\
+    RF09 & Destacar todo trecho gerado que exija conferência humana, em especial
+      base legal, prazo e valor \\
+    RF11 & Redigir as seções que descrevem método a partir do resultado efetivo
+      do processo, e não de texto padrão \\
+    RF14 & Gerar o documento mesmo sem memória de cálculo informada, sem afirmar
+      levantamento que não houve, e registrar a lacuna de forma visível no
+      arquivo exportado \\
+    RF07 & Exportar os documentos em formato editável \\
+    \midrule
+    \multicolumn{2}{@{}l}{\textit{Trilha e reconstituição}} \\
+    RF32 & Registrar trilha de auditoria de cada decisão: quem decidiu, quando,
+      quais candidatos havia, quais foram escolhidos e sob qual critério \\
+    RF30 & Permitir reconstituir uma pesquisa anterior tal como ela se
+      encontrava na data em que foi realizada \\
+    RF33 & Permitir que o usuário edite qualquer conteúdo gerado antes da
+      exportação \\
+    \bottomrule
+  \end{tabularx}
+  \end{ufopaespacosimples}
+  \fonte{Elaborado pelo autor.}
+\end{table}
+
+Os requisitos classificados como importantes ou desejáveis, os critérios de
+aceitação de cada um e a matriz que liga requisito a evidência estão na
+especificação completa, disponível no repositório público do trabalho.
 
 \begin{table}[H]
   \centering
