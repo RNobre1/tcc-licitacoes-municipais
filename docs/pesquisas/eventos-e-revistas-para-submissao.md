@@ -55,8 +55,24 @@ estágio, com que prazo e com que estrato?
 prazo confirmado ainda em 2026, e nenhuma das duas é boa: uma não tem estrato, e
 a outra exclui trabalho em andamento de graduação.
 
-**A trilha principal do SBSI 2027 venceu em 30/09/2026.** Era o evento de melhor
-encaixe temático com estrato A4.
+**A trilha principal do SBSI 2027 venceu em 30/09/2026, e não foi prorrogada.**
+Reconferido em 14/10/2026: a chamada marca registro em 21/09 e submissão em
+30/09/2026, os dois como prazo "HARD", e a primeira notificação em 25/11/2026.
+Era o evento de melhor encaixe temático com estrato A4.
+
+> **De onde vem o "até fevereiro" lido na tela do evento.** A página inicial do
+> SBSI 2027 resume a trilha de novas ideias e resultados emergentes como
+> "11/12/2026 – 18/02/2027". A chamada da própria trilha diz outra coisa:
+> registro em 11/12/2026, arquivos em **18/12/2026** e notificação em
+> **22/02/2027**. O resumo da página inicial diverge da chamada; vale a chamada.
+> Não é prorrogação da trilha principal: é outra trilha do mesmo evento.
+>
+> Das trilhas ainda abertas, a que acolhe o estágio atual é a de **indústria e
+> inovação**: submissão em **11/12/2026**, texto de 2 a 4 páginas sobre
+> experiência prática — contexto, processo adotado (prova de conceito,
+> protótipo, medição de indicadores) e solução —, apresentado como *pitch*,
+> publicado nos anais estendidos, e com estudantes de graduação entre o público
+> declarado. A de novas ideias segue fechada para graduação em andamento.
 
 **Recomendação, em duas frentes:**
 
@@ -109,7 +125,8 @@ nacional de administração pública.
 | **SBSI 2027** — trilha de novas ideias e resultados emergentes | **Confirmado: registro 11/12/2026, arquivos 18/12/2026.** Notificação 22/02/2027 | 17 a 20/05/2027, Campo Grande-MS | Uma categoria de 8 a 10 páginas, que a chamada diz **não se destinar a trabalho em andamento**; outra de 4 a 5 páginas, reservada a mestrandos e doutorandos | Duplo-anônimo, ao menos três revisores. Anais estendidos na biblioteca da SBC. Presença obrigatória | A4 para o SBSI | **Baixa pelo formato**, apesar do tema. Nenhuma das duas categorias acolhe graduação em andamento |
 | **dg.o 2027** — pesquisa em governo digital | Chamada sai em **16/10/2026** (confirmado); prazo ainda não publicado. **Estimado por 2026:** fim de janeiro, início de fevereiro; pôster e demonstração no início de abril | 28/06 a 01/07/2027, Seul, Coreia do Sul | Em 2026: artigo de gestão e política, cerca de 5.000 palavras, que descreve e avalia projeto prático; pôster e demonstração, cerca de 2.500 palavras, com sistema em desenvolvimento aceito. Em inglês | Duplo-cego. Selecionados são convidados a números especiais de periódicos da área | A3 | Alta no tema. Custo de viagem alto; presença e taxa não confirmadas |
 | **Congresso Consad de Gestão Pública 2027** | Não anunciado. **Estimado por 2026:** resumo no início de fevereiro; artigo completo no fim de abril | Em 2026: 20 a 22/05, Fortaleza | Duas etapas: resumo curto, depois artigo de 5.000 a 8.000 palavras, só em português. Eixos incluem governo digital e gestão eficiente, que cita compras públicas | Comitê técnico-científico. Apresentação presencial | Não classificado | Alta no tema. Público de gestores; o resumo pede presença de resultados |
-| **SBSI 2027** — trilha de indústria e concurso de trabalhos de conclusão | "Em breve" no site. **Estimado por 2026:** 23/02 | 17 a 20/05/2027, Campo Grande-MS | Em 2026: relato de experiência de 2 a 4 páginas; concurso só para trabalho **concluído** no ano anterior | Anais estendidos | A4 para o SBSI | Média. Depende da chamada |
+| **SBSI 2027** — trilha de indústria e inovação | **Confirmado em 14/10/2026: submissão 11/12/2026.** Notificação 22/02/2027; versão final 19/03/2027 | 17 a 20/05/2027, Campo Grande-MS | *Pitch* de experiência prática, 2 a 4 páginas sem referências, em português ou inglês: contexto, processo adotado — prova de conceito, protótipo, medição —, solução. Estudantes de graduação entre o público declarado | Revisão simples, ou duplo-anônima se o autor preferir. Apresentação em sessão de *pitches*. Anais estendidos na biblioteca da SBC | A4 para o SBSI | **Média-alta.** Único formato do SBSI aberto que aceita o estágio atual. É vitrine de experiência, não de contribuição científica |
+| **SBSI 2027** — concurso de teses, dissertações e trabalhos de conclusão | "Em breve" no site em 14/10/2026 | 17 a 20/05/2027, Campo Grande-MS | Em 2026: só trabalho **concluído** no ano anterior | Anais estendidos | A4 para o SBSI | Baixa para 2027: o TCC só termina em 2027.1 |
 | **Encontro Brasileiro de Administração Pública 2027** | Não anunciado. **Estimado por 2026:** de dezembro a 08/03 | Em 2026: sessões virtuais e presenciais em junho, Brasília. Em 2025 foi no Pará | Artigo, **relato técnico** ou caso de ensino; recomendação de até 15 páginas. **Graduando pode submeter** | Duplo-cego, nota mínima 7. Resultado em cerca de cinco semanas. **Apresentação virtual ou presencial**. Anais com identificador | Não classificado | **Alta.** Relato técnico, graduando admitido e opção virtual |
 | **Escola Regional de Banco de Dados 2027** | Não anunciada. **Estimado por 2026:** 06/03 | Em 2026: abril, Paraná | Categoria de aplicações e experiências, até 4 páginas; pesquisa, até 10 | Avaliação simples-cega. Presença obrigatória. Anais na biblioteca da SBC | Não consta | Média-alta pela área. Regional do Sul |
 | **EGOV-CeDEM-ePart 2027** | Não anunciado. **Estimado por 2026:** 16/03 | Em 2026: fim de agosto, Atenas | **Pesquisa em andamento, até 12 páginas**; pesquisa concluída, até 16. Em inglês | Duplo-cego. Concluídos em série de anais de editora; demais categorias em anais abertos | B1 | Alta no tema, com categoria explícita para pesquisa em andamento. Viagem internacional |
@@ -149,6 +166,7 @@ comprometer.
 |---|---|---|---|---|---|
 | Computer on the Beach 2027 | **confirmado** 15/11/2026 | 13–17/04/2027, Florianópolis-SC | **Sim.** Apresentação por um autor é condição para entrar nos anais. Taxa de R$ 240 | sem estrato | `computeronthebeach.com.br` |
 | SBSI 2027 — novas ideias | **confirmado** 11/12 e 18/12/2026 | 17–20/05/2027, Campo Grande-MS | **Sim** | A4 (do SBSI) | `sbsi.sbc.org.br/2027/` |
+| SBSI 2027 — indústria e inovação | **confirmado** 11/12/2026 | 17–20/05/2027, Campo Grande-MS | **Sim**, apresentação de *pitch* | A4 (do SBSI) | `sbsi.sbc.org.br/2027/chamadas/chamada-industria-inovacao` |
 | dg.o 2027 | **artigo 17/01/2027**; pôster, demonstração e workshop **31/01/2027**, ambos 23:59 AoE. Calendário final sai com a chamada de 16/10/2026 | 28/06–01/07/2027, **Seul, Coreia do Sul** | Não confirmado | **A3** | `dgsociety.org/dg-o-2027/` |
 | Congresso Consad 2027 | *estimado* fev (resumo) e abr (completo) | *estimado* maio, sede a confirmar | **Sim**, presencial | não classificado | `congressoconsad.org.br` |
 | Encontro Brasileiro de Administração Pública 2027 | *estimado* dez/2026 a 08/03/2027 | *estimado* junho, Brasília | **Não.** Admite apresentação virtual | não classificado | `sbap.org.br` |
@@ -408,9 +426,11 @@ Estas decidem a escolha mais do que qualquer linha das tabelas.
 
 ## 10. O que não foi possível confirmar
 
-- **SBSI 2027:** datas das trilhas ainda marcadas como "em breve"; o quadro-resumo
-  do site mostra uma data final diferente da que consta na chamada da trilha de
-  novas ideias; valores de inscrição e de publicação.
+- **SBSI 2027:** desafios e concurso de trabalhos ainda marcados como "em breve"
+  em 14/10/2026; o quadro-resumo da página inicial mostra, para novas ideias,
+  data final diferente da chamada da trilha (vale a chamada); valores de
+  inscrição e de publicação. Se o estrato A4 do evento se estende aos anais
+  estendidos é pergunta para a orientação.
 - **Chamadas de 2027 ainda não publicadas:** SBBD, simpósio de governo digital e
   concurso de iniciação científica do CSBC, escola regional de banco de dados,
   EGOV-CeDEM-ePart, EnANPAD, encontro de administração pública, congresso Consad,
