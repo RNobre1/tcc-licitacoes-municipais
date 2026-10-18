@@ -148,6 +148,7 @@ cd texto/tcc2 && make pdf
 # versão apresentável, sem os marcadores de pendência
 python scripts/gerar_entregas.py   # regera entregas/
 python scripts/gerar_figuras.py    # regera as figuras dos diagramas
+python scripts/gerar_bpmn.py       # regera a figura do processo em BPMN
 
 # normas
 python scripts/gerar_normas.py     # regera .sty e docs/normas/README.md

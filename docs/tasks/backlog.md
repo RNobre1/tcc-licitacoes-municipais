@@ -43,7 +43,7 @@ O que destrava mais coisa adiante, em ordem.
 | C12 | ~~Declarar o artefato que é a contribuição e o tipo dela~~ | Autor | **fechado 15/10** | Dois níveis declarados; o protocolo de avaliação é a contribuição principal |
 | C13 | ~~Declarar a classe de problemas~~ | Autor | **fechado 15/10** | Escrita na metodologia |
 | C14 | Conferir a política de declaração de ferramenta de geração em cada veículo | Autor | aberto | Obrigação do veículo; precisa ser verificada antes de submeter |
-| C8 | **Modelar o processo de licitação em BPMN** | Autor | aberto | Pedido da orientação; vale para o texto, para a revista e para o evento |
+| C8 | ~~Modelar o processo de licitação em BPMN~~ | Autor | **fechado 18/10** | Modelo em formato aberto, figura gerada por script, com guarda de frescor |
 | C9 | ~~Conferir o prazo do simpósio de sistemas de informação~~ | Autor | **fechado 14/10** | Não houve prorrogação; apareceu a trilha de indústria, com prazo em 11/12/2026 |
 
 Sobre C2: foi confirmado em 06/10/2026 que o gabarito pode ser montado do

@@ -76,6 +76,33 @@ def test_as_figuras_correspondem_ao_diagrama_em_disco():
     )
 
 
+def test_a_figura_do_processo_corresponde_ao_modelo_bpmn():
+    """Mesma guarda da anterior, para o modelo de processo.
+
+    O ``.bpmn`` é a fonte e abre em qualquer ferramenta da notação — inclusive na
+    que a orientação indicou, para conferência. A figura é derivada dele, e
+    envelhece em silêncio se alguém editar o modelo sem reexportar.
+
+    Regerar com ``python scripts/gerar_bpmn.py``.
+    """
+    from scripts.gerar_bpmn import FIGURA, MODELO, PROCEDENCIA, impressao
+
+    assert MODELO.is_file(), f"{MODELO.relative_to(RAIZ)} não existe"
+    assert FIGURA.is_file(), (
+        f"{FIGURA.relative_to(RAIZ)} não foi gerada. "
+        "Rodar `python scripts/gerar_bpmn.py`."
+    )
+    assert FIGURA.stat().st_size > 0, "a figura do processo está vazia"
+    assert PROCEDENCIA.is_file(), (
+        f"{PROCEDENCIA.relative_to(RAIZ)} não existe. Sem ele não há como saber "
+        "de que versão do modelo a figura saiu — regerar."
+    )
+    assert PROCEDENCIA.read_text(encoding="utf-8").strip() == impressao(), (
+        "o modelo de processo mudou depois que a figura foi exportada. O PDF "
+        "mostra a versão antiga. Regerar com `python scripts/gerar_bpmn.py`."
+    )
+
+
 def test_o_texto_referencia_todas_as_figuras_exportadas():
     """Figura exportada e não usada é peso morto; figura usada e não exportada quebra.
 
