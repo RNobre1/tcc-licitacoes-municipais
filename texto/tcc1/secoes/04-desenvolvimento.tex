@@ -59,18 +59,35 @@ mecanismo: das doze seções numeradas, onze são idênticas, e apenas a estimat
 de valor difere. É dado de projeto, e não só de diagnóstico, porque descreve
 exatamente a transformação que o sistema precisa reproduzir.
 
-\begin{figure}[H]
+\begin{landscape}
+\begin{figure}[p]
   \centering
-  \includegraphics[angle=90,height=0.72\textheight,keepaspectratio]{figuras/processo-licitacao.pdf}
-  \caption{O processo da fase preparatória, em notação de modelagem de processos
-    de negócio}
-  \label{fig:processo-bpmn}
+  % `trim` corta a faixa do rodapé, onde a ferramenta de renderização imprime a
+  % própria marca. Medido: 26 pt na base do arquivo exportado.
+  \includegraphics[width=\linewidth,trim=0 26 0 0,clip]%
+    {figuras/processo-licitacao-1-demanda.pdf}
+  \caption{O processo da fase preparatória, parte 1: da demanda à minuta do
+    estudo técnico}
+  \label{fig:processo-bpmn-1}
   \fonte{Elaborado pelo autor.}
 \end{figure}
 
-A figura~\ref{fig:processo-bpmn} apresenta esse percurso em notação padronizada
-de modelagem de processos, com as três raias que correspondem a quem executa
-cada etapa. A notação é a de uso corrente na administração pública para
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=\linewidth,trim=0 26 0 0,clip]%
+    {figuras/processo-licitacao-2-precos.pdf}
+  \caption{O processo da fase preparatória, parte 2: da pesquisa de preços às
+    peças do processo}
+  \label{fig:processo-bpmn-2}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
+\end{landscape}
+
+As figuras~\ref{fig:processo-bpmn-1} e~\ref{fig:processo-bpmn-2} apresentam
+esse percurso em notação padronizada de modelagem de processos, com três raias
+que correspondem a quem executa cada etapa. A divisão em duas partes segue a
+prática da própria notação para processo longo: catorze etapas numa faixa única
+produzem figura que não cabe legível na página. A notação é a de uso corrente na administração pública para
 descrever processos de trabalho, e foi escolhida por isso: o vocabulário de
 processo é o que esse público emprega, e expressar o trabalho nele torna o
 desenho legível para quem decide sobre a contratação.

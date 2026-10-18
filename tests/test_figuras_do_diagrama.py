@@ -85,14 +85,15 @@ def test_a_figura_do_processo_corresponde_ao_modelo_bpmn():
 
     Regerar com ``python scripts/gerar_bpmn.py``.
     """
-    from scripts.gerar_bpmn import FIGURA, MODELO, PROCEDENCIA, impressao
+    from scripts.gerar_bpmn import PROCEDENCIA, figuras, impressao, modelos
 
-    assert MODELO.is_file(), f"{MODELO.relative_to(RAIZ)} não existe"
-    assert FIGURA.is_file(), (
-        f"{FIGURA.relative_to(RAIZ)} não foi gerada. "
+    ausentes = [m.name for m in modelos() if not m.is_file()]
+    assert ausentes == [], f"modelo(s) de processo ausente(s): {ausentes}"
+    nao_geradas = [f.name for f in figuras() if not f.is_file() or f.stat().st_size == 0]
+    assert nao_geradas == [], (
+        f"figura(s) do processo ausente(s) ou vazia(s): {nao_geradas}. "
         "Rodar `python scripts/gerar_bpmn.py`."
     )
-    assert FIGURA.stat().st_size > 0, "a figura do processo está vazia"
     assert PROCEDENCIA.is_file(), (
         f"{PROCEDENCIA.relative_to(RAIZ)} não existe. Sem ele não há como saber "
         "de que versão do modelo a figura saiu — regerar."
@@ -116,3 +117,24 @@ def test_o_texto_referencia_todas_as_figuras_exportadas():
         f"figura(s) exportada(s) e não referenciada(s) no texto: {orfas}. "
         "Ou inserir no texto, ou parar de exportar."
     )
+
+
+def test_os_modelos_de_processo_nao_tem_linha_cruzada():
+    """O defeito que motivou refazer o desenho, agora verificado por teste.
+
+    A primeira versão do modelo tinha ligações se cruzando e uma passando por
+    dentro de uma caixa. Dá para ver a olho numa figura pequena, mas não dá para
+    ver relendo XML — e é o XML que se edita.
+    """
+    from scripts.gerar_bpmn import modelos
+    from scripts.verificar_bpmn import verificar
+
+    for modelo in modelos():
+        r = verificar(modelo.read_text(encoding="utf-8"))
+        detalhe = {
+            "sobrepostas": r.sobrepostas,
+            "diagonais": r.diagonais,
+            "cruzamentos": r.cruzamentos,
+            "atravessam": r.atravessam,
+        }
+        assert r.problemas == 0, f"{modelo.name} tem problemas de leitura: {detalhe}"

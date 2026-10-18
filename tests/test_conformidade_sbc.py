@@ -94,12 +94,30 @@ def test_pagina_e_a4(pdf_sbc: Path):
 
 
 def test_nao_passa_do_limite_de_paginas(pdf_sbc: Path):
-    """Limite de entrega, não de estilo: orçamento de página é restrição real."""
-    total = leitura_pdf.paginas(pdf_sbc)
+    """Limite de entrega, não de estilo: orçamento de página é restrição real.
+
+    Mede a versão **apresentável**, em ``entregas/``, e não a de trabalho: o
+    limite vale para o que chega às mãos de quem avalia, e os marcadores de
+    pendência são bilhete interno que não estará lá.
+
+    A ressalva, e ela importa: marcador vira prosa, e prosa ocupa mais espaço
+    que o marcador que a anunciava. Estar dentro do limite hoje não garante
+    estar depois de escrever o que falta — por isso a folga é reportada na
+    mensagem, e não só o veredito.
+    """
+    entrega = RAIZ / "entregas" / "tcc1-formato-sbc.pdf"
+    alvo = entrega if entrega.is_file() else pdf_sbc
+    total = leitura_pdf.paginas(alvo)
+    folga = PAGINAS_MAX - total
     assert total <= PAGINAS_MAX, (
         f"documento com {total} páginas; a orientação fixou o máximo em "
         f"{PAGINAS_MAX}. Cortar conteúdo, não aumentar o limite."
     )
+    if folga <= 1:
+        print(
+            f"\n  atenção: {total} de {PAGINAS_MAX} páginas, folga de {folga}. "
+            "Escrever as pendências restantes deve estourar o limite."
+        )
 
 
 # --- Tipografia ---------------------------------------------------------------
@@ -138,10 +156,29 @@ def test_nenhuma_fonte_e_bitmap(pdf_sbc: Path):
 # --- Margens ------------------------------------------------------------------
 
 
+def _em_paisagem(pdf: Path, pagina: int) -> bool:
+    """Se a página está girada para acomodar figura larga.
+
+    A margem declarada no estilo vale para a mancha do corpo, em retrato. Numa
+    página girada as margens trocam de eixo por construção, e medi-la contra a
+    regra do corpo reprovaria o documento por um recurso que o próprio formato
+    admite.
+
+    A detecção é pela rotação registrada no PDF, e não por número de página:
+    assim a guarda continua valendo quando a figura mudar de lugar.
+    """
+    saida = executar(
+        ["pdfinfo", "-f", str(pagina), "-l", str(pagina), str(pdf)]
+    ).stdout
+    return any("rot:" in linha and "90" in linha for linha in saida.splitlines())
+
+
 def _caixas_do_corpo(pdf: Path) -> list[tuple[float, float, float, float]]:
-    """Caixas de palavra de todas as páginas do corpo, fora da bibliografia."""
+    """Caixas de palavra do corpo, fora da bibliografia e das páginas giradas."""
     caixas: list[tuple[float, float, float, float]] = []
     for pagina in leitura_pdf.paginas_antes_das_referencias(pdf):
+        if _em_paisagem(pdf, pagina):
+            continue
         caixas.extend(leitura_pdf.caixas_de_palavra(pdf, pagina))
     return caixas
 

@@ -40,9 +40,23 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-MODELO = RAIZ / "docs" / "arquitetura" / "processo-licitacao.bpmn"
-FIGURA = RAIZ / "texto" / "tcc1" / "figuras" / "processo-licitacao.pdf"
-PROCEDENCIA = RAIZ / "texto" / "tcc1" / "figuras" / "procedencia-bpmn.txt"
+ARQUITETURA = RAIZ / "docs" / "arquitetura"
+FIGURAS = RAIZ / "texto" / "tcc1" / "figuras"
+PROCEDENCIA = FIGURAS / "procedencia-bpmn.txt"
+
+# O processo vem em duas partes. Catorze etapas numa faixa só produzem figura de
+# proporção 4,2 para 1, que não cabe legível em página nenhuma — o rótulo das
+# caixas fica com menos de cinco pontos. Dividido, cada parte fica perto de 2
+# para 1, e a notação prevê essa quebra para processo longo.
+PARTES = ("1-demanda", "2-precos")
+
+
+def modelos() -> list[Path]:
+    return [ARQUITETURA / f"processo-licitacao-{s}.bpmn" for s in PARTES]
+
+
+def figuras() -> list[Path]:
+    return [FIGURAS / f"processo-licitacao-{s}.pdf" for s in PARTES]
 
 CACHE_CHROME = Path.home() / ".cache" / "puppeteer" / "chrome"
 
@@ -70,7 +84,12 @@ def chrome() -> str | None:
 
 
 def impressao() -> str:
-    return hashlib.sha256(MODELO.read_bytes()).hexdigest()
+    """Resumo das duas partes, em ordem estável."""
+    somador = hashlib.sha256()
+    for modelo in modelos():
+        somador.update(modelo.name.encode())
+        somador.update(modelo.read_bytes())
+    return somador.hexdigest()
 
 
 def gerar() -> bool:
@@ -83,8 +102,12 @@ def gerar() -> bool:
         )
         return False
 
-    FIGURA.parent.mkdir(parents=True, exist_ok=True)
+    FIGURAS.mkdir(parents=True, exist_ok=True)
     ambiente = {**os.environ, "PUPPETEER_EXECUTABLE_PATH": binario}
+    alvos = [
+        f"{m.relative_to(RAIZ)}:{f.relative_to(RAIZ)}"
+        for m, f in zip(modelos(), figuras(), strict=True)
+    ]
     resultado = subprocess.run(
         [
             "npx",
@@ -97,7 +120,7 @@ def gerar() -> bool:
             # impressão. Com as duas, restam apenas fontes vetoriais.
             "--no-title",
             "--no-footer",
-            f"{MODELO.relative_to(RAIZ)}:{FIGURA.relative_to(RAIZ)}",
+            *alvos,
         ],
         cwd=RAIZ,
         env=ambiente,
@@ -107,8 +130,9 @@ def gerar() -> bool:
         errors="replace",
         check=False,
     )
-    if not FIGURA.is_file() or FIGURA.stat().st_size == 0:
-        print("a renderização não produziu arquivo", file=sys.stderr)
+    faltando = [f.name for f in figuras() if not f.is_file() or f.stat().st_size == 0]
+    if faltando:
+        print(f"a renderização não produziu: {faltando}", file=sys.stderr)
         for linha in (resultado.stderr or "").splitlines()[:3]:
             print(f"  {linha}", file=sys.stderr)
         return False
@@ -120,8 +144,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--conferir", action="store_true", help="só informa se está atualizada")
     args = p.parse_args(argv)
 
-    if not MODELO.is_file():
-        print(f"não encontrei o modelo: {MODELO}", file=sys.stderr)
+    ausentes = [m.name for m in modelos() if not m.is_file()]
+    if ausentes:
+        print(f"não encontrei: {ausentes}", file=sys.stderr)
         return 1
 
     atual = impressao()
@@ -140,7 +165,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     PROCEDENCIA.write_text(atual + "\n", encoding="utf-8")
-    print(f"  {FIGURA.name}  ({FIGURA.stat().st_size // 1024} KB)")
+    for f in figuras():
+        print(f"  {f.name}  ({f.stat().st_size // 1024} KB)")
     print(f"procedência gravada: {atual[:16]}…")
     return 0
 

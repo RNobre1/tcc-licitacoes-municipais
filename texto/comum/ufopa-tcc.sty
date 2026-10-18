@@ -64,6 +64,10 @@
 \RequirePackage{booktabs}
 \RequirePackage{longtable}
 \RequirePackage{float}
+% Página em paisagem para figura larga. O `pdflscape` acrescenta a rotação ao
+% próprio PDF, e não só ao layout: o leitor vê a página já virada, em vez de
+% precisar girar a cabeça. `lscape` sozinho não faz isso.
+\RequirePackage{pdflscape}
 \RequirePackage[hidelinks]{hyperref}
 
 % --- Citação curta ------------------------------------------------------------
