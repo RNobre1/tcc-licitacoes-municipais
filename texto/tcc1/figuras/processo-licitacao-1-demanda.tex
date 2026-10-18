@@ -1,0 +1,48 @@
+% GERADO por scripts/gerar_bpmn.py — não editar à mão.
+% Fonte: docs/arquitetura/ — regerar depois de mexer no modelo.
+% A aparência (traço, ponta de seta, corpo do rótulo) está em
+% texto/comum/figura-bpmn.sty, e não aqui.
+\begin{tikzpicture}[x=1pt, y=1pt]
+  \useasboundingbox (10.0,-10.0) rectangle (428.0,-574.0);
+  \draw[bpmn raia] (10.0,-10.0) rectangle (428.0,-574.0);
+  \draw[bpmn raia] (32.0,-10.0) -- (32.0,-574.0);
+  \draw[bpmn raia] (32.0,-10.0) rectangle (164.0,-574.0);
+  \draw[bpmn raia] (32.0,-30.0) -- (164.0,-30.0);
+  \draw[bpmn raia] (164.0,-10.0) rectangle (296.0,-574.0);
+  \draw[bpmn raia] (164.0,-30.0) -- (296.0,-30.0);
+  \draw[bpmn raia] (296.0,-10.0) rectangle (428.0,-574.0);
+  \draw[bpmn raia] (296.0,-30.0) -- (428.0,-30.0);
+  \draw[bpmn evento inicial] (98.0,-70.0) circle[radius=15.0pt];
+  \draw[bpmn tarefa] (48.0,-105.0) rectangle (148.0,-141.0);
+  \draw[bpmn tarefa] (180.0,-161.0) rectangle (280.0,-197.0);
+  \draw[bpmn tarefa] (312.0,-217.0) rectangle (412.0,-253.0);
+  \draw[bpmn decisao] (230.0,-273.0) -- (247.0,-290.0) -- (230.0,-307.0) -- (213.0,-290.0) -- cycle;
+  \draw[bpmn tarefa] (312.0,-349.0) rectangle (412.0,-385.0);
+  \draw[bpmn tarefa] (180.0,-405.0) rectangle (280.0,-441.0);
+  \draw[bpmn tarefa] (312.0,-461.0) rectangle (412.0,-497.0);
+  \draw[bpmn evento final] (362.0,-532.0) circle[radius=15.0pt];
+  \draw[bpmn ligacao] (98.0,-85.0) -- (98.0,-105.0);
+  \draw[bpmn ligacao] (98.0,-141.0) -- (98.0,-151.0) -- (230.0,-151.0) -- (230.0,-161.0);
+  \draw[bpmn ligacao] (230.0,-197.0) -- (230.0,-207.0) -- (362.0,-207.0) -- (362.0,-217.0);
+  \draw[bpmn ligacao] (362.0,-253.0) -- (362.0,-263.0) -- (230.0,-263.0) -- (230.0,-273.0);
+  \draw[bpmn ligacao] (247.0,-290.0) -- (362.0,-290.0) -- (362.0,-349.0);
+  \draw[bpmn ligacao] (362.0,-385.0) -- (362.0,-395.0) -- (230.0,-395.0) -- (230.0,-405.0);
+  \draw[bpmn ligacao] (230.0,-441.0) -- (230.0,-451.0) -- (362.0,-451.0) -- (362.0,-461.0);
+  \draw[bpmn ligacao] (213.0,-290.0) -- (41.0,-290.0) -- (41.0,-479.0) -- (312.0,-479.0);
+  \draw[bpmn ligacao] (362.0,-497.0) -- (362.0,-517.0);
+  \node[bpmn texto, rotate=90, text width=552.0pt] at (21.0,-292.0) {Prefeitura — Da demanda à minuta do estudo técnico};
+  \node[bpmn texto, text width=124.0pt] at (98.0,-20.0) {Secretaria demandante};
+  \node[bpmn texto, text width=124.0pt] at (230.0,-20.0) {Setor de licitações};
+  \node[bpmn texto, text width=124.0pt] at (362.0,-20.0) {Sistema de apoio};
+  \node[bpmn texto, text width=112.0pt] at (98.0,-47.5) {Necessidade identificada};
+  \node[bpmn texto, text width=88.0pt] at (98.0,-123.0) {Formalizar demanda};
+  \node[bpmn texto, text width=88.0pt] at (230.0,-179.0) {Importar documentos de demanda};
+  \node[bpmn texto, text width=88.0pt] at (362.0,-235.0) {Extrair itens, quantidades e unidades};
+  \node[bpmn texto, text width=112.0pt] at (230.0,-319.0) {Item pedido por mais de uma secretaria?};
+  \node[bpmn texto, text width=88.0pt] at (362.0,-367.0) {Propor descrição de consenso};
+  \node[bpmn texto, text width=88.0pt] at (230.0,-423.0) {Alinhar descrição com as secretarias};
+  \node[bpmn texto, text width=88.0pt] at (362.0,-479.0) {Emitir minuta do estudo técnico};
+  \node[bpmn texto, text width=112.0pt] at (362.0,-554.5) {Segue na parte 2};
+  \node[bpmn texto] at (276.0,-283.0) {sim};
+  \node[bpmn texto] at (184.0,-283.0) {não};
+\end{tikzpicture}%

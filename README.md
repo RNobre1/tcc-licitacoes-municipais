@@ -103,12 +103,15 @@ export PATH="$HOME/Library/TinyTeX/bin/universal-darwin:$PATH"   # ponha no ~/.z
 tlmgr install biber biblatex biblatex-abnt babel-portuges psnfss cm-super \
   geometry titlesec fancyhdr setspace microtype booktabs float longtable \
   tabularx xcolor hyperref indentfirst csquotes xpatch l3packages rsfs \
-  palatino mathpazo
+  palatino mathpazo pgf
 
 brew install poppler libthai
 ```
 
 `palatino` e `mathpazo` servem ao alvo de layout do curso, que usa essa fonte.
+`pgf` traz o TikZ, com que o modelo de processo é desenhado: a figura não é
+imagem importada, é desenho feito pelo próprio compositor, e sem o pacote
+nenhum dos três alvos compila.
 Se o `tlmgr` recusar a instalação pedindo que ele próprio seja atualizado, rode
 `tlmgr update --self` antes — a instalação mínima do TinyTeX envelhece, e a
 mensagem aparece anos depois de instalado.

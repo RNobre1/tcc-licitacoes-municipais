@@ -43,7 +43,7 @@ O que destrava mais coisa adiante, em ordem.
 | C12 | ~~Declarar o artefato que é a contribuição e o tipo dela~~ | Autor | **fechado 15/10** | Dois níveis declarados; o protocolo de avaliação é a contribuição principal |
 | C13 | ~~Declarar a classe de problemas~~ | Autor | **fechado 15/10** | Escrita na metodologia |
 | C14 | Conferir a política de declaração de ferramenta de geração em cada veículo | Autor | aberto | Obrigação do veículo; precisa ser verificada antes de submeter |
-| C8 | ~~Modelar o processo de licitação em BPMN~~ | Autor | **fechado 18/10** | Modelo em formato aberto, figura gerada por script, com guarda de frescor |
+| C8 | ~~Modelar o processo de licitação em BPMN~~ | Autor | **fechado 18/10** | Raias verticais, página retrato, desenho em TikZ gerado do modelo; geometria e tamanho verificados por teste |
 | C9 | ~~Conferir o prazo do simpósio de sistemas de informação~~ | Autor | **fechado 14/10** | Não houve prorrogação; apareceu a trilha de indústria, com prazo em 11/12/2026 |
 
 Sobre C2: foi confirmado em 06/10/2026 que o gabarito pode ser montado do
@@ -213,7 +213,7 @@ de fato lido no período.
 
 | # | O que | Dono | Estado |
 |---|---|---|---|
-| A1 | Linguagem e arcabouço | Autor | aberto — não afeta os níveis desenhados |
+| A1 | Linguagem, arcabouço e banco relacional | Autor | aberto — recomendação posta em 18/10, aguardando decisão |
 | A2 | Modelo de representação das descrições | Autor | aberto — depende de C2 e C3 |
 | A3 | Estratégia de atualização da ingestão | Autor | aberto — depende de C1 |
 | A4 | Onde reside a geração dos documentos | Autor | aberto |

@@ -78,10 +78,15 @@
 \RequirePackage{booktabs}
 \RequirePackage{longtable}
 \RequirePackage{float}
-% Página em paisagem para figura larga. O `pdflscape` acrescenta a rotação ao
-% próprio PDF, e não só ao layout: o leitor vê a página já virada, em vez de
-% precisar girar a cabeça. `lscape` sozinho não faz isso.
-\RequirePackage{pdflscape}
+% Desenho do modelo de processo. Feito pelo próprio compositor, em TikZ, e não
+% importado como imagem: ver o porquê no cabeçalho do pacote.
+%
+% Aqui esteve `pdflscape`, para pôr a figura do processo numa página girada. A
+% página girada foi recusada pela orientação — gira a numeração e o cabeçalho
+% junto. A correção foi redesenhar o modelo com as raias na vertical, e com
+% isso a figura passou a caber em retrato. Não devolver o pacote: trazê-lo de
+% volta reabre a porta para o desenho largo demais.
+\RequirePackage{figura-bpmn}
 \RequirePackage[hidelinks]{hyperref}
 
 % --- Títulos de seção --------------------------------------------------------

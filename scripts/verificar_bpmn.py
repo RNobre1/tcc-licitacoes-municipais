@@ -54,32 +54,57 @@ class Resultado:
         )
 
 
+def _limites(elemento: ET.Element) -> tuple[float, float, float, float] | None:
+    alvo = elemento.find(f"{DC}Bounds")
+    if alvo is None:
+        return None
+    return (
+        float(alvo.get("x", 0)),
+        float(alvo.get("y", 0)),
+        float(alvo.get("width", 0)),
+        float(alvo.get("height", 0)),
+    )
+
+
 def verificar(xml: str) -> Resultado:
     raiz = ET.fromstring(xml)
     r = Resultado()
 
     caixas: dict[str, tuple[float, float, float, float]] = {}
+    # Rótulo desenhado fora da forma — de evento, de decisão, de ramificação —
+    # ocupa área como qualquer caixa, e seta passando por cima dele é tão ruim
+    # quanto seta passando por cima de caixa. Entra aqui com o dono anotado,
+    # porque a ligação que sai do nó passa perto do rótulo **dele** por
+    # construção, e isso não é defeito.
+    donos: dict[str, str] = {}
+
     for forma in raiz.iter(f"{DI}BPMNShape"):
-        limites = forma.find(f"{DC}Bounds")
+        ident = forma.get("bpmnElement", "")
+        limites = _limites(forma)
         if limites is None:
             continue
-        caixas[forma.get("bpmnElement", "")] = (
-            float(limites.get("x", 0)),
-            float(limites.get("y", 0)),
-            float(limites.get("width", 0)),
-            float(limites.get("height", 0)),
-        )
+        caixas[ident] = limites
+        donos[ident] = ident
+        rotulo = forma.find(f"{DI}BPMNLabel")
+        if rotulo is not None and (marca := _limites(rotulo)) is not None:
+            caixas[f"rot_{ident}"] = marca
+            donos[f"rot_{ident}"] = ident
 
     caminhos: dict[str, list[Ponto]] = {}
     for aresta in raiz.iter(f"{DI}BPMNEdge"):
+        ident = aresta.get("bpmnElement", "")
         pontos = [
             (float(p.get("x", 0)), float(p.get("y", 0))) for p in aresta.findall(f"{D}waypoint")
         ]
         if len(pontos) >= 2:
-            caminhos[aresta.get("bpmnElement", "")] = pontos
+            caminhos[ident] = pontos
+        rotulo = aresta.find(f"{DI}BPMNLabel")
+        if rotulo is not None and (marca := _limites(rotulo)) is not None:
+            caixas[f"rot_{ident}"] = marca
+            donos[f"rot_{ident}"] = ident
 
     r.caixas, r.ligacoes = len(caixas), len(caminhos)
-    desenhaveis = {i: b for i, b in caixas.items() if not i.startswith(CONTINENTES)}
+    desenhaveis = {i: b for i, b in caixas.items() if not donos[i].startswith(CONTINENTES)}
 
     for a, b in combinations(sorted(desenhaveis), 2):
         ax, ay, aw, ah = desenhaveis[a]
@@ -103,7 +128,7 @@ def verificar(xml: str) -> Resultado:
         for trecho in _trechos(pontos):
             (x1, y1), (x2, y2) = trecho
             for alvo, (bx, by, bw, bh) in desenhaveis.items():
-                if alvo in ident:
+                if donos[alvo] in ident:
                     continue
                 dentro = (
                     by + TOLERANCIA < y1 < by + bh - TOLERANCIA

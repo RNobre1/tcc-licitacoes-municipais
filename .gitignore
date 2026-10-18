@@ -24,7 +24,11 @@ dados-dominio/
 *.aux
 *.bbl
 *.bcf
-*.bcf-SAVE-ERROR
+# O latexmk salva o arquivo anterior com este sufixo quando a compilação morre
+# no meio. Era `*.bcf-SAVE-ERROR`, e bastou uma compilação quebrar com o biber
+# já tendo rodado para aparecer um `.bbl-SAVE-ERROR` que a lista não cobria. A
+# regra vale para qualquer extensão, que é o que uma lista não faz.
+*-SAVE-ERROR
 *.blg
 *.fdb_latexmk
 *.fls

@@ -1,0 +1,67 @@
+% =============================================================================
+% figura-bpmn.sty — aparência do modelo de processo
+%
+% O desenho do processo é GERADO, por `scripts/gerar_bpmn.py`, a partir do
+% `.bpmn` versionado em `docs/arquitetura/`. O arquivo gerado carrega apenas
+% geometria: coordenadas, texto e que tipo de forma desenhar.
+%
+% TUDO o que é aparência — espessura de traço, raio de canto, tipo de ponta de
+% seta, corpo do rótulo — mora aqui, e só aqui. É o que permite mudar o visual
+% da figura sem regerar nada, e o que impede que a decisão visual se espalhe
+% por dois arquivos gerados que envelhecem separados.
+%
+% POR QUE O DESENHO É FEITO EM TIKZ, E NÃO EXPORTADO COMO IMAGEM
+%
+% A versão anterior renderizava o `.bpmn` num navegador controlado por script e
+% importava o PDF resultante. Três defeitos vieram junto, e nenhum deles era
+% contornável de fora:
+%
+%   1. O renderizador imprime a própria marca no rodapé da imagem. Recortá-la
+%      com `trim` levava junto a borda inferior do desenho.
+%   2. A fonte da marca entrava embutida como Type 3 — bitmap, que serrilha na
+%      impressão e que a guarda de fontes do projeto acusa, com razão.
+%   3. A imagem tinha tamanho próprio, e encaixá-la na coluna exigia reduzi-la.
+%      Reduzida, o rótulo ficava abaixo de 5 pt.
+%
+% Desenhado aqui, o rótulo sai na fonte do próprio documento, no corpo que este
+% arquivo declara, e em tamanho natural: não há redução, não há marca a
+% recortar, e não há dependência de navegador para compilar o texto.
+% =============================================================================
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{figura-bpmn}[2026/10/18 Aparência do modelo de processo em BPMN]
+
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta}
+
+\tikzset{
+  % Contorno de piscina e raia: mais fino que o das formas, para a moldura não
+  % competir com o que está dentro dela.
+  bpmn raia/.style={line width=0.4pt},
+  bpmn tarefa/.style={rounded corners=3pt, line width=0.6pt},
+  bpmn decisao/.style={line width=0.6pt},
+  bpmn evento inicial/.style={line width=0.6pt},
+  % Evento final é traço grosso — é assim que a notação distingue um do outro
+  % sem cor nem rótulo.
+  bpmn evento final/.style={line width=1.7pt},
+  bpmn ligacao/.style={
+    -{Stealth[length=4pt, width=3pt]},
+    rounded corners=2pt,
+    line width=0.6pt,
+  },
+  % Rótulo de desenho não se hifeniza. Numa caixa de três linhas a hifenização
+  % tira mais legibilidade do que a linha curta que ela evita, e some com a
+  % palavra inteira que o leitor procura. As caixas são dimensionadas para a
+  % palavra mais longa do vocabulário do processo caber sem quebra.
+  % A proibição entra por `execute at begin node`, e não pelo valor de `font`:
+  % o que vai em `font` é expandido pelo TikZ em contexto onde a atribuição de
+  % contador não se completa, e o erro que sai de lá — `Missing number` — não
+  % menciona hifenização nenhuma.
+  bpmn texto/.style={
+    font=\scriptsize,
+    align=center,
+    inner sep=0pt,
+    outer sep=0pt,
+    execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000\relax},
+  },
+}

@@ -59,13 +59,12 @@ mecanismo: das doze seções numeradas, onze são idênticas, e apenas a estimat
 de valor difere. É dado de projeto, e não só de diagnóstico, porque descreve
 exatamente a transformação que o sistema precisa reproduzir.
 
-\begin{landscape}
+% O desenho é gerado de docs/arquitetura/ por scripts/gerar_bpmn.py, em TikZ, e
+% entra em tamanho natural: sem `width`, porque qualquer redução levaria o
+% rótulo a corpo ilegível.
 \begin{figure}[p]
   \centering
-  % `trim` corta a faixa do rodapé, onde a ferramenta de renderização imprime a
-  % própria marca. Medido: 26 pt na base do arquivo exportado.
-  \includegraphics[width=\linewidth,trim=0 26 0 0,clip]%
-    {figuras/processo-licitacao-1-demanda.pdf}
+  \input{figuras/processo-licitacao-1-demanda}
   \caption{O processo da fase preparatória, parte 1: da demanda à minuta do
     estudo técnico}
   \label{fig:processo-bpmn-1}
@@ -74,29 +73,39 @@ exatamente a transformação que o sistema precisa reproduzir.
 
 \begin{figure}[p]
   \centering
-  \includegraphics[width=\linewidth,trim=0 26 0 0,clip]%
-    {figuras/processo-licitacao-2-precos.pdf}
+  \input{figuras/processo-licitacao-2-precos}
   \caption{O processo da fase preparatória, parte 2: da pesquisa de preços às
     peças do processo}
   \label{fig:processo-bpmn-2}
   \fonte{Elaborado pelo autor.}
 \end{figure}
-\end{landscape}
 
 As figuras~\ref{fig:processo-bpmn-1} e~\ref{fig:processo-bpmn-2} apresentam
-esse percurso em notação padronizada de modelagem de processos, com três raias
-que correspondem a quem executa cada etapa. A divisão em duas partes segue a
-prática da própria notação para processo longo: catorze etapas numa faixa única
-produzem figura que não cabe legível na página. A notação é a de uso corrente na administração pública para
-descrever processos de trabalho, e foi escolhida por isso: o vocabulário de
-processo é o que esse público emprega, e expressar o trabalho nele torna o
-desenho legível para quem decide sobre a contratação.
+esse percurso em \emph{Business Process Model and Notation}
+\cite{omg2013bpmn}, com três raias que correspondem a quem executa cada etapa.
+A notação é a de uso corrente na administração pública para descrever
+processos de trabalho, e foi escolhida por isso: o vocabulário de processo é o
+que esse público emprega, e expressar o trabalho nele torna o desenho legível
+para quem decide sobre a contratação.
+
+As raias são verticais e o fluxo desce a página. A notação admite as duas
+orientações --- a raia se estende por toda a extensão da piscina na vertical
+ou na horizontal ---, e \citaautor{trilha2018compras} adotam a vertical ao
+mapear um processo de compras numa universidade federal. A razão é de
+proporção: catorze etapas dispostas lado a lado produzem figura larga demais
+para a coluna de texto, e o que não cabe na largura cabe na altura. Pelo mesmo
+motivo o modelo vem em duas partes, com as mesmas raias em ambas, de modo que
+a segunda se lê como continuação da primeira.
 
 Duas decisões exclusivas aparecem no modelo, e são as mesmas etapas condicionais
 já discutidas. A consolidação só ocorre quando mais de uma secretaria pede o
 mesmo item; e a pesquisa de preços é pulada quando o preço provém de ata de
-registro ou contrato vigente. O alinhamento com as secretarias permanece na raia
-da secretaria demandante, e não na do sistema, porque acontece fora dele.
+registro ou contrato vigente. O alinhamento com as secretarias está na raia do
+setor de licitações, e não na da secretaria demandante nem na do sistema:
+quem telefona às secretarias para fechar a descrição é o servidor do setor. Na
+segunda parte a raia da secretaria demandante aparece vazia, e isso é
+informação e não desperdício --- do recebimento da minuta em diante a
+secretaria não executa etapa alguma.
 
 \subsubsection{Onde o esforço se concentra}
 \label{subsec:onde-doi}

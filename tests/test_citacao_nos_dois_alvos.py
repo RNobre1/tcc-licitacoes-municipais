@@ -54,11 +54,7 @@ def _definidos(arquivos: list[Path]) -> set[str]:
         if not arquivo.is_file():
             continue
         texto = arquivo.read_text(encoding="utf-8", errors="replace")
-        nomes |= set(
-            re.findall(
-                r"\\(?:new|renew|provide)command\*?\s*\{?\\([A-Za-z@]+)", texto
-            )
-        )
+        nomes |= set(re.findall(r"\\(?:new|renew|provide)command\*?\s*\{?\\([A-Za-z@]+)", texto))
     return nomes
 
 
@@ -85,9 +81,7 @@ def test_todo_comando_de_citacao_existe_nos_dois_alvos(alvo: str):
     definir o comando no alvo que não o tem ou trocá-lo por um que ambos tenham.
     """
     definidos = _definidos(ALVOS[alvo]) | UNIVERSAIS
-    faltando = {
-        nome: arquivos for nome, arquivos in _usados().items() if nome not in definidos
-    }
+    faltando = {nome: arquivos for nome, arquivos in _usados().items() if nome not in definidos}
     assert faltando == {}, (
         f"comando(s) de citação ausente(s) no alvo {alvo}: "
         + "; ".join(

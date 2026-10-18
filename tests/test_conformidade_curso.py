@@ -75,8 +75,7 @@ def test_o_alvo_do_curso_usa_as_mesmas_secoes_dos_outros():
     sibi = entradas.findall((RAIZ / "texto" / "tcc1" / "main.tex").read_text(encoding="utf-8"))
     assert curso, "o alvo do curso não inclui nenhuma seção"
     assert curso == sibi, (
-        "o alvo do curso e o do SIBI incluem seções diferentes:\n"
-        f"  curso: {curso}\n  SIBI : {sibi}"
+        f"o alvo do curso e o do SIBI incluem seções diferentes:\n  curso: {curso}\n  SIBI : {sibi}"
     )
 
 

@@ -156,29 +156,18 @@ def test_nenhuma_fonte_e_bitmap(pdf_sbc: Path):
 # --- Margens ------------------------------------------------------------------
 
 
-def _em_paisagem(pdf: Path, pagina: int) -> bool:
-    """Se a página está girada para acomodar figura larga.
-
-    A margem declarada no estilo vale para a mancha do corpo, em retrato. Numa
-    página girada as margens trocam de eixo por construção, e medi-la contra a
-    regra do corpo reprovaria o documento por um recurso que o próprio formato
-    admite.
-
-    A detecção é pela rotação registrada no PDF, e não por número de página:
-    assim a guarda continua valendo quando a figura mudar de lugar.
-    """
-    saida = executar(
-        ["pdfinfo", "-f", str(pagina), "-l", str(pagina), str(pdf)]
-    ).stdout
-    return any("rot:" in linha and "90" in linha for linha in saida.splitlines())
-
-
 def _caixas_do_corpo(pdf: Path) -> list[tuple[float, float, float, float]]:
-    """Caixas de palavra do corpo, fora da bibliografia e das páginas giradas."""
+    """Caixas de palavra de todas as páginas do corpo, fora da bibliografia.
+
+    Aqui esteve uma dispensa para páginas giradas, de quando a figura do
+    processo ficava em paisagem. Ela saiu junto com a página girada: enquanto
+    existiu, media-se a margem de uma parte do documento e supunha-se a da
+    outra. Com o documento inteiro em retrato, toda página do corpo é medida —
+    e `tests/test_processo_cabe_na_mancha.py` é o que garante que continue
+    assim.
+    """
     caixas: list[tuple[float, float, float, float]] = []
     for pagina in leitura_pdf.paginas_antes_das_referencias(pdf):
-        if _em_paisagem(pdf, pagina):
-            continue
         caixas.extend(leitura_pdf.caixas_de_palavra(pdf, pagina))
     return caixas
 

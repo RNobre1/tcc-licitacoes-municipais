@@ -2,14 +2,14 @@
 <!--
   Processo da fase preparatória de uma contratação, em BPMN 2.0.
 
-  ESTE ARQUIVO É A FONTE a partir de agora. É XML padrão da OMG e abre em
-  qualquer ferramenta da notação, inclusive na indicada pela orientação, para
-  conferência e edição. A figura do texto é gerada dele por
-  `scripts/gerar_bpmn.py`, e nunca o contrário.
+  GERADO por `scripts/montar_bpmn.py`. Rodar aquele script SOBRESCREVE este
+  arquivo: ajuste feito à mão aqui, ou numa ferramenta de modelagem, é
+  descartado. O arquivo existe para ser **aberto e conferido** em qualquer
+  ferramenta da notação, inclusive a indicada pela orientação.
 
-  O desenho inicial saiu de `scripts/montar_bpmn.py`, que calcula as
-  coordenadas de modo que nenhuma ligação cruze outra. Rodar aquele script de
-  novo SOBRESCREVE este arquivo e descarta qualquer ajuste feito à mão.
+  As raias são verticais (`isHorizontal="false"`), e isso é deliberado: o
+  processo tem catorze etapas, e nessa disposição ele ocupa o eixo longo da
+  página, em vez de exigir uma figura larga demais para a coluna de texto.
 
   Recorte: contratação de material ou serviço comum, com valor estimado montado
   por pesquisa de preços. Obras ficam de fora, porque seu orçamento sai de
@@ -90,87 +90,99 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram id="diagrama">
     <bpmndi:BPMNPlane id="plano" bpmnElement="colaboracao">
-      <bpmndi:BPMNShape id="di_pool" bpmnElement="pool_prefeitura" isHorizontal="true">
-        <dc:Bounds x="160" y="60" width="1351" height="715" />
+      <bpmndi:BPMNShape id="di_pool" bpmnElement="pool_prefeitura" isHorizontal="false">
+        <dc:Bounds x="10" y="10" width="418" height="508" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="di_raia_secretaria" bpmnElement="raia_secretaria" isHorizontal="true">
-        <dc:Bounds x="190" y="60" width="1321" height="215" />
+      <bpmndi:BPMNShape id="di_raia_secretaria" bpmnElement="raia_secretaria" isHorizontal="false">
+        <dc:Bounds x="32" y="30" width="132" height="488" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="di_raia_licitacoes" bpmnElement="raia_licitacoes" isHorizontal="true">
-        <dc:Bounds x="190" y="275" width="1321" height="245" />
+      <bpmndi:BPMNShape id="di_raia_licitacoes" bpmnElement="raia_licitacoes" isHorizontal="false">
+        <dc:Bounds x="164" y="30" width="132" height="488" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="di_raia_sistema" bpmnElement="raia_sistema" isHorizontal="true">
-        <dc:Bounds x="190" y="520" width="1321" height="255" />
+      <bpmndi:BPMNShape id="di_raia_sistema" bpmnElement="raia_sistema" isHorizontal="false">
+        <dc:Bounds x="296" y="30" width="132" height="488" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="di_ev_vem" bpmnElement="ev_vem">
-        <dc:Bounds x="220" y="628" width="40" height="40" />
+        <dc:Bounds x="347" y="55" width="30" height="30" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="306" y="42" width="112" height="11" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="di_g_ata" bpmnElement="g_ata">
-        <dc:Bounds x="378" y="368" width="60" height="60" />
+        <dc:Bounds x="213" y="105" width="34" height="34" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="174" y="141" width="112" height="20" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="di_t_recuperar" bpmnElement="t_recuperar">
-        <dc:Bounds x="536" y="610" width="125" height="76" />
+        <dc:Bounds x="312" y="181" width="100" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="di_t_triar" bpmnElement="t_triar">
-        <dc:Bounds x="694" y="360" width="125" height="76" />
+        <dc:Bounds x="180" y="237" width="100" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="di_t_calcular" bpmnElement="t_calcular">
-        <dc:Bounds x="852" y="610" width="125" height="76" />
+        <dc:Bounds x="312" y="293" width="100" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="di_t_pecas" bpmnElement="t_pecas">
-        <dc:Bounds x="1010" y="610" width="125" height="76" />
+        <dc:Bounds x="312" y="349" width="100" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="di_t_revisar" bpmnElement="t_revisar">
-        <dc:Bounds x="1168" y="360" width="125" height="76" />
+        <dc:Bounds x="180" y="405" width="100" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="di_ev_fim" bpmnElement="ev_fim">
-        <dc:Bounds x="1326" y="378" width="40" height="40" />
+        <dc:Bounds x="215" y="461" width="30" height="30" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="174" y="493" width="112" height="11" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="di_fl_ev_vem_g_ata" bpmnElement="fl_ev_vem_g_ata">
-        <di:waypoint x="260" y="648" />
-        <di:waypoint x="307" y="648" />
-        <di:waypoint x="307" y="398" />
-        <di:waypoint x="378" y="398" />
+        <di:waypoint x="362" y="85" />
+        <di:waypoint x="362" y="95" />
+        <di:waypoint x="230" y="95" />
+        <di:waypoint x="230" y="105" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="di_fl_g_ata_t_recuperar" bpmnElement="fl_g_ata_t_recuperar">
-        <di:waypoint x="438" y="398" />
-        <di:waypoint x="477" y="398" />
-        <di:waypoint x="477" y="648" />
-        <di:waypoint x="536" y="648" />
+        <di:waypoint x="247" y="122" />
+        <di:waypoint x="362" y="122" />
+        <di:waypoint x="362" y="181" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="265" y="110" width="22" height="10" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="di_fl_t_recuperar_t_triar" bpmnElement="fl_t_recuperar_t_triar">
-        <di:waypoint x="661" y="648" />
-        <di:waypoint x="677" y="648" />
-        <di:waypoint x="677" y="398" />
-        <di:waypoint x="694" y="398" />
+        <di:waypoint x="362" y="217" />
+        <di:waypoint x="362" y="227" />
+        <di:waypoint x="230" y="227" />
+        <di:waypoint x="230" y="237" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="di_fl_t_triar_t_calcular" bpmnElement="fl_t_triar_t_calcular">
-        <di:waypoint x="819" y="398" />
-        <di:waypoint x="835" y="398" />
-        <di:waypoint x="835" y="648" />
-        <di:waypoint x="852" y="648" />
+        <di:waypoint x="230" y="273" />
+        <di:waypoint x="230" y="283" />
+        <di:waypoint x="362" y="283" />
+        <di:waypoint x="362" y="293" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="di_fl_t_calcular_t_pecas" bpmnElement="fl_t_calcular_t_pecas">
-        <di:waypoint x="977" y="648" />
-        <di:waypoint x="1010" y="648" />
+        <di:waypoint x="362" y="329" />
+        <di:waypoint x="362" y="349" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="di_fl_g_ata_t_pecas" bpmnElement="fl_g_ata_t_pecas">
-        <di:waypoint x="438" y="398" />
-        <di:waypoint x="476" y="398" />
-        <di:waypoint x="476" y="757" />
-        <di:waypoint x="988" y="757" />
-        <di:waypoint x="988" y="648" />
-        <di:waypoint x="1010" y="648" />
+        <di:waypoint x="213" y="122" />
+        <di:waypoint x="41" y="122" />
+        <di:waypoint x="41" y="367" />
+        <di:waypoint x="312" y="367" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="173" y="110" width="22" height="10" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="di_fl_t_pecas_t_revisar" bpmnElement="fl_t_pecas_t_revisar">
-        <di:waypoint x="1135" y="648" />
-        <di:waypoint x="1151" y="648" />
-        <di:waypoint x="1151" y="398" />
-        <di:waypoint x="1168" y="398" />
+        <di:waypoint x="362" y="385" />
+        <di:waypoint x="362" y="395" />
+        <di:waypoint x="230" y="395" />
+        <di:waypoint x="230" y="405" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="di_fl_t_revisar_ev_fim" bpmnElement="fl_t_revisar_ev_fim">
-        <di:waypoint x="1293" y="398" />
-        <di:waypoint x="1326" y="398" />
+        <di:waypoint x="230" y="441" />
+        <di:waypoint x="230" y="461" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

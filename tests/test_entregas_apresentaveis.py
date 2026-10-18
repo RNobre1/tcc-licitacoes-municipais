@@ -43,8 +43,7 @@ def _texto(pdf: Path) -> str:
 
 def test_a_pasta_de_entregas_existe():
     assert ENTREGAS.is_dir(), (
-        f"{ENTREGAS.relative_to(RAIZ)} não existe. "
-        "Gerar com `python scripts/gerar_entregas.py`."
+        f"{ENTREGAS.relative_to(RAIZ)} não existe. Gerar com `python scripts/gerar_entregas.py`."
     )
 
 

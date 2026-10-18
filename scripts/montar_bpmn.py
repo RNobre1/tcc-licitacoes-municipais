@@ -1,28 +1,46 @@
 """Monta o modelo BPMN do processo a partir da declaração abaixo.
 
-FONTE E DERIVAÇÃO — leia antes de editar qualquer um dos dois arquivos.
+FONTE E DERIVAÇÃO — leia antes de editar qualquer arquivo desta cadeia.
 
-Este script é a fonte do **primeiro** desenho: ele produz
-`docs/arquitetura/processo-licitacao.bpmn` com coordenadas calculadas, que é o
-que evita o erro de digitá-las à mão e o que garante que nenhuma linha cruze
-outra.
+Este script é a fonte do desenho: ele produz os `.bpmn` de
+`docs/arquitetura/` com coordenadas calculadas. Daí sai, por
+`scripts/gerar_bpmn.py`, a figura do texto. Calcular as coordenadas em vez de
+digitá-las é o que garante que nenhuma ligação cruze outra, e
+`scripts/verificar_bpmn.py` prova que a garantia valeu.
 
-Daí em diante o `.bpmn` passa a valer por si. Ele é XML padrão da OMG e abre em
-qualquer ferramenta da notação — inclusive na que a orientação indicou. Se
-alguém mover uma caixa por lá, aquela edição é a que vale, e rodar este script
-de novo a descarta. Por isso ele não roda em cadeia com os outros geradores:
-é ferramenta de partida, não de rotina.
+O `.bpmn` é XML padrão da OMG e abre em qualquer ferramenta da notação —
+inclusive na que a orientação indicou — para conferência. Rodar este script de
+novo o sobrescreve: ajuste feito por lá é descartado.
+
+POR QUE AS RAIAS SÃO VERTICAIS
+
+A primeira versão usava raias horizontais, com o fluxo da esquerda para a
+direita. Catorze etapas nessa disposição dão um desenho de mais de 1500 pt de
+largura. A coluna de texto mais estreita dos três alvos tem 427 pt, o que
+exigiria reduzir a figura a 28% — e a 28% o rótulo de 9 pt vira 2,5 pt.
+
+A saída tentada na ocasião foi girar a página para paisagem, e foi recusada:
+gira a numeração e o cabeçalho junto, e quebra a leitura do documento.
+
+A correção certa não é de diagramação da página, é de desenho do modelo. O
+processo é longo, e coisa longa ocupa o eixo longo do papel: as raias viram
+colunas e o fluxo desce. A notação prevê isso — `isHorizontal="false"` é
+atributo do próprio padrão de intercâmbio. O desenho passa a nascer com 418 pt
+de largura, cabe em tamanho natural, e o rótulo fica no corpo do documento.
+
+`tests/test_processo_cabe_na_mancha.py` é o que impede a volta do defeito.
 
 O LAYOUT, E POR QUE ELE É ASSIM
 
-A primeira versão roteava cada ligação pelo ponto médio entre origem e destino.
-O resultado foi um emaranhado: ligações diferentes que mudam de raia no mesmo
-trecho acabam no mesmo x e se cruzam.
+Cada etapa ocupa uma linha própria, na coluna de quem a executa. Ligação entre
+linhas vizinhas desce pelo vão entre elas, onde não há caixa nenhuma. Desvio
+longo — o salto de uma decisão exclusiva por cima de etapas que não acontecem —
+corre por um canal reservado à esquerda, dentro da primeira raia, largo o
+bastante para a linha não encostar em caixa.
 
-Aqui cada ligação que troca de raia recebe um **canal vertical próprio**, e os
-canais são distribuídos no vão entre as caixas. Duas ligações nunca descem pela
-mesma coluna. As que atravessam o diagrama inteiro usam a faixa livre no pé da
-raia de destino, por baixo das caixas, em vez de cortá-las.
+Decisão exclusiva recebe por cima e ramifica pelos lados, nunca por baixo: por
+baixo fica a pergunta, e seta sobre texto é exatamente o tipo de estrago que
+este arquivo existe para evitar.
 
     python scripts/montar_bpmn.py
     python scripts/gerar_bpmn.py     # depois, para a figura
@@ -36,52 +54,65 @@ from xml.sax.saxutils import escape
 RAIZ = Path(__file__).resolve().parent.parent
 DESTINO = RAIZ / "docs" / "arquitetura" / "processo-licitacao.bpmn"
 
-# --- Geometria ---------------------------------------------------------------
-T_W, T_H = 125, 76
-G_W = 60
-E_W = 40
-MARGEM_POOL = 30
+# --- Geometria, em pontos ----------------------------------------------------
+# Os números saem da mancha de texto do alvo mais estreito (sbc-tcc, 426,79 pt).
+# Somados: 22 + 3 x 132 = 418 pt. A folga de 9 pt é deliberada — figura
+# encostada na margem parece erro de composição mesmo quando não é.
+CAB_POOL = 22  # faixa vertical com o nome do pool, à esquerda
+CAB_RAIA = 20  # faixa horizontal com o nome da raia, no topo da coluna
+RAIA_W = 132
+
+# O desvio longo desce por um canal dentro da primeira raia, junto à borda. Não
+# se reserva coluna para ele: alargar uma raia só para isso deixa as três
+# visivelmente desiguais, e a desigualdade sugere hierarquia que não existe. A
+# folga de 16 pt entre a caixa e a borda da raia é o que torna o canal
+# possível, e `verificar_bpmn.py` é quem prova que ele não encosta em nada.
+CANAL = 9  # distância do canal à borda esquerda da primeira raia
+
+T_W, T_H = 100, 36  # tarefa
+G_W = 34  # decisão exclusiva
+E_W = 30  # evento
+ROTULO_W = 112  # rótulo externo, de evento e de decisão
+ROTULO_1, ROTULO_2 = 11, 20  # uma e duas linhas de rótulo externo
+
+VAO = 20  # vão vertical entre linhas
+PAD_TOPO, PAD_BASE = 12, 14
+POOL_X, POOL_Y = 10, 10
 
 RAIAS = [
-    ("raia_secretaria", "Secretaria demandante", 215),
-    ("raia_licitacoes", "Setor de licitações", 245),
-    ("raia_sistema", "Sistema de apoio", 255),
+    ("raia_secretaria", "Secretaria demandante"),
+    ("raia_licitacoes", "Setor de licitações"),
+    ("raia_sistema", "Sistema de apoio"),
 ]
 
 # O processo é declarado em duas partes, ligadas por eventos intermediários.
-# Catorze etapas numa faixa só produzem figura de proporção 4,2 para 1, que não
-# cabe legível em página nenhuma: o rótulo das caixas fica com menos de cinco
-# pontos. Cada parte fica perto de 2 para 1.
+# Catorze linhas numa figura só passam de 900 pt de altura, e não existe página
+# que as comporte. Cada parte cabe inteira numa, com folga.
 #
-# Estrutura de cada parte: (sufixo do arquivo, título, nós, ligações).
-# Nó: id, tipo, rótulo, raia, coluna. Ligação: origem, destino, rótulo, por_baixo.
+# A ordem da lista é a ordem das linhas: a primeira etapa declarada ocupa a
+# primeira linha. Não há número de linha a manter em dia.
+#
+# Nó: id, tipo, rótulo, raia. Ligação: origem, destino, rótulo, desvio.
 
 PARTES = [
     (
         "1-demanda",
         "Da demanda à minuta do estudo técnico",
         [
-            ("ev_inicio", "start", "Necessidade identificada", "raia_secretaria", 0),
-            ("t_formalizar", "task", "Formalizar demanda", "raia_secretaria", 1),
-            ("t_importar", "task", "Importar documentos de demanda", "raia_licitacoes", 2),
-            ("t_extrair", "task", "Extrair itens, quantidades e unidades", "raia_sistema", 3),
+            ("ev_inicio", "start", "Necessidade identificada", "raia_secretaria"),
+            ("t_formalizar", "task", "Formalizar demanda", "raia_secretaria"),
+            ("t_importar", "task", "Importar documentos de demanda", "raia_licitacoes"),
+            ("t_extrair", "task", "Extrair itens, quantidades e unidades", "raia_sistema"),
             (
                 "g_consolida",
                 "gateway",
                 "Item pedido por mais de uma secretaria?",
                 "raia_licitacoes",
-                4,
             ),
-            ("t_consenso", "task", "Propor descrição de consenso", "raia_sistema", 5),
-            (
-                "t_alinhar",
-                "task",
-                "Alinhar descrição com as secretarias",
-                "raia_licitacoes",
-                6,
-            ),
-            ("t_minuta", "task", "Emitir minuta do estudo técnico", "raia_sistema", 7),
-            ("ev_segue", "end", "Segue na parte 2", "raia_sistema", 8),
+            ("t_consenso", "task", "Propor descrição de consenso", "raia_sistema"),
+            ("t_alinhar", "task", "Alinhar descrição com as secretarias", "raia_licitacoes"),
+            ("t_minuta", "task", "Emitir minuta do estudo técnico", "raia_sistema"),
+            ("ev_segue", "end", "Segue na parte 2", "raia_sistema"),
         ],
         [
             ("ev_inicio", "t_formalizar", "", False),
@@ -99,38 +130,14 @@ PARTES = [
         "2-precos",
         "Da pesquisa de preços às peças do processo",
         [
-            ("ev_vem", "start", "Minuta emitida", "raia_sistema", 0),
-            (
-                "g_ata",
-                "gateway",
-                "Preço vem de ata ou contrato vigente?",
-                "raia_licitacoes",
-                1,
-            ),
-            (
-                "t_recuperar",
-                "task",
-                "Recuperar candidatos por significado",
-                "raia_sistema",
-                2,
-            ),
-            ("t_triar", "task", "Triar candidatos e decidir", "raia_licitacoes", 3),
-            (
-                "t_calcular",
-                "task",
-                "Calcular valor e gerar mapa de cotação",
-                "raia_sistema",
-                4,
-            ),
-            (
-                "t_pecas",
-                "task",
-                "Gerar estudo final e termo de referência",
-                "raia_sistema",
-                5,
-            ),
-            ("t_revisar", "task", "Revisar e assinar as peças", "raia_licitacoes", 6),
-            ("ev_fim", "end", "Processo instruído", "raia_licitacoes", 7),
+            ("ev_vem", "start", "Minuta emitida", "raia_sistema"),
+            ("g_ata", "gateway", "Preço vem de ata ou contrato vigente?", "raia_licitacoes"),
+            ("t_recuperar", "task", "Recuperar candidatos por significado", "raia_sistema"),
+            ("t_triar", "task", "Triar candidatos e decidir", "raia_licitacoes"),
+            ("t_calcular", "task", "Calcular valor e gerar mapa de cotação", "raia_sistema"),
+            ("t_pecas", "task", "Gerar estudo final e termo de referência", "raia_sistema"),
+            ("t_revisar", "task", "Revisar e assinar as peças", "raia_licitacoes"),
+            ("ev_fim", "end", "Processo instruído", "raia_licitacoes"),
         ],
         [
             ("ev_vem", "g_ata", "", False),
@@ -145,156 +152,193 @@ PARTES = [
     ),
 ]
 
-# Preenchidos por parte, durante a geração.
-NOS: list = []
-FLUXOS: list = []
-
-TIPOS = {
-    "start": ("startEvent", E_W, E_W),
-    "end": ("endEvent", E_W, E_W),
-    "task": ("task", T_W, T_H),
-    "gateway": ("exclusiveGateway", G_W, G_W),
+TAG = {
+    "start": "startEvent",
+    "end": "endEvent",
+    "task": "task",
+    "gateway": "exclusiveGateway",
 }
 
-COL_X0 = 220
-COL_PASSO = 158
-POOL_X, POOL_Y = 160, 60
+# Largura e altura da forma, por tipo.
+FORMA = {"start": (E_W, E_W), "end": (E_W, E_W), "task": (T_W, T_H), "gateway": (G_W, G_W)}
+
+# Altura do rótulo externo; tarefa escreve dentro da caixa e não tem.
+ROTULO = {"start": ROTULO_1, "end": ROTULO_1, "task": 0, "gateway": ROTULO_2}
+
+# Em que ponto da linha a forma fica, e onde sobra espaço para o rótulo. O
+# evento inicial põe o rótulo **em cima**, porque sai por baixo; os demais põem
+# embaixo, porque entram por cima. É o que mantém seta e texto separados.
+ROTULO_ACIMA = ("start",)
 
 
-def _topo(rid: str) -> float:
-    y = POOL_Y
-    for ident, _nome, altura in RAIAS:
-        if ident == rid:
-            return y
-        y += altura
-    raise KeyError(rid)
+class Parte:
+    """Uma metade do processo, com a geometria já resolvida."""
+
+    def __init__(self, sufixo: str, titulo: str, nos: list, fluxos: list) -> None:
+        self.sufixo, self.titulo, self.nos, self.fluxos = sufixo, titulo, nos, fluxos
+        self.tipo = {n[0]: n[1] for n in nos}
+        self.raia = {n[0]: n[3] for n in nos}
+
+        self.largura = CAB_POOL + len(RAIAS) * RAIA_W
+        self.canal_x = POOL_X + CAB_POOL + CANAL
+
+        self.caixa: dict[str, tuple[float, float, float, float]] = {}
+        self.rotulo: dict[str, tuple[float, float, float, float]] = {}
+        topo = POOL_Y + CAB_RAIA + PAD_TOPO
+        for ident, tipo, _nome, _raia in nos:
+            w, h = FORMA[tipo]
+            alto_rotulo = ROTULO[tipo]
+            cx = self._centro_da_raia(ident)
+            if tipo in ROTULO_ACIMA and alto_rotulo:
+                self.rotulo[ident] = (cx - ROTULO_W / 2, topo, ROTULO_W, alto_rotulo)
+                y = topo + alto_rotulo + 2
+            else:
+                y = topo
+                if alto_rotulo:
+                    self.rotulo[ident] = (cx - ROTULO_W / 2, y + h + 2, ROTULO_W, alto_rotulo)
+            self.caixa[ident] = (cx - w / 2, y, w, h)
+            topo += h + (alto_rotulo + 2 if alto_rotulo else 0) + VAO
+        self.altura = topo - VAO + PAD_BASE - POOL_Y
+
+    def _indice_da_raia(self, ident: str) -> int:
+        return [r[0] for r in RAIAS].index(self.raia[ident])
+
+    def _limite_da_raia(self, indice: int) -> tuple[float, float]:
+        """Esquerda e largura da coluna. As três são iguais."""
+        return POOL_X + CAB_POOL + indice * RAIA_W, RAIA_W
+
+    def _centro_da_raia(self, ident: str) -> float:
+        x, largura = self._limite_da_raia(self._indice_da_raia(ident))
+        return x + largura / 2
+
+    def rota(self, origem: str, destino: str, desvio: bool) -> list[tuple[float, float]]:
+        ox, oy, ow, oh = self.caixa[origem]
+        dx, dy, dw, dh = self.caixa[destino]
+        ocx, odx = ox + ow / 2, dx + dw / 2
+        oy_meio, dy_meio = oy + oh / 2, dy + dh / 2
+
+        if desvio:
+            # Sai pelo lado esquerdo, desce pelo canal reservado, entra pelo
+            # lado esquerdo do destino. Nunca por baixo da decisão: lá está a
+            # pergunta.
+            return [
+                (ox, oy_meio),
+                (self.canal_x, oy_meio),
+                (self.canal_x, dy_meio),
+                (dx, dy_meio),
+            ]
+
+        if self.tipo[origem] == "gateway":
+            # Ramifica pelo lado e desce já na coluna do destino, fora do
+            # alcance da pergunta.
+            lado = ox + ow if odx > ocx else ox
+            return [(lado, oy_meio), (odx, oy_meio), (odx, dy)]
+
+        if abs(ocx - odx) < 1:
+            return [(ocx, oy + oh), (odx, dy)]
+
+        meio = (oy + oh + dy) / 2
+        return [(ocx, oy + oh), (ocx, meio), (odx, meio), (odx, dy)]
+
+    def conferir(self) -> None:
+        """Pressupostos do roteamento, cobrados aqui e não descobertos na figura."""
+        for origem, destino, _rotulo, desvio in self.fluxos:
+            if self.tipo[origem] != "gateway":
+                continue
+            if desvio:
+                continue
+            if self.raia[origem] == self.raia[destino]:
+                raise ValueError(
+                    f"{origem} ramifica para {destino} na mesma raia. A saída lateral "
+                    "desceria por cima da pergunta da decisão. Mover um dos dois de raia."
+                )
 
 
-def _centro(rid: str) -> float:
-    altura = next(a for i, _n, a in RAIAS if i == rid)
-    return _topo(rid) + altura / 2
-
-
-def geo(ident: str) -> tuple[float, float, float, float]:
-    _, tipo, _, raia, coluna = next(n for n in NOS if n[0] == ident)
-    _, w, h = TIPOS[tipo]
-    return COL_X0 + coluna * COL_PASSO, _centro(raia) - h / 2, w, h
-
-
-def caminho(origem: str, destino: str, por_baixo: bool, canal: float) -> list[tuple[float, float]]:
-    ox, oy, ow, oh = geo(origem)
-    dx, dy, dw, dh = geo(destino)
-    x1, y1 = ox + ow, oy + oh / 2
-    x2, y2 = dx, dy + dh / 2
-
-    if abs(y1 - y2) < 1:
-        return [(x1, y1), (x2, y2)]
-
-    if por_baixo:
-        # Desce pelo canal logo após a origem, corre no pé da raia de destino e
-        # sobe só na frente do destino. Nunca passa por dentro de uma caixa.
-        rid = next(n[3] for n in NOS if n[0] == destino)
-        pe = _topo(rid) + next(a for i, _n, a in RAIAS if i == rid) - 18
-        return [(x1, y1), (canal, y1), (canal, pe), (x2 - 22, pe), (x2 - 22, y2), (x2, y2)]
-
-    return [(x1, y1), (canal, y1), (canal, y2), (x2, y2)]
-
-
-def main() -> None:
-    global NOS, FLUXOS
-    for sufixo, titulo, nos, fluxos in PARTES:
-        NOS, FLUXOS = nos, fluxos
-        arquivo = DESTINO.with_name(f"processo-licitacao-{sufixo}.bpmn")
-        _escrever(arquivo, titulo)
-
-
-def _escrever(arquivo: Path, titulo: str) -> None:
-    # Um canal por ligação que troca de raia, distribuído no vão entre as
-    # colunas de origem e destino. Duas ligações nunca compartilham o x.
-    canais: dict[tuple[str, str], float] = {}
-    usados: dict[int, int] = {}
-    for origem, destino, _rot, por_baixo in FLUXOS:
-        ox, _oy, ow, _oh = geo(origem)
-        dx, _dy, _dw, _dh = geo(destino)
-        fim_origem, inicio_destino = ox + ow, dx
-        chave = int(fim_origem)
-        ordem = usados.get(chave, 0)
-        usados[chave] = ordem + 1
-        if por_baixo:
-            # Desvio longo desce logo depois da origem. Calcular o canal no meio
-            # do vão faz a descida cair sobre uma caixa do caminho principal —
-            # foi o defeito que a verificação geométrica apanhou.
-            canais[(origem, destino)] = fim_origem + 24 + 14 * ordem
-        else:
-            vao = max(inicio_destino - fim_origem, 40)
-            canais[(origem, destino)] = fim_origem + vao * (0.4 + 0.25 * ordem)
-
+def _xml(p: Parte) -> str:
+    nl = chr(10)
     elementos, formas, arestas = [], [], []
 
-    for ident, tipo, rotulo, _raia, _col in NOS:
-        tag, _, _ = TIPOS[tipo]
-        entra = [f for f in FLUXOS if f[1] == ident]
-        sai = [f for f in FLUXOS if f[0] == ident]
+    for ident, tipo, rotulo, _raia in p.nos:
+        entra = [f for f in p.fluxos if f[1] == ident]
+        sai = [f for f in p.fluxos if f[0] == ident]
         corpo = "\n".join(
             [f"      <bpmn:incoming>fl_{o}_{d}</bpmn:incoming>" for o, d, _r, _b in entra]
             + [f"      <bpmn:outgoing>fl_{o}_{d}</bpmn:outgoing>" for o, d, _r, _b in sai]
         )
         elementos.append(
-            f'    <bpmn:{tag} id="{ident}" name="{escape(rotulo)}">\n{corpo}\n    </bpmn:{tag}>'
+            f'    <bpmn:{TAG[tipo]} id="{ident}" name="{escape(rotulo)}">\n{corpo}\n'
+            f"    </bpmn:{TAG[tipo]}>"
         )
-        x, y, w, h = geo(ident)
+        x, y, w, h = p.caixa[ident]
+        marca = ""
+        if ident in p.rotulo:
+            lx, ly, lw, lh = p.rotulo[ident]
+            marca = (
+                f"\n        <bpmndi:BPMNLabel>\n"
+                f'          <dc:Bounds x="{lx:.0f}" y="{ly:.0f}" '
+                f'width="{lw:.0f}" height="{lh:.0f}" />\n'
+                f"        </bpmndi:BPMNLabel>"
+            )
         formas.append(
             f'      <bpmndi:BPMNShape id="di_{ident}" bpmnElement="{ident}">\n'
-            f'        <dc:Bounds x="{x:.0f}" y="{y:.0f}" '
-            f'width="{w:.0f}" height="{h:.0f}" />\n'
-            f"      </bpmndi:BPMNShape>"
+            f'        <dc:Bounds x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" />'
+            f"{marca}\n      </bpmndi:BPMNShape>"
         )
 
-    for origem, destino, rotulo, por_baixo in FLUXOS:
+    for origem, destino, rotulo, desvio in p.fluxos:
         ident = f"fl_{origem}_{destino}"
         nome = f' name="{escape(rotulo)}"' if rotulo else ""
         elementos.append(
             f'    <bpmn:sequenceFlow id="{ident}"{nome} '
             f'sourceRef="{origem}" targetRef="{destino}" />'
         )
-        pontos = caminho(origem, destino, por_baixo, canais[(origem, destino)])
+        pontos = p.rota(origem, destino, desvio)
         wp = "\n".join(f'        <di:waypoint x="{x:.0f}" y="{y:.0f}" />' for x, y in pontos)
+        marca = ""
+        if rotulo:
+            # Logo depois da origem, e não no meio do trecho: o rótulo de uma
+            # ramificação diz por onde se sai da decisão, e lido a meio caminho
+            # do destino ele deixa de responder a isso.
+            (x1, y1), (x2, _y2) = pontos[0], pontos[1]
+            lx = x1 + (18 if x2 > x1 else -40)
+            marca = (
+                f"\n        <bpmndi:BPMNLabel>\n"
+                f'          <dc:Bounds x="{lx:.0f}" y="{y1 - 12:.0f}" width="22" height="10" />\n'
+                f"        </bpmndi:BPMNLabel>"
+            )
         arestas.append(
-            f'      <bpmndi:BPMNEdge id="di_{ident}" bpmnElement="{ident}">\n{wp}\n'
+            f'      <bpmndi:BPMNEdge id="di_{ident}" bpmnElement="{ident}">\n{wp}{marca}\n'
             f"      </bpmndi:BPMNEdge>"
         )
 
-    largura = COL_X0 + (len(NOS) - 1) * COL_PASSO + T_W + 60 - POOL_X
-    altura = sum(a for _i, _n, a in RAIAS)
-
     raias_xml, raias_di = [], []
-    for rid, nome, alt in RAIAS:
+    for indice, (rid, nome) in enumerate(RAIAS):
         refs = "\n".join(
-            f"        <bpmn:flowNodeRef>{n[0]}</bpmn:flowNodeRef>" for n in NOS if n[3] == rid
+            f"        <bpmn:flowNodeRef>{n[0]}</bpmn:flowNodeRef>" for n in p.nos if n[3] == rid
         )
         raias_xml.append(
             f'      <bpmn:lane id="{rid}" name="{escape(nome)}">\n{refs}\n      </bpmn:lane>'
         )
+        x, largura = p._limite_da_raia(indice)
         raias_di.append(
-            f'      <bpmndi:BPMNShape id="di_{rid}" bpmnElement="{rid}" isHorizontal="true">\n'
-            f'        <dc:Bounds x="{POOL_X + MARGEM_POOL}" y="{_topo(rid):.0f}" '
-            f'width="{largura - MARGEM_POOL}" height="{alt}" />\n'
+            f'      <bpmndi:BPMNShape id="di_{rid}" bpmnElement="{rid}" isHorizontal="false">\n'
+            f'        <dc:Bounds x="{x:.0f}" y="{POOL_Y + CAB_RAIA}" '
+            f'width="{largura:.0f}" height="{p.altura - CAB_RAIA:.0f}" />\n'
             f"      </bpmndi:BPMNShape>"
         )
 
-    nl = chr(10)
-    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!--
   Processo da fase preparatória de uma contratação, em BPMN 2.0.
 
-  ESTE ARQUIVO É A FONTE a partir de agora. É XML padrão da OMG e abre em
-  qualquer ferramenta da notação, inclusive na indicada pela orientação, para
-  conferência e edição. A figura do texto é gerada dele por
-  `scripts/gerar_bpmn.py`, e nunca o contrário.
+  GERADO por `scripts/montar_bpmn.py`. Rodar aquele script SOBRESCREVE este
+  arquivo: ajuste feito à mão aqui, ou numa ferramenta de modelagem, é
+  descartado. O arquivo existe para ser **aberto e conferido** em qualquer
+  ferramenta da notação, inclusive a indicada pela orientação.
 
-  O desenho inicial saiu de `scripts/montar_bpmn.py`, que calcula as
-  coordenadas de modo que nenhuma ligação cruze outra. Rodar aquele script de
-  novo SOBRESCREVE este arquivo e descarta qualquer ajuste feito à mão.
+  As raias são verticais (`isHorizontal="false"`), e isso é deliberado: o
+  processo tem catorze etapas, e nessa disposição ele ocupa o eixo longo da
+  página, em vez de exigir uma figura larga demais para a coluna de texto.
 
   Recorte: contratação de material ou serviço comum, com valor estimado montado
   por pesquisa de preços. Obras ficam de fora, porque seu orçamento sai de
@@ -311,7 +355,7 @@ def _escrever(arquivo: Path, titulo: str) -> None:
                   id="defs_licitacao"
                   targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:collaboration id="colaboracao">
-    <bpmn:participant id="pool_prefeitura" name="Prefeitura — {titulo}"
+    <bpmn:participant id="pool_prefeitura" name="Prefeitura — {escape(p.titulo)}"
                       processRef="processo_licitacao" />
   </bpmn:collaboration>
   <bpmn:process id="processo_licitacao" isExecutable="false">
@@ -322,8 +366,9 @@ def _escrever(arquivo: Path, titulo: str) -> None:
   </bpmn:process>
   <bpmndi:BPMNDiagram id="diagrama">
     <bpmndi:BPMNPlane id="plano" bpmnElement="colaboracao">
-      <bpmndi:BPMNShape id="di_pool" bpmnElement="pool_prefeitura" isHorizontal="true">
-        <dc:Bounds x="{POOL_X}" y="{POOL_Y}" width="{largura:.0f}" height="{altura}" />
+      <bpmndi:BPMNShape id="di_pool" bpmnElement="pool_prefeitura" isHorizontal="false">
+        <dc:Bounds x="{POOL_X}" y="{POOL_Y}" width="{p.largura:.0f}" \
+height="{p.altura:.0f}" />
       </bpmndi:BPMNShape>
 {nl.join(raias_di)}
 {nl.join(formas)}
@@ -332,8 +377,18 @@ def _escrever(arquivo: Path, titulo: str) -> None:
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
 """
-    arquivo.write_text(xml, encoding="utf-8")
-    print(f"{arquivo.name}: {len(NOS)} nós, {len(FLUXOS)} ligações, {largura:.0f}x{altura} pt")
+
+
+def main() -> None:
+    for sufixo, titulo, nos, fluxos in PARTES:
+        parte = Parte(sufixo, titulo, nos, fluxos)
+        parte.conferir()
+        arquivo = DESTINO.with_name(f"processo-licitacao-{sufixo}.bpmn")
+        arquivo.write_text(_xml(parte), encoding="utf-8")
+        print(
+            f"{arquivo.name}: {len(nos)} nós, {len(fluxos)} ligações, "
+            f"{parte.largura:.0f}x{parte.altura:.0f} pt"
+        )
 
 
 if __name__ == "__main__":
