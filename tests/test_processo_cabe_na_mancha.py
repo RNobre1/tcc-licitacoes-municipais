@@ -98,6 +98,32 @@ def test_cada_parte_do_processo_cabe_na_altura_da_pagina():
         )
 
 
+def test_nenhuma_figura_ou_tabela_flutua():
+    """Toda ilustração aparece onde foi declarada, e não onde o LaTeX preferir.
+
+    O documento usa `[H]` em todos os flutuantes. Não é cacoete: com colocação
+    flutuante o LaTeX empurra a ilustração para uma página adiante e emenda o
+    texto por cima, de modo que o parágrafo que a apresenta fica numa página e
+    ela em outra, duas adiante. Aconteceu com as duas figuras do processo, que
+    nasceram com `[p]` — as únicas duas de catorze a destoar.
+
+    A guarda é por regra e não por lista: vale para o flutuante que for escrito
+    amanhã, que é justamente o que uma lista dos de hoje não pega.
+    """
+    import re
+
+    fora = []
+    for arquivo in sorted((RAIZ / "texto").rglob("*.tex")):
+        for numero, linha in enumerate(arquivo.read_text(encoding="utf-8").splitlines(), 1):
+            achado = re.search(r"\\begin\{(figure|table)\}\[([^\]]*)\]", linha)
+            if achado and achado.group(2) != "H":
+                fora.append(f"{arquivo.relative_to(RAIZ)}:{numero} [{achado.group(2)}]")
+    assert fora == [], (
+        "flutuante com colocação diferente de [H]: " + "; ".join(fora) + ". "
+        "Colocação flutuante separa a ilustração do parágrafo que a apresenta."
+    )
+
+
 def test_o_texto_nao_gira_a_pagina_do_processo():
     """Contraprova da guarda acima: ela só vale enquanto a página for retrato.
 

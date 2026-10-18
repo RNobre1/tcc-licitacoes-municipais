@@ -213,12 +213,20 @@ de fato lido no período.
 
 | # | O que | Dono | Estado |
 |---|---|---|---|
-| A1 | Linguagem, arcabouço e banco relacional | Autor | aberto — recomendação posta em 18/10, aguardando decisão |
+| A1 | ~~Linguagem, arcabouço e banco relacional~~ | Autor | **fechado 18/10** — Python, Django, HTMX e PostgreSQL |
 | A2 | Modelo de representação das descrições | Autor | aberto — depende de C2 e C3 |
 | A3 | Estratégia de atualização da ingestão | Autor | aberto — depende de C1 |
 | A4 | Onde reside a geração dos documentos | Autor | aberto |
-| A5 | Mecanismo concreto de autenticação | Autor | aberto |
+| A5 | ~~Mecanismo concreto de autenticação~~ | Autor | **fechado 18/10** — o do próprio arcabouço, com o perfil único de 22/09 |
 | A6 | Proporção entre tipos de processo no setor | Fonte de domínio | aberto — limita o alcance do que se pode afirmar |
+
+**A1 e A5, fechadas em 18/10.** Nota em `TCC/decisões/2026-10-18-pilha-tecnologica.md`.
+A escolha não foi precedida de pesquisa comparativa, e isso é deliberado: o que a
+metodologia cobra é o registro das alternativas descartadas naquilo que **muda o
+resultado medido**. Linguagem e arcabouço não mudam — o mesmo experimento daria o
+mesmo número em qualquer um deles. Só o banco relacional tem razão técnica ligada
+ao problema, e ela está declarada no texto. A5 cai junto porque autenticação
+passa a ser recurso do arcabouço.
 
 ### A2 e A3 não bloqueiam o TCC I
 

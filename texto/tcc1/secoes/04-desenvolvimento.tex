@@ -59,27 +59,6 @@ mecanismo: das doze seções numeradas, onze são idênticas, e apenas a estimat
 de valor difere. É dado de projeto, e não só de diagnóstico, porque descreve
 exatamente a transformação que o sistema precisa reproduzir.
 
-% O desenho é gerado de docs/arquitetura/ por scripts/gerar_bpmn.py, em TikZ, e
-% entra em tamanho natural: sem `width`, porque qualquer redução levaria o
-% rótulo a corpo ilegível.
-\begin{figure}[p]
-  \centering
-  \input{figuras/processo-licitacao-1-demanda}
-  \caption{O processo da fase preparatória, parte 1: da demanda à minuta do
-    estudo técnico}
-  \label{fig:processo-bpmn-1}
-  \fonte{Elaborado pelo autor.}
-\end{figure}
-
-\begin{figure}[p]
-  \centering
-  \input{figuras/processo-licitacao-2-precos}
-  \caption{O processo da fase preparatória, parte 2: da pesquisa de preços às
-    peças do processo}
-  \label{fig:processo-bpmn-2}
-  \fonte{Elaborado pelo autor.}
-\end{figure}
-
 As figuras~\ref{fig:processo-bpmn-1} e~\ref{fig:processo-bpmn-2} apresentam
 esse percurso em \emph{Business Process Model and Notation}
 \cite{omg2013bpmn}, com três raias que correspondem a quem executa cada etapa.
@@ -106,6 +85,32 @@ quem telefona às secretarias para fechar a descrição é o servidor do setor. 
 segunda parte a raia da secretaria demandante aparece vazia, e isso é
 informação e não desperdício --- do recebimento da minuta em diante a
 secretaria não executa etapa alguma.
+
+% As duas figuras vêm DEPOIS dos parágrafos que as explicam, e não antes, e
+% entram com a mesma colocação fixa do resto do documento. Com colocação
+% flutuante o LaTeX as empurrava para páginas próprias no meio da subseção, e o
+% texto que as apresenta terminava duas páginas depois delas.
+%
+% O desenho é gerado de docs/arquitetura/ por scripts/gerar_bpmn.py, em TikZ, e
+% entra em tamanho natural: sem `width`, porque qualquer redução levaria o
+% rótulo a corpo ilegível.
+\begin{figure}[H]
+  \centering
+  \input{figuras/processo-licitacao-1-demanda}
+  \caption{O processo da fase preparatória, parte 1: da demanda à minuta do
+    estudo técnico}
+  \label{fig:processo-bpmn-1}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \input{figuras/processo-licitacao-2-precos}
+  \caption{O processo da fase preparatória, parte 2: da pesquisa de preços às
+    peças do processo}
+  \label{fig:processo-bpmn-2}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
 
 \subsubsection{Onde o esforço se concentra}
 \label{subsec:onde-doi}
@@ -523,6 +528,35 @@ não uma: semelhança do item e proximidade do preço esperado. Elas são exibid
 separadas, e não fundidas em escore único, para que o operador saiba qual das
 duas puxou cada candidato para cima.
 
+\subsubsection{Pilha tecnológica}
+\label{subsec:pilha}
+
+A implementação usa Python, com o arcabouço Django e a biblioteca HTMX para as
+interações de tela, sobre PostgreSQL. O índice semântico permanece em banco
+vetorial dedicado, pela medição já relatada.
+
+Duas dessas escolhas têm razão técnica ligada ao problema, e duas não têm. A
+distinção é declarada porque alegar vantagem onde não há seria afirmação que o
+trabalho não consegue sustentar.
+
+As que têm razão são as do banco relacional. A primeira é o tipo de dado
+documental indexável: a resposta da base pública de contratações é aninhada e
+muda de forma entre versões da interface, e é preciso guardá-la como veio e
+ainda assim consultar campo dentro dela. A segunda é o tipo de intervalo
+temporal com restrição de exclusão por sobreposição, que resolve no próprio
+banco o versionamento exigido pela regra RN08 --- reproduzir uma pesquisa de
+preços exatamente como ela era numa data ---, em vez de deixá-lo a cargo de
+código de aplicação, que é justamente o que não se consegue auditar.
+
+As que não têm são a linguagem e o arcabouço. Python é continuidade com o
+ferramental em que a avaliação descrita na seção~\ref{sec:metodologia} é
+executada, e não escolha de desempenho; Django poupa esforço em autenticação,
+migrações e formulários, que não são objeto de avaliação neste trabalho.
+Nenhuma das duas altera o que será medido: o mesmo experimento produziria o
+mesmo resultado em qualquer linguagem de uso geral. Registrá-las sem alegar
+superioridade é o que mantém a comparação de alternativas onde ela de fato
+pesa, que é a representação das descrições.
+
 \subsubsection{Decisões ainda abertas}
 \label{subsec:decisoes-abertas}
 
@@ -540,8 +574,6 @@ escolha não se sustentava.
     \toprule
     \textbf{\#} & \textbf{Decisão} & \textbf{Aguarda} \\
     \midrule
-    A1 & Linguagem e arcabouço de desenvolvimento & Não afeta os dois níveis
-      desenhados; fechar cedo prende sem necessidade \\
     A2 & Como representar as descrições de item para a busca & Teste com as
       descrições reais, que são curtas e ruidosas \\
     A3 & Política de atualização da ingestão & Medição do volume e do ritmo de
@@ -556,3 +588,5 @@ escolha não se sustentava.
 
 A decisão A2 é a que mais afeta o resultado do trabalho, e é a próxima a ser
 fechada. A A3 depende de uma medição simples sobre a base pública, já planejada.
+A lista encolheu com a definição da pilha tecnológica registrada acima: a
+escolha de linguagem e arcabouço saiu daqui porque foi tomada.
