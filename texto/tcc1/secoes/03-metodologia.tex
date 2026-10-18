@@ -1,14 +1,114 @@
 \section{Metodologia}
 \label{sec:metodologia}
 
-\pendente{Descrever o percurso metodológico completo, incluindo classificação
-da pesquisa, procedimentos de levantamento de requisitos, processo de
-desenvolvimento e forma de avaliação.}
-
 \subsection{Classificação da pesquisa}
+\label{subsec:classificacao}
 
-\pendente{Natureza, objetivos e procedimentos técnicos, com a fonte
-metodológica que sustenta a classificação.}
+Esta pesquisa classifica-se como \emph{Design Science Research}, paradigma em
+que o conhecimento é produzido pela construção e avaliação de um artefato
+destinado a resolver um problema identificado em contexto real
+\cite{hevner2004design}. A escolha decorre da natureza do trabalho: o problema
+foi levantado em campo, a solução é um artefato de software, e a avaliação
+acontece contra o processo que o originou.
+
+O percurso segue as seis atividades do modelo de processo de
+\citaautor{peffers2007dsrm}, com entrada centrada no problema --- a origem
+declarada quando a pesquisa nasce da observação de uma dificuldade prática, e
+não de uma oportunidade tecnológica. As atividades são identificar o problema,
+definir objetivos para a solução, projetar e desenvolver, demonstrar, avaliar e
+comunicar. No momento da redação deste projeto, a primeira está concluída, a
+segunda parcialmente, a terceira em curso, e as três últimas planejadas para a
+etapa seguinte.
+
+A condução observa os três ciclos descritos por \citaautor{hevner2007ciclos}. O
+ciclo de relevância liga o trabalho ao ambiente de aplicação, e aqui é a
+prefeitura estudada: dela vieram o problema, os requisitos e os critérios de
+aceitação, e é para ela que o artefato volta para ser avaliado. O ciclo de rigor
+liga o trabalho à base de conhecimento, da qual se extraem a literatura de
+recuperação de informação e de avaliação, e a que se devolve a contribuição
+declarada adiante. O ciclo de projeto alterna construção e avaliação internas,
+e é onde a bateria de modelos de representação acontece.
+
+\subsubsection{Posicionamento da contribuição}
+\label{subsec:posicionamento}
+
+\citaautor{gregor2013posicionamento} propõem posicionar a contribuição de uma
+pesquisa de projeto em duas dimensões: a maturidade do domínio da aplicação e a
+maturidade das soluções disponíveis. Este trabalho situa-se no quadrante que os
+autores denominam \emph{exaptation}: estender solução conhecida a um problema
+novo.
+
+A recuperação por proximidade de significado é tecnologia madura, com literatura
+consolidada e aplicações em produção. O domínio, porém, é pouco explorado: o
+levantamento registrado na seção~\ref{subsec:trabalhos-relacionados} não
+encontrou trabalho que apoie a decisão, item a item, de quem compõe uma pesquisa
+de preços, e nenhuma das ferramentas em operação examinadas busca o item por
+significado.
+
+Os mesmos autores advertem que, nesse quadrante, não basta transpor a técnica:
+é preciso demonstrar que o novo campo apresenta dificuldades ausentes naquele
+onde ela já era aplicada. Duas o caracterizam. A primeira é que a busca é sempre
+submetida a filtro estruturado obrigatório --- categoria, abrangência geográfica
+e janela de doze meses, por força de norma ---, e não é o caso irrestrito em que
+a literatura costuma medir. A segunda é a natureza do texto: descrições de item
+de compra pública têm mediana de seis palavras e seguem gramática própria, o que
+as distancia das sentenças sobre as quais os modelos de representação são
+habitualmente avaliados.
+
+\subsubsection{Contribuição declarada}
+\label{subsec:contribuicao}
+
+A tipologia de \citaautor{gregor2013posicionamento} distingue três níveis de
+contribuição, do mais situado ao mais abstrato: a implementação do artefato, o
+conhecimento na forma de princípios operacionais, e a teoria de projeto
+plenamente desenvolvida. Este trabalho pretende contribuir nos dois primeiros, e
+não no terceiro.
+
+No primeiro nível está o sistema, instanciação do artefato no município
+estudado. No segundo, e é esta a contribuição que o trabalho reivindica como
+principal, está o \textbf{protocolo de avaliação que corrige o viés de origem do
+conjunto de referência}.
+
+O problema que esse protocolo trata é o seguinte. O conjunto de referência deste
+trabalho é extraído de pesquisas de preço já realizadas, e os preços que o
+compõem foram escolhidos pela servidora dentro de uma ferramenta que busca por
+palavra. Os itens tidos como relevantes são, por construção, os que uma busca
+lexical alcança --- e um método semântico que encontre item comparável descrito
+com outras palavras é contado como erro. A literatura de avaliação documenta o
+efeito: conjuntos montados apenas com sistemas de uma família avaliam mal os de
+outra \pendente{citar Yilmaz et al. 2020 após conferir a entrada}.
+
+A correção proposta reúne os primeiros resultados de todos os métodos
+comparados, incluindo a busca lexical, embaralha-os e submete o conjunto a
+julgamento sem identificação de origem. A assimetria que ela desfaz está
+descrita na seção~\ref{subsec:limites-avaliacao}.
+
+\pendente{Esta declaração de contribuição precisa ser confrontada com a
+literatura de avaliação antes de ser afirmada como nova. Há trabalho publicado
+tratando de anotação parcial e de viés de coleta, e a redação correta é
+posicionar a contribuição como aplicação e adaptação desse conhecimento ao caso
+de descrições curtas sob filtro restritivo --- não como invenção.}
+
+\subsubsection{Classe de problemas}
+\label{subsec:classe-de-problemas}
+
+O artefato é construído para um município, mas a classe de problemas a que ele
+responde é mais ampla, e delimitá-la é o que permite dizer a quem mais o
+resultado serve.
+
+A classe é: \textbf{triagem de candidatos a referência, em acervo público de
+descrições curtas e heterogêneas, sob filtro estruturado obrigatório, com
+decisão final humana e exigência de registro da procedência.} Pertencem a ela os
+casos em que a busca precisa recuperar por significado mas obedecer a restrições
+formais, o julgamento não pode ser automatizado por imposição normativa, e cada
+escolha precisa ser justificável perante terceiro.
+
+Pesquisa de preços em contratação pública é um caso dessa classe. Outros,
+não examinados aqui, provavelmente também o são.
+
+\pendente{Confirmar, na literatura, se a classe de problemas enunciada já tem
+nome estabelecido. Nomear classe que já existe com outro rótulo é erro que a
+revisão apanha.}
 
 \subsection{Procedimento de levantamento}
 \label{subsec:procedimento-levantamento}
