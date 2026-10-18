@@ -96,6 +96,8 @@ Não revisitar sem motivo técnico novo. Cada uma tem nota em `TCC/decisões/`.
 | Fonte tipográfica | Times New Roman (via `mathptmx`) |
 | Documentos do texto | Dois projetos irmãos com preâmbulo e bibliografia compartilhados |
 | Dados de domínio | Documento real nunca versionado; testes e texto usam versão sintética |
+| Classificação da pesquisa | *Design Science Research*, com o estudo na prefeitura como contexto de avaliação dentro dela |
+| Contribuição declarada | O protocolo que corrige o viés do gabarito — contribuição do tipo "métodos e métricas de avaliação" |
 
 ## Política de dados
 
