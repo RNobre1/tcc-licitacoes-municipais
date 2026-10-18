@@ -38,10 +38,11 @@ O que destrava mais coisa adiante, em ordem.
 | C5 | Sessão de julgamento às cegas com a fonte de domínio | Fonte de domínio | aberto | **Condição** para a medição ter conclusão nos dois sentidos |
 | C6 | **Escrever o roteiro da sessão de observação do banco de preços** | Autor | aberto | É o pré-requisito de C5, e precisa existir antes de marcar a sessão |
 | C7 | ~~Decidir a classificação da pesquisa~~ | Autor | **fechado 15/10** | DSR adotada. Abre C10 a C13 |
-| C10 | **Escrever a subseção de classificação da pesquisa** | Autor | aberto | Fecha a lacuna apontada pela orientação |
+| C10 | ~~Escrever a subseção de classificação da pesquisa~~ | Autor | **fechado 15/10** | Classificação, ciclos, posicionamento e contribuição escritos |
 | C11 | **Fixar limiar de aceitação de cada resultado esperado, antes de medir** | Autor | aberto | Exigência da classificação adotada; muda a ordem de trabalho |
-| C12 | **Declarar por escrito o artefato que é a contribuição e o tipo dela** | Autor | aberto | É a cobrança da orientação, e tem lugar previsto no método |
-| C13 | Declarar a classe de problemas para a qual o resultado vale | Autor | aberto | Delimita a generalização |
+| C12 | ~~Declarar o artefato que é a contribuição e o tipo dela~~ | Autor | **fechado 15/10** | Dois níveis declarados; o protocolo de avaliação é a contribuição principal |
+| C13 | ~~Declarar a classe de problemas~~ | Autor | **fechado 15/10** | Escrita na metodologia |
+| C14 | Conferir a política de declaração de ferramenta de geração em cada veículo | Autor | aberto | Obrigação do veículo; precisa ser verificada antes de submeter |
 | C8 | **Modelar o processo de licitação em BPMN** | Autor | aberto | Pedido da orientação; vale para o texto, para a revista e para o evento |
 | C9 | ~~Conferir o prazo do simpósio de sistemas de informação~~ | Autor | **fechado 14/10** | Não houve prorrogação; apareceu a trilha de indústria, com prazo em 11/12/2026 |
 
