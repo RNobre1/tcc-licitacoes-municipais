@@ -109,6 +109,13 @@ sobre o que se publica em código aberto.
 - Se algum periódico internacional com formato curto e sem taxa for confirmado,
   a restrição a veículos nacionais pode ser revista.
 
+## Aval da orientação — 24/10/2026
+
+Os três veículos foram apresentados e aceitos, assim como a saída do SBSI. A
+orientação acrescentou um critério de prioridade: **revista tem mais peso** que
+evento, e a recomendação é tentar a revista primeiro. A ordem de esforço passa a
+seguir isso, e não só o calendário das chamadas.
+
 ## Backlinks
 - [[../sessões/2026-10-09]]
 - [[2026-10-15-classificacao-da-pesquisa-dsr]]

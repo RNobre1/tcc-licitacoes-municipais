@@ -6,7 +6,7 @@ As pendências **não** são repetidas em `docs/projeto.md` nem na especificaç�
 requisitos: os dois apontam para cá. Lista duplicada envelhece em um dos lados e
 ninguém descobre qual.
 
-Última revisão: 06/10/2026.
+Última revisão: 27/10/2026, depois da reunião de 24/10.
 
 ## Como ler
 
@@ -34,7 +34,7 @@ O que destrava mais coisa adiante, em ordem.
 | C1 | Medir volume, ritmo de publicação e formato das descrições da base pública | Autor | aberto | Decisão A3, e dimensiona o índice |
 | C2 | Montar o conjunto de avaliação a partir dos relatórios de cotação já recebidos | Autor | aberto | Decisão A2, que é a que mais afeta o resultado |
 | C3 | Levantar candidatos a modelo de representação e rodar a bateria contra C2 | Autor | aberto | Fecha A2 |
-| C4 | Escrever a seção de resultados esperados | Autor | aberto | Último vazio do texto |
+| C4 | ~~Escrever a seção de resultados esperados~~ | Autor | **fechado** | R1 a R8 escritos, um indicador cada; os limiares ficam em C11 |
 | C5 | Sessão de julgamento às cegas com a fonte de domínio | Fonte de domínio | aberto | **Condição** para a medição ter conclusão nos dois sentidos |
 | C6 | **Escrever o roteiro da sessão de observação do banco de preços** | Autor | aberto | É o pré-requisito de C5, e precisa existir antes de marcar a sessão |
 | C7 | ~~Decidir a classificação da pesquisa~~ | Autor | **fechado 15/10** | DSR adotada. Abre C10 a C13 |
@@ -187,9 +187,12 @@ As três candidatas deste trabalho, nenhuma dependente de o sistema existir:
 
 | O que | Dono | Estado |
 |---|---|---|
-| Seção de resultados esperados — única ainda vazia | Autor | aberto |
+| ~~Seção de resultados esperados~~ | Autor | fechado — R1 a R8; falta o instrumento de usabilidade |
 | Trabalhos relacionados: escrever o quadro com quatro referências citadas | Autor | em andamento |
-| Figuras dos diagramas: exportar as três páginas do editor para `texto/tcc1/figuras/` | Autor | aberto |
+| ~~Figuras dos diagramas~~ | Autor | fechado — exportadas e guardadas por teste de frescor |
+| Reduzir a subseção da pilha tecnológica a uma declaração: a orientação dispensou justificar a linguagem (24/10). Recupera folga no alvo da SBC, hoje em 25 de 25 | Autor | aberto |
+| Diagrama geral de casos de uso no texto; os demais por link ao repositório (orientação, 24/10) | Autor | aberto — depende de D1 |
+| Resultados no TCC II com teste de aceitação com usuário e estatística descritiva (orientação, 24/10) | Autor | TCC II |
 | Fonte publicada para a afirmação sobre municípios de pequeno porte | Autor | bloqueado em pesquisa |
 | Reescrever "domínio pouco explorado" como observação até o quadro fechar | Autor | aberto |
 | Organização do trabalho, na introdução — escrever por último | Autor | aberto |
@@ -206,6 +209,27 @@ A decisão é citar **quatro** nesta semana, e crescer semanalmente. O motivo é
 que cada referência citada precisa ser defensável diante da banca, e saltar de
 três para catorze de uma vez não é sustentável — nem honesto quanto ao que foi
 de fato lido no período.
+
+---
+
+## Desenvolvimento
+
+Aberto pela reunião de 24/10, quando a orientação deu a metodologia por
+concluída. Cada item aqui é **o quê**; a ordem e as datas são do plano do ciclo,
+não deste arquivo.
+
+| # | O que | Dono | Estado |
+|---|---|---|---|
+| D1 | Diagrama geral de casos de uso, com cada caso ligado aos requisitos que cobre | Autor | aberto |
+| D2 | Documentar cada caso de uso no repositório **quando ele for implementado**, não antes nem depois | Autor | permanente |
+| D3 | Protótipo navegável das telas principais, com dados fictícios e layout pronto, antes do modelo de dados | Autor | aberto |
+| D4 | Ambiente local: banco relacional e banco vetorial em contêiner, com a aplicação apontando para eles | Autor | aberto |
+| D5 | Conferir que os modelos `.bpmn` abrem na ferramenta indicada pela orientação. Foi afirmado na reunião e não testado: ela não roda no sistema da máquina de trabalho, e raia vertical é o recurso menos uniforme entre editores | Autor | aberto — exige outra máquina |
+| D6 | Repositório acessível na entrega: a orientação conta com o link para código e casos de uso, e ele hoje é privado | Orientação | aberto — decidir com o aval dela, antes da versão da banca |
+
+**Convenção de citação daqui em diante**, fixada em 24/10: biblioteca usada é
+mencionada no texto com link para a documentação técnica dela. Não exige a
+leitura integral que vale para artigo — é referência de uso, não de argumento.
 
 ---
 
@@ -275,13 +299,14 @@ texto.
 | O que | Dono | Estado | Observação |
 |---|---|---|---|
 | Titulação da orientadora, para a folha de rosto | Orientação | aberto | Pedido mais de uma vez |
+| Parecer sobre o texto atualizado, em especial a classificação da pesquisa | Orientação | aberto | Prometido até 07/11 |
 | Texto da natureza do trabalho conforme o colegiado | Instituição | aberto | |
 | **Datas do calendário acadêmico de 2026.2 e 2027.1** | Instituição | aberto | Trava o cronograma do texto **e decide quais prazos de publicação servem**: para substituir o TCC, o aceite precisa sair antes da defesa |
 | Modelo de TCC usado por orientando anterior | Orientação | em andamento | Pedido de novo em 06/10. Até chegar, segue o alvo atual |
 | Designação exata do órgão de controle externo competente | Autor | aberto | Conferir em fonte oficial. Nunca preencher de memória |
 | Texto da instrução normativa que ampara a pesquisa de preços | Autor | aberto | Identificada com evidência primária; o texto não foi lido na fonte |
 | Acesso ao artigo correlato de acesso fechado | Externo | bloqueado | Pedido em 24/08, sem resposta. A orientação autorizou usar o resumo, declarando a limitação |
-| Modelo em branco de estudo técnico e termo de referência, com marcação do que é fixo | Fonte de domínio | aberto | |
+| Modelo em branco de estudo técnico e termo de referência, com marcação do que é fixo | Fonte de domínio | aberto | Incluir o cabeçalho e o brasão em uso: a geração vai usar layout pronto com esses campos (orientação, 24/10) |
 | Documento de formalização de demanda ainda não visto em alguma modalidade | Fonte de domínio | aberto | |
 
 ---
@@ -305,6 +330,8 @@ Mantidos por um ciclo, para que não voltem por engano.
 
 | O que | Quando | Como fechou |
 |---|---|---|
+| Versão para celular | 24/10/2026 | Não: só interface web. O setor não usaria |
+| Justificar a escolha da linguagem no texto | 24/10/2026 | Não é preciso, segundo a orientação |
 | Planilha de entrada de cotações encerradas | 06/10/2026 | Deixou de ser necessária: o gabarito está nos relatórios já recebidos |
 | Perfil de usuário: um ou dois | 22/09/2026 | Um só, com autenticação mantida. Decisão registrada |
 | O município usa catálogo federal de materiais? | 21/09/2026 | Não |

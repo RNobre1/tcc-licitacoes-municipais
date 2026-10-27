@@ -115,6 +115,18 @@ Reabrir se, e somente se:
 
 Preferência por outra linguagem não é critério de revisão.
 
+## Aval da orientação — 24/10/2026
+
+Apresentada na reunião e aceita. A orientação foi além do que esta nota
+supunha: **não é preciso justificar a linguagem no texto**. O critério dela é
+que o sistema funcione, e o recomendado é usar o que já se domina.
+
+Isso muda a consequência registrada acima. A subseção do texto foi escrita com
+quatro parágrafos, separando o que tem razão técnica do que não tem. Com a
+dispensa, ela pode encolher para uma declaração, mantendo só a razão do banco
+relacional, que é a única ligada ao problema. O espaço recuperado volta para o
+alvo da SBC.
+
 ## Backlinks
 
 - [[2026-09-22-um-unico-perfil-de-usuario]]

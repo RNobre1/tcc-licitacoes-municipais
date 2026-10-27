@@ -79,7 +79,8 @@ Papéis separados, sem mistura:
   moram aqui em markdown. Backlinks fazem parte do método — é o que permite
   rastrear, na hora de escrever, qual fonte sustenta cada afirmação.
 - **`texto/`** é o entregável. O PDF é gerado; o `.tex` é o fonte.
-- **`code/`** é o sistema. Pilha tecnológica ainda em decisão aberta.
+- **`code/`** é o sistema: Python, Django e HTMX sobre PostgreSQL, com Qdrant
+  para o índice semântico. Interface só web.
 - **`docs/`** é o que o repositório precisa explicar a quem chega.
 
 ## Decisões firmes
