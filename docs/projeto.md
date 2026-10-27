@@ -80,7 +80,9 @@ Papéis separados, sem mistura:
   rastrear, na hora de escrever, qual fonte sustenta cada afirmação.
 - **`texto/`** é o entregável. O PDF é gerado; o `.tex` é o fonte.
 - **`code/`** é o sistema: Python, Django e HTMX sobre PostgreSQL, com Qdrant
-  para o índice semântico. Interface só web.
+  para o índice semântico. Interface só web, e em português. O código é
+  escrito em inglês, e `code/GLOSSARY.md` faz a ponte com o vocabulário do
+  domínio.
 - **`docs/`** é o que o repositório precisa explicar a quem chega.
 
 ## Decisões firmes
@@ -102,6 +104,7 @@ Não revisitar sem motivo técnico novo. Cada uma tem nota em `TCC/decisões/`.
 | Persistência vetorial | Qdrant, por medição própria: sob filtro de 1%, a extensão do relacional recupera 6% dos vizinhos contra 99,96% |
 | Linguagem e arcabouço | Python com Django e HTMX — continuidade com o ferramental da avaliação, sem alegação de superioridade |
 | Banco relacional | PostgreSQL, por `JSONB` para o retorno da API e intervalo temporal para a trilha de auditoria |
+| Idioma do código | Inglês em `code/`, com termos do domínio vindos de `code/GLOSSARY.md`; interface e o resto do projeto em português |
 
 ## Política de dados
 
