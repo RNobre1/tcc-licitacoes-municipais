@@ -1,25 +1,21 @@
 import os
 
 
-def load_environment(env=os.environ):
+def load_environment(env=None):
     if env is None:
         env = os.environ
 
-    DEBUG = env.get("DEBUG", "True").lower() in ('1', 'true', "yes")
-    SECRET_KEY = env.get("SECRET_KEY", "")
+    debug = env.get("DEBUG", "False").lower() in ("1", "true", "yes")
+    secret_key = env.get("SECRET_KEY", "").strip()
 
-    if not DEBUG and not SECRET_KEY:
-        raise RuntimeError("SECRET_KEY environment variable is required when DEBUG is False")
+    if not secret_key:
+        raise RuntimeError("SECRET_KEY environment variable is required")
 
-    if not SECRET_KEY:
-        SECRET_KEY = "dev-insecure-secret-key-not-for-production"
-
-    ALLOWED_HOSTS = [
-        host
-        for host in map(str.strip, env.get("ALLOWED_HOSTS", "").split(","))
-        if host
+    allowed_hosts = [
+        host for host in map(str.strip, env.get("ALLOWED_HOSTS", "").split(",")) if host
     ]
 
-    return DEBUG, SECRET_KEY, ALLOWED_HOSTS
+    return debug, secret_key, allowed_hosts
+
 
 DEBUG, SECRET_KEY, ALLOWED_HOSTS = load_environment()

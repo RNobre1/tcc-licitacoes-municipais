@@ -17,7 +17,7 @@ Web application supporting municipal public procurement.
 
 Run the test suite:
 ```bash
-uv run pytest
+uv run --env-file .env pytest
 ```
 
 Check code style and formatting:
