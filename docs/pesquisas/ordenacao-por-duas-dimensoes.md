@@ -1,7 +1,7 @@
 ---
 tipo: pesquisa
 titulo: "Como ordenar candidatos por comparabilidade e proximidade de valor sem fundi-las, como medir a proximidade, e o que a estimativa exibida faz com o julgamento do operador?"
-status: recomendação, pendente de decisão do Rafael e, na parte que toca o protocolo de avaliação, de aval da orientação
+status: decidida em 28/10/2026 — opção A, proximidade pelo logaritmo da razão e emendas P1 a P3 adotadas; ver TCC/decisões/2026-10-28-ordenacao-rf23.md
 criado: 2026-10-28
 autor: Rafael Nobre de Souza
 relacionado:

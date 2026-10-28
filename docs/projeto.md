@@ -105,6 +105,7 @@ Não revisitar sem motivo técnico novo. Cada uma tem nota em `TCC/decisões/`.
 | Linguagem e arcabouço | Python com Django e HTMX — continuidade com o ferramental da avaliação, sem alegação de superioridade |
 | Banco relacional | PostgreSQL, por `JSONB` para o retorno da API e intervalo temporal para a trilha de auditoria |
 | Idioma do código | Inglês em `code/`, com termos do domínio vindos de `code/GLOSSARY.md`; interface e o resto do projeto em português |
+| Ordenação dos candidatos (RF23) | Lexicográfica por faixa de comparabilidade; proximidade de valor como \|ln(preço/esperado)\|, sem fusão num escore único |
 
 ## Política de dados
 

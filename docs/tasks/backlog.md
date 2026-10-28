@@ -40,6 +40,8 @@ O que destrava mais coisa adiante, em ordem.
 | C7 | ~~Decidir a classificação da pesquisa~~ | Autor | **fechado 15/10** | DSR adotada. Abre C10 a C13 |
 | C10 | ~~Escrever a subseção de classificação da pesquisa~~ | Autor | **fechado 15/10** | Classificação, ciclos, posicionamento e contribuição escritos |
 | C11 | **Fixar limiar de aceitação de cada resultado esperado, antes de medir** | Autor | aberto | Exigência da classificação adotada; muda a ordem de trabalho |
+| C15 | Fixar os limites de faixa de comparabilidade do RF23, hoje provisórios (0,80 e 0,60), num subconjunto de ajuste e antes de medir | Autor | aberto | Parte de C11: limite escolhido olhando o resultado invalida a medição |
+| C16 | Incorporar as emendas P1, P2 e P3 ao protocolo: R2 como curva sob ruído na estimativa; preço esperado pedido antes dos candidatos na C5; preço visível ou oculto sorteado por item no julgamento às cegas | Autor | aberto | Texto da metodologia e roteiro de C6. Decidido em 28/10 |
 | C12 | ~~Declarar o artefato que é a contribuição e o tipo dela~~ | Autor | **fechado 15/10** | Dois níveis declarados; o protocolo de avaliação é a contribuição principal |
 | C13 | ~~Declarar a classe de problemas~~ | Autor | **fechado 15/10** | Escrita na metodologia |
 | C14 | Conferir a política de declaração de ferramenta de geração em cada veículo | Autor | aberto | Obrigação do veículo; precisa ser verificada antes de submeter |
@@ -112,8 +114,14 @@ comparação; o teste é pareado sobre os itens, com intervalo, declarando empat
 quando for empate; e qualquer limiar é ajustado em subconjunto separado daquele
 em que se mede.
 
-A avaliação em duas condições, com e sem o preço esperado, não é afetada: ela
-compara cada método consigo mesmo.
+~~A avaliação em duas condições, com e sem o preço esperado, não é afetada: ela
+compara cada método consigo mesmo.~~ **Corrigido em 28/10/2026.** Isso vale para o
+viés da busca por palavra, mas não para o viés de **seleção por preço**. O gabarito
+foi montado por quem descarta pelo preço antes de ler a descrição, então o
+candidato perto do preço dela está super-representado, e a condição com
+estimativa o favorece. As emendas P1, P2 e P3, adotadas na decisão de ordenação
+do RF23 (`TCC/decisões/2026-10-28-ordenacao-rf23.md`), tratam disso. A
+explicação do viés é inferência, e é testável.
 
 ### Sobre C7, C8 e C9: o que a reunião de 09/10/2026 mudou
 
@@ -303,6 +311,7 @@ texto.
 |---|---|---|---|
 | Titulação da orientadora, para a folha de rosto | Orientação | aberto | Pedido mais de uma vez |
 | Parecer sobre o texto atualizado, em especial a classificação da pesquisa | Orientação | aberto | Prometido até 07/11 |
+| Informar a orientação da decisão de ordenação do RF23 e das emendas P1 a P3 ao protocolo de avaliação | Autor | aberto | Reunião de 07/11. O autor decidiu e informa, em vez de pedir aval antes |
 | Texto da natureza do trabalho conforme o colegiado | Instituição | aberto | |
 | **Datas do calendário acadêmico de 2026.2 e 2027.1** | Instituição | aberto | Trava o cronograma do texto **e decide quais prazos de publicação servem**: para substituir o TCC, o aceite precisa sair antes da defesa |
 | Modelo de TCC usado por orientando anterior | Orientação | em andamento | Pedido de novo em 06/10. Até chegar, segue o alvo atual |
