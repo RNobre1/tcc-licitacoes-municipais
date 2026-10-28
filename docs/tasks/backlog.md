@@ -228,7 +228,7 @@ não deste arquivo.
 | D6 | Repositório acessível na entrega: a orientação conta com o link para código e casos de uso, e ele hoje é privado | Orientação | aberto — decidir com o aval dela, antes da versão da banca |
 | D7 | Fuso de referência da data de uma pesquisa de preços. O sistema guarda o instante em UTC, mas "a data em que a pesquisa foi realizada", que a RN08 exige reproduzir, depende do fuso em que a data é lida. É **decisão relevante**, porque afeta a trilha de auditoria. Levantada na revisão do dia 03 | Autor | aberto — decidir ao implementar a trilha, pelo protocolo de decisões relevantes |
 | D8 | A integração contínua roda só a suíte do texto. A de `code/` precisa entrar como portão obrigatório | Autor | aberto — fase 6 do ciclo de desenvolvimento |
-| D9 | Endurecimento para implantação: `check --deploy` aponta envio de e-mail, HSTS, SSL e cookies. Precisa de dono **antes** de qualquer implantação, nunca depois | Autor | aberto — sem implantação prevista neste ciclo |
+| D9 | Endurecimento para implantação: `check --deploy` aponta envio de e-mail, HSTS, SSL e cookies, e não há `STATIC_ROOT`, de modo que os arquivos estáticos só são servidos pelo servidor de desenvolvimento. Precisa de dono **antes** de qualquer implantação, nunca depois | Autor | aberto — sem implantação prevista neste ciclo |
 
 **Convenção de citação daqui em diante**, fixada em 24/10: biblioteca usada é
 mencionada no texto com link para a documentação técnica dela. Não exige a
