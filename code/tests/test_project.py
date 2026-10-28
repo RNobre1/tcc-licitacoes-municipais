@@ -1,7 +1,5 @@
-import django
-from django.conf import settings
+from django.core.management import call_command
 
 
-def test_project_is_wired():
-    django.setup()
-    assert settings.ROOT_URLCONF == "config.urls"
+def test_system_checks_pass():
+    call_command("check")
