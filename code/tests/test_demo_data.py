@@ -1,10 +1,12 @@
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, fields
 from decimal import Decimal
 
 import pytest
 
 from procurement.demo_data import (
     UNITS,
+    Procurement,
+    RequestedItem,
     get_item,
     get_procurement,
     list_procurements,
@@ -79,6 +81,56 @@ def test_get_item_known_and_unknown():
     assert item.id == 1
 
     assert get_item(999) is None
+
+
+def test_every_procurement_is_found_by_its_own_id():
+    for procurement in list_procurements():
+        assert get_procurement(procurement.id) is procurement
+
+
+def test_every_item_is_found_by_its_own_id():
+    for procurement in list_procurements():
+        for item in procurement.items:
+            assert get_item(item.id) is item
+
+
+def test_dataclass_fields_match_the_frozen_contract():
+    assert [f.name for f in fields(RequestedItem)] == [
+        "id",
+        "description",
+        "quantity",
+        "unit",
+        "requesting_department",
+    ]
+    assert [f.name for f in fields(Procurement)] == ["id", "title", "items"]
+
+
+def test_contract_types_hold_for_every_record():
+    procurements = list_procurements()
+    assert isinstance(procurements, list)
+    for procurement in procurements:
+        assert isinstance(procurement.id, int)
+        assert isinstance(procurement.title, str)
+        assert isinstance(procurement.items, tuple)
+        for item in procurement.items:
+            assert isinstance(item.id, int)
+            assert isinstance(item.description, str)
+            assert isinstance(item.quantity, Decimal)
+            assert isinstance(item.unit, str)
+            assert isinstance(item.requesting_department, str)
+
+
+def test_text_fields_are_filled_in():
+    for procurement in list_procurements():
+        assert procurement.title.strip()
+        for item in procurement.items:
+            assert item.description.strip()
+            assert item.requesting_department.strip()
+
+
+def test_procurement_ids_are_unique():
+    ids = [procurement.id for procurement in list_procurements()]
+    assert len(ids) == len(set(ids))
 
 
 def test_requested_item_and_procurement_are_frozen():
