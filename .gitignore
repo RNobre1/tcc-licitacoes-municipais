@@ -112,6 +112,16 @@ venv/
 .coverage
 htmlcov/
 
+# --- Banco local --------------------------------------------------------------
+# O Django vem com SQLite por padrão, e o primeiro `migrate` cria o arquivo do
+# banco dentro de `code/`. O banco do projeto é PostgreSQL, em contêiner, mas
+# até a configuração chegar o SQLite é o que roda. Banco local guarda dado de
+# teste e, mais adiante, dado coletado, e nada disso se versiona. A regra é por
+# extensão, e não por nome de arquivo, para cobrir qualquer banco que um teste
+# ou comando criar.
+*.sqlite3
+*.sqlite3-journal
+
 # --- Editores e sistema ------------------------------------------------------
 .vscode/
 .idea/
