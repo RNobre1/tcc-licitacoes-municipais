@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{{ procurement.title }} — {{ block.super }}{% endblock %}
+
+{% block content %}
+<p>
+    <a href="{% url 'procurement:list' %}">Voltar para a lista</a>
+</p>
+
+<h1>{{ procurement.title }}</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Descrição</th>
+            <th>Quantidade</th>
+            <th>Unidade</th>
+            <th>Secretaria demandante</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in procurement.items %}
+            <tr>
+                <td>{{ item.description }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.unit }}</td>
+                <td>{{ item.requesting_department }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

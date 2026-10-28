@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Processos de contratação — {{ block.super }}{% endblock %}
+
+{% block content %}
+<h1>Processos de contratação</h1>
+
+{% if procurements %}
+    <ul>
+        {% for procurement in procurements %}
+            <li>
+                <a href="{% url 'procurement:detail' procurement.id %}">{{ procurement.title }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>Nenhum processo de contratação encontrado.</p>
+{% endif %}
+{% endblock %}
