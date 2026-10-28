@@ -30,6 +30,8 @@ uv run ruff format --check .
 
 The project vendors the class-based build of [`@picocss/pico@2.0.6`](https://picocss.com/) at `static/vendor/pico-2.0.6/pico.min.css`, alongside its MIT license. The stylesheet's SHA-256 is `dd5fd5591afd81ee21dcc117ad85c014dc3f1f19dc2d7b7d101ea0acc29274c2`.
 
+The project vendors [`htmx.org@2.0.4`](https://htmx.org/) at `static/vendor/htmx-2.0.4/htmx.min.js`, alongside its 0BSD license. The script's SHA-256 is `e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447`.
+
 The selection criterion was a self-contained stylesheet with no CDN dependency, rather than simply avoiding a frontend build step. The federal government design system (`@govbr-ds/core`) can load without a build step, but its intended appearance depends on Rawline fonts and Font Awesome assets loaded from a CDN. Vendoring those assets would make govbr-ds a viable option later.
 
 ## Domain Glossary
