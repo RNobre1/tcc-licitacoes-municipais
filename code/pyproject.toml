@@ -1,14 +1,14 @@
 [project]
-name = "code"
+name = "preparatory-phase-support"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
     "django>=6.1.2",
-    "pytest-django>=4.14.0",
 ]
 
 [dependency-groups]
 dev = [
+    "pytest-django>=4.14.0",
     "ruff>=0.17.3",
 ]
 
@@ -19,3 +19,6 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
