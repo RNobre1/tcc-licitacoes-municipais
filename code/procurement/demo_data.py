@@ -60,6 +60,13 @@ _PROCUREMENTS: tuple[Procurement, ...] = (
                 unit="caixa",
                 requesting_department="Secretaria Municipal de Administração",
             ),
+            RequestedItem(
+                id=8,
+                description="Papel A4 branco para impressão, pacote de 500 folhas",
+                quantity=Decimal("80"),
+                unit="pacote",
+                requesting_department="Secretaria Municipal de Administração",
+            ),
         ),
     ),
     Procurement(
@@ -75,7 +82,7 @@ _PROCUREMENTS: tuple[Procurement, ...] = (
             ),
             RequestedItem(
                 id=6,
-                description="Açúcar cristal branco refinado, pacote de 1kg",
+                description="Açúcar cristal branco refinado",
                 quantity=Decimal("120"),
                 unit="quilograma",
                 requesting_department="Secretaria Municipal de Saúde",
@@ -94,13 +101,6 @@ _PROCUREMENTS: tuple[Procurement, ...] = (
         title="Aquisição de materiais de limpeza e suprimentos complementares",
         items=(
             RequestedItem(
-                id=8,
-                description="Papel A4 branco para impressão, pacote de 500 folhas",
-                quantity=Decimal("80"),
-                unit="pacote",
-                requesting_department="Secretaria Municipal de Administração",
-            ),
-            RequestedItem(
                 id=9,
                 description="Detergente líquido neutro biodegradável de 500ml",
                 quantity=Decimal("150"),
@@ -116,7 +116,7 @@ _PROCUREMENTS: tuple[Procurement, ...] = (
             ),
             RequestedItem(
                 id=11,
-                description="Álcool etílico hidratado 70% para limpeza hospitalar e predial de 1L",
+                description="Álcool etílico 70% líquido, frasco de 1 litro",
                 quantity=Decimal("90"),
                 unit="unidade",
                 requesting_department="Secretaria Municipal de Saúde",
