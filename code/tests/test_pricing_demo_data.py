@@ -6,6 +6,7 @@ from decimal import Decimal
 import pytest
 
 from pricing.demo_data import (
+    _PRICE_CANDIDATES,
     PriceCandidate,
     candidates_for,
     get_candidate,
@@ -81,13 +82,10 @@ def test_every_candidate_is_found_by_its_own_id():
 
 
 def test_candidates_for_returns_declaration_order():
-    all_candidates = _all_candidates()
-    assert len(all_candidates) > 0
     for item in _all_items():
-        item_candidates = candidates_for(item.id)
-        assert len(item_candidates) >= 3
-        expected_subset = [c for c in all_candidates if c.item_id == item.id]
-        assert item_candidates == expected_subset
+        expected = [c for c in _PRICE_CANDIDATES if c.item_id == item.id]
+        assert len(expected) >= 3
+        assert candidates_for(item.id) == expected
 
 
 def test_candidate_count_per_requested_item_between_three_and_six():
@@ -106,11 +104,10 @@ def test_candidate_ids_are_unique():
 
 
 def test_candidate_item_ids_exist_in_procurement_demo_data():
-    all_candidates = _all_candidates()
-    assert len(all_candidates) > 0
     valid_item_ids = {item.id for item in _all_items()}
-    for c in all_candidates:
-        assert c.item_id in valid_item_ids
+    assert len(_PRICE_CANDIDATES) > 0
+    for c in _PRICE_CANDIDATES:
+        assert c.item_id in valid_item_ids, c.id
 
 
 def test_candidate_similarity_between_zero_and_one():
