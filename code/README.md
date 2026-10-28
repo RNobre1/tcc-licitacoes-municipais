@@ -26,6 +26,12 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
+## Frontend Layout
+
+The project vendors the class-based build of [`@picocss/pico@2.0.6`](https://picocss.com/) at `static/vendor/pico-2.0.6/pico.min.css`, alongside its MIT license. The stylesheet's SHA-256 is `dd5fd5591afd81ee21dcc117ad85c014dc3f1f19dc2d7b7d101ea0acc29274c2`.
+
+The selection criterion was a self-contained stylesheet with no CDN dependency, rather than simply avoiding a frontend build step. The federal government design system (`@govbr-ds/core`) can load without a build step, but its intended appearance depends on Rawline fonts and Font Awesome assets loaded from a CDN. Vendoring those assets would make govbr-ds a viable option later.
+
 ## Domain Glossary
 
 Domain concepts in code follow standard English identifiers mapped to Brazilian procurement law. Refer to [`GLOSSARY.md`](GLOSSARY.md) as the single source for domain naming conventions.
