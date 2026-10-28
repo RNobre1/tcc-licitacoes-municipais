@@ -9,4 +9,5 @@ from django.urls import include, path
 
 urlpatterns = [
     path("", include("procurement.urls")),
+    path("", include("pricing.urls")),
 ]
