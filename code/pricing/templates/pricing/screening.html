@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+{% load l10n %}
+{% load pricing_extras %}
+
+{% block title %}Triagem — {{ block.super }}{% endblock %}
+
+{% block content %}
+<script src="{% static 'vendor/htmx-2.0.4/htmx.min.js' %}"></script>
+
+<h1>Triagem de preços</h1>
+
+<section>
+    <h2>Item demandado</h2>
+    <p><strong>Descrição:</strong> {{ item.description }}</p>
+    <p><strong>Quantidade:</strong> {{ item.quantity }}</p>
+    <p><strong>Unidade:</strong> {{ item.unit }}</p>
+    <p><strong>Secretaria demandante:</strong> {{ item.requesting_department }}</p>
+</section>
+
+<section>
+    <form method="get" action="{% url 'pricing:screening' item.id %}">
+        <label for="expected_price">Preço esperado</label>
+        <input type="text" id="expected_price" name="expected_price" value="{% if expected_price is not None %}{{ expected_price|unlocalize }}{% endif %}">
+        <button type="submit">Atualizar</button>
+    </form>
+</section>
+
+<section>
+    <h2>Preços candidatos</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Descrição</th>
+                <th>Unidade</th>
+                <th>Quantidade</th>
+                <th>Órgão</th>
+                <th>Data</th>
+                <th>Fonte</th>
+                <th>Procedência</th>
+                <th>Preço</th>
+                <th>Semelhança</th>
+                <th>Proximidade de valor</th>
+                <th>Decisão</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for candidate in candidates %}
+                {% include "pricing/_candidate.html" with candidate=candidate decision=decisions|lookup:candidate.id proximity=proximities|lookup:candidate.id %}
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

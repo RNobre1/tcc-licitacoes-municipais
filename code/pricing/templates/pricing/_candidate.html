@@ -1,0 +1,26 @@
+<tr id="candidate-{{ candidate.id }}">
+    <td>{{ candidate.description }}</td>
+    <td>{{ candidate.unit }}</td>
+    <td>{{ candidate.quantity }}</td>
+    <td>{{ candidate.agency }}</td>
+    <td>{{ candidate.date }}</td>
+    <td>{{ candidate.source }}</td>
+    <td>{{ candidate.provenance }}</td>
+    <td>{{ candidate.price }}</td>
+    <td>{{ candidate.similarity }}</td>
+    <td>{% if proximity %}{{ proximity }}{% else %}—{% endif %}</td>
+    <td>
+        {% if decision == "accept" %}
+            Aceito
+        {% elif decision == "reject" %}
+            Descartado
+        {% endif %}
+    </td>
+    <td>
+        <form method="post" action="{% url 'pricing:decide' candidate.id %}" hx-post="{% url 'pricing:decide' candidate.id %}" hx-target="#candidate-{{ candidate.id }}" hx-swap="outerHTML">
+            {% csrf_token %}
+            <button type="submit" name="decision" value="accept">Aceitar</button>
+            <button type="submit" name="decision" value="reject">Descartar</button>
+        </form>
+    </td>
+</tr>
