@@ -1,3 +1,4 @@
+{% load l10n %}
 <tr id="candidate-{{ candidate.id }}">
     <td>{{ candidate.description }}</td>
     <td>{{ candidate.unit }}</td>
@@ -19,6 +20,7 @@
     <td>
         <form method="post" action="{% url 'pricing:decide' candidate.id %}" hx-post="{% url 'pricing:decide' candidate.id %}" hx-target="#candidate-{{ candidate.id }}" hx-swap="outerHTML">
             {% csrf_token %}
+            <input type="hidden" name="expected_price" value="{% if expected_price is not None %}{{ expected_price|unlocalize }}{% endif %}">
             <button type="submit" name="decision" value="accept">Aceitar</button>
             <button type="submit" name="decision" value="reject">Descartar</button>
         </form>
