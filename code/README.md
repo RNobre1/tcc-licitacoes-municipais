@@ -8,9 +8,17 @@ Web application supporting municipal public procurement.
    ```bash
    uv sync
    ```
-2. Run the development server:
+2. Create your local environment file from the example:
    ```bash
-   uv run python manage.py runserver
+   cp .env.example .env
+   ```
+   For local development, set `DEBUG=True` in `.env`, so that the development server serves the static files. Outside development, replace `SECRET_KEY` with a generated key:
+   ```bash
+   uv run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+   ```
+3. Run the development server:
+   ```bash
+   uv run --env-file .env python manage.py runserver
    ```
 
 ## Testing
