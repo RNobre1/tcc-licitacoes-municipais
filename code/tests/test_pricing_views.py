@@ -1,3 +1,4 @@
+from decimal import Decimal
 from html import escape
 
 import pytest
@@ -5,6 +6,8 @@ from django.test import Client
 from django.urls import reverse
 
 from pricing import demo_data
+from pricing.ranking import rank_candidates
+from procurement.demo_data import get_item
 
 
 def test_pricing_decide_route_matches_contract():
@@ -84,7 +87,7 @@ def test_decide_rejects_anything_but_accept_or_reject_and_stores_nothing(client,
     assert "screening_decisions" not in client.session
 
 
-@pytest.mark.parametrize("method", ["get", "put", "delete"])
+@pytest.mark.parametrize("method", [["get", "put", "delete"][i] for i in range(3)])
 def test_decide_is_post_only_and_a_wrong_method_changes_nothing(client, method):
     response = getattr(client, method)(reverse("pricing:decide", args=[1]))
 
@@ -101,3 +104,159 @@ def test_decide_is_csrf_protected():
     client.cookies["csrftoken"] = "a" * 32
     response = client.post(url, {"decision": "accept", "csrfmiddlewaretoken": "a" * 32})
     assert response.status_code == 200
+
+
+# =====================================================================
+# Step 3: Screening View Tests
+# =====================================================================
+
+
+def test_pricing_screening_route_matches_contract():
+    assert reverse("pricing:screening", args=[1]) == "/items/1/screening/"
+
+
+def test_pricing_screening_returns_404_for_unknown_item(client):
+    url = reverse("pricing:screening", args=[9999])
+    response = client.get(url)
+    assert response.status_code == 404
+
+
+def test_pricing_screening_renders_screening_template_and_base(client):
+    url = reverse("pricing:screening", args=[1])
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert "pricing/screening.html" in [t.name for t in response.templates]
+    assert "base.html" in [t.name for t in response.templates]
+
+
+def test_pricing_screening_context_without_expected_price(client):
+    item = get_item(1)
+    assert item is not None
+    url = reverse("pricing:screening", args=[1])
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.context["item"] == item
+    assert response.context["expected_price"] is None
+
+    expected_candidates = rank_candidates(demo_data.candidates_for(1), None, item.unit)
+    assert [c.id for c in response.context["candidates"]] == [c.id for c in expected_candidates]
+
+    for candidate in response.context["candidates"]:
+        assert response.context["proximities"][candidate.id] == "—"
+
+
+def test_pricing_screening_context_with_expected_price_ranks_and_calculates_proximities(client):
+    item = get_item(1)
+    assert item is not None
+
+    url = reverse("pricing:screening", args=[1]) + "?expected_price=28.00"
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.context["expected_price"] == Decimal("28.00")
+
+    candidate_ids = [c.id for c in response.context["candidates"]]
+    # Proximity reorders candidates within high similarity band:
+    # 2 (price 27.90) and 3 (price 29.00) are closer to 28.00 than 1 (price 26.50)
+    assert candidate_ids == [2, 3, 1, 4]
+
+    proximities = response.context["proximities"]
+    assert proximities[2] == "1,00× abaixo"
+    assert proximities[3] == "1,04× acima"
+    assert proximities[1] == "1,06× abaixo"
+    assert proximities[4] == "unidade diferente"
+
+
+@pytest.mark.parametrize(
+    "raw_query,expected_val",
+    [
+        ("28,00", Decimal("28.00")),
+        ("12.50", Decimal("12.50")),
+        ("  15,75  ", Decimal("15.75")),
+    ],
+)
+def test_pricing_screening_accepts_comma_and_dot_expected_price(client, raw_query, expected_val):
+    url = reverse("pricing:screening", args=[1]) + f"?expected_price={raw_query}"
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.context["expected_price"] == expected_val
+
+
+@pytest.mark.parametrize("invalid_raw", ["", "banana", "-5.00", "0", "0,00"])
+def test_pricing_screening_ignores_invalid_or_non_positive_expected_price(client, invalid_raw):
+    url = reverse("pricing:screening", args=[1]) + f"?expected_price={invalid_raw}"
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.context["expected_price"] is None
+
+
+def test_pricing_screening_adapts_string_session_decisions_to_integer_keys(client):
+    session = client.session
+    session["screening_decisions"] = {"1": "accept", "2": "reject"}
+    session.save()
+
+    url = reverse("pricing:screening", args=[1])
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.context["decisions"] == {1: "accept", 2: "reject"}
+    html = response.content.decode()
+    assert "Aceito" in html
+    assert "Descartado" in html
+
+
+# =====================================================================
+# Step 4: HTMX Row Swap Proximity Preservation Tests
+# =====================================================================
+
+
+def test_decide_preserves_proximity_when_expected_price_is_posted(client):
+    url = reverse("pricing:decide", args=[1])
+    response = client.post(url, {"decision": "accept", "expected_price": "28.00"})
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "1,06× abaixo" in html
+    assert "<td>—</td>" not in html
+
+
+def test_decide_preserves_unit_mismatch_proximity_when_expected_price_is_posted(client):
+    url = reverse("pricing:decide", args=[4])
+    response = client.post(url, {"decision": "reject", "expected_price": "28.00"})
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "unidade diferente" in html
+
+
+def test_decide_preserves_expected_price_in_hidden_input(client):
+    url = reverse("pricing:decide", args=[1])
+    response = client.post(url, {"decision": "accept", "expected_price": "28.00"})
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert '<input type="hidden" name="expected_price" value="28.00">' in html
+
+
+def test_decide_accepts_comma_in_posted_expected_price(client):
+    url = reverse("pricing:decide", args=[1])
+    response = client.post(url, {"decision": "accept", "expected_price": "28,00"})
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "1,06× abaixo" in html
+    assert '<input type="hidden" name="expected_price" value="28.00">' in html
+
+
+def test_decide_without_expected_price_renders_dash_and_empty_hidden_input(client):
+    url = reverse("pricing:decide", args=[1])
+    response = client.post(url, {"decision": "accept"})
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "<td>—</td>" in html
+    assert '<input type="hidden" name="expected_price" value="">' in html

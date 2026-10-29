@@ -96,6 +96,7 @@ def _render_candidate_fragment(
     candidate: CandidateStub,
     decision: str | None = None,
     proximity: str | None = None,
+    expected_price: Decimal | None = None,
 ) -> str:
     request = RequestFactory().get("/")
     return render_to_string(
@@ -104,6 +105,7 @@ def _render_candidate_fragment(
             "candidate": candidate,
             "decision": decision,
             "proximity": proximity,
+            "expected_price": expected_price,
         },
         request=request,
     )
@@ -323,3 +325,22 @@ def test_screening_get_form_has_one_expected_price_field_submitting_to_the_same_
     assert '<label for="expected_price">Preço esperado</label>' in flat
     assert '<input type="text" id="expected_price" name="expected_price" value="12.50">' in flat
     assert ">Atualizar</button>" in flat
+
+
+def test_candidate_fragment_renders_hidden_expected_price_field():
+    candidate = _make_candidate(id=1)
+    rendered = _render_candidate_fragment(candidate, expected_price=Decimal("12.50"))
+    assert '<input type="hidden" name="expected_price" value="12.50">' in rendered
+
+
+def test_candidate_fragment_renders_empty_hidden_expected_price_when_none():
+    candidate = _make_candidate(id=1)
+    rendered = _render_candidate_fragment(candidate, expected_price=None)
+    assert '<input type="hidden" name="expected_price" value="">' in rendered
+
+
+def test_screening_passes_expected_price_to_candidate_fragments():
+    item = _make_item()
+    candidate = _make_candidate(id=1)
+    rendered = _render_screening(item, candidates=[candidate], expected_price=Decimal("12.50"))
+    assert '<input type="hidden" name="expected_price" value="12.50">' in rendered
