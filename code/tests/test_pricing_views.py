@@ -195,9 +195,9 @@ def test_pricing_screening_ignores_invalid_or_non_positive_expected_price(client
 
 
 def test_pricing_screening_adapts_string_session_decisions_to_integer_keys(client):
-    session = client.session
-    session["screening_decisions"] = {"1": "accept", "2": "reject"}
-    session.save()
+    _decide(client, 1, "accept")
+    _decide(client, 2, "reject")
+    assert client.session["screening_decisions"] == {"1": "accept", "2": "reject"}
 
     url = reverse("pricing:screening", args=[1])
     response = client.get(url)
