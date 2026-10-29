@@ -126,3 +126,6 @@ MAILERS = {
         "BACKEND": "django.core.mail.backends.console.EmailBackend",
     },
 }
+
+# Session engine for database-less prototype
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
