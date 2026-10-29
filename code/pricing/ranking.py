@@ -6,6 +6,7 @@ prior to empirical measurement.
 """
 
 import math
+from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 
 BAND_HIGH_MIN = 0.80
 BAND_MEDIUM_MIN = 0.60
+
 
 def compute_proximity(price, expected_price, candidate_unit, item_unit) -> float | None:
     if price is None or expected_price is None or price <= 0 or expected_price <= 0:
@@ -60,8 +62,7 @@ def _band_rank(similarity: float) -> int:
         return 0  # High band
     if similarity >= BAND_MEDIUM_MIN:
         return 1  # Medium band
-    return 2      # Low band
-
+    return 2  # Low band
 
 
 def rank_candidates(candidates, expected_price=None, item_unit=None) -> list[PriceCandidate]:
@@ -69,10 +70,8 @@ def rank_candidates(candidates, expected_price=None, item_unit=None) -> list[Pri
         band = _band_rank(candidate.similarity)
         if expected_price is not None:
             prox = compute_proximity(
-                candidate.price,
-                expected_price,
-                candidate.unit,
-                item_unit or "")
+                candidate.price, expected_price, candidate.unit, item_unit or ""
+            )
             # Undefined proximity (None) goes to the end of the band:
             # 0 comes before 1, so (0, prox) comes before (1, 0.0)
             has_no_prox = 1 if prox is None else 0
@@ -83,3 +82,17 @@ def rank_candidates(candidates, expected_price=None, item_unit=None) -> list[Pri
             return (band, -candidate.similarity, candidate.id)
 
     return sorted(candidates, key=sort_key)
+
+
+def parse_expected_price(raw: str | None) -> Decimal | None:
+    if raw is None or raw == "":
+        return None
+
+    cleaned = raw.strip().replace(",", ".")
+
+    try:
+        if Decimal(cleaned) <= 0:
+            return None
+        return Decimal(cleaned)
+    except InvalidOperation, TypeError:
+        return None
