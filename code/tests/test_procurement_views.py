@@ -15,6 +15,14 @@ def test_procurement_list_view_returns_200_and_provides_procurements_in_context(
     assert response.context["procurements"] == demo_data.list_procurements()
 
 
+def test_procurement_detail_view_returns_200_and_provides_procurement_in_context(client):
+    url = reverse("procurement:detail", args=[1])
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.context["procurement"] == demo_data.get_procurement(1)
+
+
 def test_procurement_detail_view_returns_404_for_invalid_procurement_id(client):
     url = reverse("procurement:detail", args=[999])
     response = client.get(url)
