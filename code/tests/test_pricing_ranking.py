@@ -2,6 +2,8 @@ import datetime
 from decimal import Decimal
 
 import pytest
+
+from pricing.demo_data import PriceCandidate
 from pricing.ranking import (
     BAND_HIGH_MIN,
     BAND_MEDIUM_MIN,
@@ -9,8 +11,6 @@ from pricing.ranking import (
     format_proximity,
     rank_candidates,
 )
-
-from pricing.demo_data import PriceCandidate
 
 
 def _make_candidate(
@@ -96,10 +96,8 @@ def test_format_proximity_display():
     assert format_proximity(Decimal("13.50"), e, d_above, "kg", "kg") == "1,35× acima"
 
     # p=7.41 -> approx 1.35x abaixo (10 / 7.4074 approx 1.35)
-    d_below = compute_proximity(Decimal("7.4074"), e, d_below_raw := d_above, "kg", "kg")
-    # Note: verify specific 1.35x abaixo
-    d_below_actual = compute_proximity(Decimal("7.4074"), e, "kg", "kg")
-    assert format_proximity(Decimal("7.4074"), e, d_below_actual, "kg", "kg") == "1,35× abaixo"
+    d_below = compute_proximity(Decimal("7.4074"), e, "kg", "kg")
+    assert format_proximity(Decimal("7.4074"), e, d_below, "kg", "kg") == "1,35× abaixo"
 
     # Equal prices -> "1,00×"
     d_equal = compute_proximity(Decimal("10.00"), e, "kg", "kg")
@@ -113,6 +111,7 @@ def test_format_proximity_display():
 
     # No expected price
     assert format_proximity(Decimal("10.00"), None, None, "kg", "kg") == "—"
+    assert format_proximity(Decimal("10.00"), None, None, "unidade", "pacote") == "—"
 
 
 # --- 3. Ranking Order Rules (Option A) ---
@@ -157,7 +156,7 @@ def test_ranking_without_expected_price_keeps_unit_mismatched_candidate_in_simil
     # Without expected price, unit mismatch is NOT sent to end of band:
     # Order is strictly band desc, similarity desc, id asc.
     cand_1 = _make_candidate(1, similarity=0.75, price="10.00", unit="unidade")  # mismatch
-    cand_2 = _make_candidate(2, similarity=0.70, price="10.00", unit="pacote")   # matches item unit
+    cand_2 = _make_candidate(2, similarity=0.70, price="10.00", unit="pacote")  # matches item unit
 
     ranked = rank_candidates([cand_2, cand_1], expected_price=None, item_unit="pacote")
     assert [c.id for c in ranked] == [1, 2]
