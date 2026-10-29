@@ -1,4 +1,4 @@
-from django.http.response import Http404
+from django.http import Http404
 from django.shortcuts import render
 
 from . import demo_data
@@ -14,5 +14,7 @@ def procurement_list(request):
 
 
 def procurement_detail(request, procurement_id: int):
-    # Placeholder
-    raise Http404
+    procurement = demo_data.get_procurement(procurement_id)
+    if procurement is None:
+        raise Http404
+    return render(request, "procurement/procurement_detail.html", {"procurement": procurement})
