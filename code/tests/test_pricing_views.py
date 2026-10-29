@@ -260,3 +260,59 @@ def test_decide_without_expected_price_renders_dash_and_empty_hidden_input(clien
     html = response.content.decode()
     assert "<td>—</td>" in html
     assert '<input type="hidden" name="expected_price" value="">' in html
+
+
+@pytest.mark.parametrize("raw", ["Infinity", "inf", "1e999", "1e-999", "NaN"])
+def test_screening_and_decide_treat_unusable_expected_prices_as_none(client, raw):
+    page = client.get(reverse("pricing:screening", args=[1]) + f"?expected_price={raw}")
+    assert page.status_code == 200
+    assert page.context["expected_price"] is None
+
+    row = client.post(
+        reverse("pricing:decide", args=[1]), {"decision": "accept", "expected_price": raw}
+    )
+    assert row.status_code == 200
+    html = row.content.decode()
+    assert "<td>—</td>" in html
+    assert '<input type="hidden" name="expected_price" value="">' in html
+
+
+def test_a_swapped_row_shows_the_same_proximity_as_the_screening_page(client):
+    for item_id in (1, 2, 3, 5):
+        page = client.get(reverse("pricing:screening", args=[item_id]) + "?expected_price=20")
+        assert page.status_code == 200
+        for candidate in page.context["candidates"]:
+            row = client.post(
+                reverse("pricing:decide", args=[candidate.id]),
+                {"decision": "accept", "expected_price": "20"},
+            ).content.decode()
+
+            assert f"<td>{page.context['proximities'][candidate.id]}</td>" in row, candidate.id
+
+
+def test_decide_uses_the_unit_of_the_candidates_own_item(client):
+    # candidate 5 belongs to item 2 (unit "unidade"), whereas item 1 is sold by "pacote"
+    row = client.post(
+        reverse("pricing:decide", args=[5]), {"decision": "accept", "expected_price": "1.50"}
+    ).content.decode()
+
+    assert "unidade diferente" not in row
+    assert "<td>1,20× abaixo</td>" in row
+
+
+def test_screening_view_announces_ignored_expected_price_when_unusable_query_param_given(client):
+    url = reverse("pricing:screening", args=[1]) + "?expected_price=1.234,50"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert response.context["expected_price"] is None
+    assert response.context["expected_price_ignored"] is True
+    assert "Preço esperado ignorado" in response.content.decode()
+
+
+def test_screening_view_does_not_announce_ignored_expected_price_when_empty_query(client):
+    url = reverse("pricing:screening", args=[1])
+    response = client.get(url)
+    assert response.status_code == 200
+    assert response.context["expected_price"] is None
+    assert response.context.get("expected_price_ignored") in (False, None)
+    assert "Preço esperado ignorado" not in response.content.decode()

@@ -344,3 +344,34 @@ def test_screening_passes_expected_price_to_candidate_fragments():
     candidate = _make_candidate(id=1)
     rendered = _render_screening(item, candidates=[candidate], expected_price=Decimal("12.50"))
     assert '<input type="hidden" name="expected_price" value="12.50">' in rendered
+
+
+def test_screening_renders_ignored_expected_price_notice_when_input_was_unusable():
+    item = _make_item()
+    rendered_notice = render_to_string(
+        "pricing/screening.html",
+        {
+            "item": item,
+            "candidates": [],
+            "decisions": {},
+            "proximities": {},
+            "expected_price": None,
+            "expected_price_ignored": True,
+        },
+        request=RequestFactory().get("/items/1/screening/?expected_price=1.234,50"),
+    )
+    assert "Preço esperado ignorado" in rendered_notice
+
+    rendered_clean = render_to_string(
+        "pricing/screening.html",
+        {
+            "item": item,
+            "candidates": [],
+            "decisions": {},
+            "proximities": {},
+            "expected_price": None,
+            "expected_price_ignored": False,
+        },
+        request=RequestFactory().get("/items/1/screening/"),
+    )
+    assert "Preço esperado ignorado" not in rendered_clean

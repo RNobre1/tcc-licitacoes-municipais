@@ -231,3 +231,85 @@ def test_parse_expected_price_returns_none_for_empty_invalid_or_non_positive():
     assert parse_expected_price("0") is None
     assert parse_expected_price("0,00") is None
     assert parse_expected_price("-15.00") is None
+
+
+@pytest.mark.parametrize("raw", ["Infinity", "-Infinity", "inf", "NaN", "1e999", "1e-999"])
+def test_parse_expected_price_rejects_values_the_proximity_cannot_use(raw):
+    assert parse_expected_price(raw) is None
+
+
+@pytest.mark.parametrize("p_high, p_low", [("25", "16"), ("16", "25"), ("45", "20"), ("20", "45")])
+def test_ranking_breaks_a_tie_between_a_price_above_and_a_price_below_by_similarity(p_high, p_low):
+    # With e=20, 25 and 16 are both 1,25x away; with e=30, 45 and 20 are both 1,5x away.
+    expected = Decimal("20") if {p_high, p_low} == {"25", "16"} else Decimal("30")
+    high = _make_candidate(1, similarity=0.95, price=p_high)
+    low = _make_candidate(2, similarity=0.85, price=p_low)
+
+    ranked = rank_candidates([low, high], expected_price=expected, item_unit="pacote")
+
+    assert [c.id for c in ranked] == [1, 2]
+
+
+def test_ranking_without_expected_price_breaks_equal_similarity_by_id():
+    # ids 3, 5, 7 carry prices 30, 10, 20: neither ascending nor descending price gives 3, 5, 7
+    cands = [
+        _make_candidate(7, similarity=0.90, price="20"),
+        _make_candidate(3, similarity=0.90, price="30"),
+        _make_candidate(5, similarity=0.90, price="10"),
+    ]
+    ranked = rank_candidates(cands, expected_price=None, item_unit="pacote")
+    assert [c.id for c in ranked] == [3, 5, 7]
+
+
+def test_ranking_without_expected_price_imputes_nothing():
+    # By similarity the order is 1, 3, 2. By distance to the median price (12) it would be 3, 2, 1.
+    cands = [
+        _make_candidate(1, similarity=0.95, price="50"),
+        _make_candidate(2, similarity=0.85, price="10"),
+        _make_candidate(3, similarity=0.90, price="12"),
+    ]
+    ranked = rank_candidates(cands, expected_price=None, item_unit="pacote")
+    assert [c.id for c in ranked] == [1, 3, 2]
+
+
+def test_ranking_orders_undefined_proximities_by_similarity_then_id_at_the_end_of_the_band():
+    cands = [
+        _make_candidate(2, similarity=0.82, price="10", unit="unidade"),
+        _make_candidate(3, similarity=0.88, price="10", unit="unidade"),
+        _make_candidate(1, similarity=0.85, price="20", unit="pacote"),
+        _make_candidate(4, similarity=0.88, price="10", unit="unidade"),
+    ]
+    ranked = rank_candidates(cands, expected_price=Decimal("10"), item_unit="pacote")
+    assert [c.id for c in ranked] == [1, 3, 4, 2]
+
+
+@pytest.mark.parametrize("bad_price", ["0", "-5"])
+def test_ranking_sends_a_non_positive_price_to_the_end_of_its_band_never_the_front(bad_price):
+    cands = [
+        _make_candidate(1, similarity=0.90, price=bad_price),
+        _make_candidate(2, similarity=0.85, price="12"),
+        _make_candidate(3, similarity=0.82, price="30"),
+    ]
+    ranked = rank_candidates(cands, expected_price=Decimal("10"), item_unit="pacote")
+    assert [c.id for c in ranked] == [2, 3, 1]
+
+
+def test_rank_candidates_does_not_change_its_input():
+    cands = [
+        _make_candidate(2, similarity=0.70, price="20"),
+        _make_candidate(1, similarity=0.90, price="10"),
+    ]
+    before = list(cands)
+    rank_candidates(cands, expected_price=Decimal("10"), item_unit="pacote")
+    assert cands == before
+
+
+def test_format_proximity_for_equal_prices_is_exactly_one_comma_zero_zero():
+    e = Decimal("10.00")
+    d = compute_proximity(Decimal("10.00"), e, "kg", "kg")
+    assert format_proximity(Decimal("10.00"), e, d, "kg", "kg") == "1,00×"
+
+
+@pytest.mark.parametrize("bad_expected", ["0", "-1"])
+def test_compute_proximity_is_undefined_when_the_expected_price_is_not_positive(bad_expected):
+    assert compute_proximity(Decimal("10"), Decimal(bad_expected), "kg", "kg") is None
