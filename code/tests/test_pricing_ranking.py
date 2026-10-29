@@ -313,3 +313,8 @@ def test_format_proximity_for_equal_prices_is_exactly_one_comma_zero_zero():
 @pytest.mark.parametrize("bad_expected", ["0", "-1"])
 def test_compute_proximity_is_undefined_when_the_expected_price_is_not_positive(bad_expected):
     assert compute_proximity(Decimal("10"), Decimal(bad_expected), "kg", "kg") is None
+
+
+@pytest.mark.parametrize("raw", ["0.01", "12500.00", "12500,00", "1000000", "0,005"])
+def test_parse_expected_price_accepts_the_realistic_range(raw):
+    assert parse_expected_price(raw) == Decimal(raw.replace(",", "."))

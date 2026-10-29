@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 from html import escape
 
@@ -316,3 +317,47 @@ def test_screening_view_does_not_announce_ignored_expected_price_when_empty_quer
     assert response.context["expected_price"] is None
     assert response.context.get("expected_price_ignored") in (False, None)
     assert "Preço esperado ignorado" not in response.content.decode()
+
+
+@pytest.mark.parametrize("raw", ["1.234,50", "1,234.50", "banana", "0", "-5", "Infinity", "1e999"])
+def test_screening_announces_every_unusable_expected_price(client, raw):
+    response = client.get(reverse("pricing:screening", args=[1]), {"expected_price": raw})
+
+    assert response.status_code == 200
+    assert response.context["expected_price"] is None
+    assert "Preço esperado ignorado" in response.content.decode()
+
+
+@pytest.mark.parametrize("raw", ["12,50", "12.50", "  12,50  ", "28"])
+def test_screening_does_not_announce_a_usable_expected_price(client, raw):
+    response = client.get(reverse("pricing:screening", args=[1]), {"expected_price": raw})
+
+    assert response.context["expected_price"] is not None
+    assert "Preço esperado ignorado" not in response.content.decode()
+
+
+def test_screening_does_not_announce_a_blank_expected_price(client):
+    response = client.get(reverse("pricing:screening", args=[1]), {"expected_price": "   "})
+
+    assert response.context["expected_price"] is None
+    assert "Preço esperado ignorado" not in response.content.decode()
+
+
+def test_the_ignored_expected_price_notice_sits_in_the_form_of_the_field(client):
+    html = client.get(
+        reverse("pricing:screening", args=[1]), {"expected_price": "1.234,50"}
+    ).content.decode()
+
+    form = re.search(r'<form method="get".*?</form>', html, re.S).group(0)
+    assert 'name="expected_price"' in form
+    assert "Preço esperado ignorado" in form
+
+
+def test_an_ignored_expected_price_leaves_the_order_without_a_price(client):
+    url = reverse("pricing:screening", args=[1])
+    plain = [c.id for c in client.get(url).context["candidates"]]
+    priced = [c.id for c in client.get(url, {"expected_price": "28"}).context["candidates"]]
+    ignored = [c.id for c in client.get(url, {"expected_price": "1.234,50"}).context["candidates"]]
+
+    assert priced != plain  # the price does reorder this item, so the comparison means something
+    assert ignored == plain
