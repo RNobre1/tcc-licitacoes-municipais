@@ -38,6 +38,10 @@ class CandidateStub:
 pytestmark = pytest.mark.urls("tests.urls_pricing")
 
 
+def _flat(html: str) -> str:
+    return " ".join(html.split())
+
+
 def _make_item(**kwargs) -> ItemStub:
     defaults = {
         "id": 1,
@@ -212,3 +216,110 @@ def test_lookup_filter_returns_none_for_missing_key():
 
 def test_lookup_filter_returns_none_for_none_mapping():
     assert lookup(None, 1) is None
+
+
+def test_candidate_fragment_renders_every_evidence_field_in_column_order():
+    candidate = _make_candidate(
+        id=5,
+        description="Descrição X",
+        unit="caixa",
+        quantity=Decimal("20"),
+        agency="Prefeitura Fictícia A",
+        date=datetime.date(2026, 3, 12),
+        source="Fonte Fictícia 2",
+        provenance="DEMO-007/2026-03",
+        price=Decimal("24.80"),
+        similarity=0.88,
+    )
+    flat = _flat(_render_candidate_fragment(candidate, proximity="1,35× acima"))
+    assert (
+        "<td>Descrição X</td> <td>caixa</td> <td>20</td> <td>Prefeitura Fictícia A</td> "
+        "<td>12 de Março de 2026</td> <td>Fonte Fictícia 2</td> <td>DEMO-007/2026-03</td> "
+        "<td>24,80</td> <td>0,88</td> <td>1,35× acima</td>"
+    ) in flat
+
+
+def test_screening_header_row_lists_every_column_in_the_fragment_order():
+    flat = _flat(_render_screening(_make_item(), candidates=[]))
+    assert (
+        "<th>Descrição</th> <th>Unidade</th> <th>Quantidade</th> <th>Órgão</th> <th>Data</th> "
+        "<th>Fonte</th> <th>Procedência</th> <th>Preço</th> <th>Semelhança</th> "
+        "<th>Proximidade de valor</th> <th>Decisão</th> <th>Ações</th>"
+    ) in flat
+
+
+def test_screening_looks_decisions_and_proximities_up_by_candidate_id():
+    cands = [_make_candidate(id=7), _make_candidate(id=3), _make_candidate(id=9)]
+    rendered = _render_screening(
+        _make_item(),
+        candidates=cands,
+        decisions={7: "accept", 9: "reject"},
+        proximities={3: "2,00× acima", 9: "unidade diferente"},
+    )
+    rows = {
+        int(i): row for i, row in re.findall(r'<tr id="candidate-(\d+)">(.*?)</tr>', rendered, re.S)
+    }
+    assert "Aceito" in rows[7] and "Descartado" not in rows[7]
+    assert "<td>—</td>" in rows[7]
+    assert "Aceito" not in rows[3] and "Descartado" not in rows[3]
+    assert "<td>2,00× acima</td>" in rows[3]
+    assert "Descartado" in rows[9] and "<td>unidade diferente</td>" in rows[9]
+
+
+def test_screening_keeps_the_given_order_whatever_the_field_values_are():
+    a = _make_candidate(
+        id=4,
+        description="m",
+        unit="pacote",
+        quantity=Decimal("20"),
+        agency="Fictícia M",
+        date=datetime.date(2026, 3, 1),
+        source="Fonte M",
+        provenance="DEMO-2",
+        price=Decimal("25"),
+        similarity=0.8,
+    )
+    b = _make_candidate(
+        id=7,
+        description="z",
+        unit="unidade",
+        quantity=Decimal("30"),
+        agency="Fictícia Z",
+        date=datetime.date(2026, 4, 1),
+        source="Fonte Z",
+        provenance="DEMO-3",
+        price=Decimal("30"),
+        similarity=0.9,
+    )
+    c = _make_candidate(
+        id=2,
+        description="a",
+        unit="caixa",
+        quantity=Decimal("10"),
+        agency="Fictícia A",
+        date=datetime.date(2026, 2, 1),
+        source="Fonte A",
+        provenance="DEMO-1",
+        price=Decimal("20"),
+        similarity=0.7,
+    )
+    rendered = _render_screening(_make_item(), candidates=[a, b, c])
+    assert re.findall(r'<tr id="candidate-(\d+)">', rendered) == ["4", "7", "2"]
+
+
+def test_candidate_fragment_form_posts_to_decide_for_its_own_candidate():
+    flat = _flat(_render_candidate_fragment(_make_candidate(id=7)))
+    assert (
+        '<form method="post" action="/candidates/7/decision/" hx-post="/candidates/7/decision/" '
+        'hx-target="#candidate-7" hx-swap="outerHTML">'
+    ) in flat
+
+
+def test_screening_get_form_has_one_expected_price_field_submitting_to_the_same_url():
+    flat = _flat(
+        _render_screening(_make_item(id=3), candidates=[], expected_price=Decimal("12.50"))
+    )
+    assert '<form method="get" action="/items/3/screening/">' in flat
+    assert '<label for="expected_price">Preço esperado</label>' in flat
+    assert '<input type="text" id="expected_price" name="expected_price" value="12.50">' in flat
+    assert ">Atualizar</button>" in flat
