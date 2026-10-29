@@ -9,6 +9,7 @@ from pricing.ranking import (
     BAND_MEDIUM_MIN,
     compute_proximity,
     format_proximity,
+    parse_expected_price,
     rank_candidates,
 )
 
@@ -210,3 +211,23 @@ def test_ranking_band_boundaries_exact_080_and_060():
         item_unit="pacote",
     )
     assert [c.id for c in ranked] == [1, 2, 3, 4]
+
+
+# --- 4. Expected Price Parsing (Contract Clarification 2) ---
+
+
+def test_parse_expected_price_accepts_dot_and_comma_decimals():
+    assert parse_expected_price("12.50") == Decimal("12.50")
+    assert parse_expected_price("12,50") == Decimal("12.50")
+    assert parse_expected_price("  12,50  ") == Decimal("12.50")
+    assert parse_expected_price("100") == Decimal("100")
+
+
+def test_parse_expected_price_returns_none_for_empty_invalid_or_non_positive():
+    assert parse_expected_price("") is None
+    assert parse_expected_price(None) is None
+    assert parse_expected_price("   ") is None
+    assert parse_expected_price("invalid") is None
+    assert parse_expected_price("0") is None
+    assert parse_expected_price("0,00") is None
+    assert parse_expected_price("-15.00") is None
