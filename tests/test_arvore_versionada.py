@@ -27,6 +27,7 @@ acrescentar amanhã, sem que nada precise ser escrito aqui.
 from __future__ import annotations
 
 import fnmatch
+import os
 from pathlib import Path
 
 import pytest
@@ -189,7 +190,13 @@ def test_o_arquivo_de_exclusoes_locais_existe():
     não é publicada, mas também não viaja. Ao clonar em outra máquina, o arquivo
     tem de ser recriado antes do primeiro commit — ou a política simplesmente não
     está em vigor.
+
+    Na integração contínua o clone é sempre novo, e a lista não pode chegar até
+    ela sem ser publicada. Lá o aviso não tem a quem servir, e a política é
+    conferida na máquina de quem faz o ``push``.
     """
+    if os.environ.get("CI"):
+        pytest.skip("clone da CI não carrega as exclusões locais; a guarda vale na máquina local")
     assert EXCLUSOES_LOCAIS.is_file(), (
         f"{EXCLUSOES_LOCAIS.relative_to(RAIZ)} não existe. Em clone novo isso é "
         "esperado, e significa que a política de exclusão NÃO está ativa: "
