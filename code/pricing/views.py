@@ -45,7 +45,11 @@ def screening(request, item_id):
     if item is None:
         raise Http404("Item not found")
 
-    expected_price = parse_expected_price(request.GET.get("expected_price"))
+    raw_expected_price = request.GET.get("expected_price")
+    expected_price = parse_expected_price(raw_expected_price)
+    expected_price_ignored = bool(
+        raw_expected_price and raw_expected_price.strip() and expected_price is None
+    )
 
     candidates = rank_candidates(demo_data.candidates_for(item_id), expected_price, item.unit)
 
@@ -71,5 +75,6 @@ def screening(request, item_id):
             "decisions": decisions,
             "proximities": proximities,
             "expected_price": expected_price,
+            "expected_price_ignored": expected_price_ignored,
         },
     )

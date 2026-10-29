@@ -15,6 +15,9 @@ if TYPE_CHECKING:
 BAND_HIGH_MIN = 0.80
 BAND_MEDIUM_MIN = 0.60
 
+EXPECTED_PRICE_MIN = Decimal("0.01")
+EXPECTED_PRICE_MAX = Decimal("999999999.99")
+
 
 def compute_proximity(price, expected_price, candidate_unit, item_unit) -> float | None:
     if price is None or expected_price is None or price <= 0 or expected_price <= 0:
@@ -37,7 +40,7 @@ def format_proximity(price, expected_price, proximity, candidate_unit, item_unit
         return "preço inválido"
 
     if item_unit is None or candidate_unit is None:
-        return "–"
+        return "—"
 
     if item_unit != candidate_unit:
         return "unidade diferente"
@@ -53,8 +56,7 @@ def format_proximity(price, expected_price, proximity, candidate_unit, item_unit
         if price == expected_price:
             return "1,00×"
 
-    elif proximity is None:
-        return "—"
+    return "—"
 
 
 def _band_rank(similarity: float) -> int:
@@ -75,7 +77,7 @@ def rank_candidates(candidates, expected_price=None, item_unit=None) -> list[Pri
             # Undefined proximity (None) goes to the end of the band:
             # 0 comes before 1, so (0, prox) comes before (1, 0.0)
             has_no_prox = 1 if prox is None else 0
-            distance = prox if prox is not None else 0.0
+            distance = round(prox, 9) if prox is not None else 0.0
             return (band, has_no_prox, distance, -candidate.similarity, candidate.id)
         else:
             # When expected_price is None, order is strictly band, similarity desc, id asc
@@ -91,8 +93,11 @@ def parse_expected_price(raw: str | None) -> Decimal | None:
     cleaned = raw.strip().replace(",", ".")
 
     try:
-        if Decimal(cleaned) <= 0:
+        val = Decimal(cleaned)
+        if not val.is_finite():
             return None
-        return Decimal(cleaned)
+        if val < EXPECTED_PRICE_MIN or val > EXPECTED_PRICE_MAX:
+            return None
+        return val
     except InvalidOperation, TypeError:
         return None

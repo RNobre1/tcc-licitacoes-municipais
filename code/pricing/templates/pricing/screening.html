@@ -23,6 +23,9 @@
         <label for="expected_price">Preço esperado</label>
         <input type="text" id="expected_price" name="expected_price" value="{% if expected_price is not None %}{{ expected_price|unlocalize }}{% endif %}">
         <button type="submit">Atualizar</button>
+        {% if expected_price_ignored %}
+            <p class="notice"><small>Preço esperado ignorado: use vírgula ou ponto só para os centavos, sem separador de milhar.</small></p>
+        {% endif %}
     </form>
 </section>
 
