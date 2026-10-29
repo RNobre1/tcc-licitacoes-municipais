@@ -47,6 +47,23 @@ sem histórico, sem diff e sem backup.
 - `docs/projeto.md` precisa ser mantido legível para quem chega de fora, não
   apenas para quem já conhece o projeto.
 
+## Adendo — 28/10/2026
+
+O repositório foi publicado como privado em 18/08, e só foi aberto em 28/10,
+por decisão do autor, depois de a orientação aprovar o rumo do trabalho e a
+pilha tecnológica.
+
+Antes de abrir, três coisas:
+
+- auditoria de todo o histórico que ficaria exposto;
+- correção do `code/README.md`, conferida seguindo as instruções num clone novo;
+- a integração contínua, que disparava em `main`, passou a disparar em `master`.
+
+Seis commits de 16 e 17/08 trazem nos metadados o e-mail profissional do autor.
+Ele preferiu não reescrever o histórico, porque isso mudaria o identificador de
+todos os commits citados nas notas e nos tickets. Do dia 18/08 em diante, todos
+usam o e-mail pessoal, fixado também na configuração local do repositório.
+
 ## Critério de revisão
 
 Reabrir se a orientadora ou o colegiado exigir repositório fechado até a defesa.
