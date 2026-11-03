@@ -6,7 +6,12 @@ import pytest
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import Distance, VectorParams
 
-from semantic_index import check_health, create_collection, get_qdrant_client
+from semantic_index import (
+    CollectionConfigurationMismatchError,
+    check_health,
+    create_collection,
+    get_qdrant_client,
+)
 
 
 def response(status: int, text: str = "") -> UnexpectedResponse:
@@ -145,8 +150,14 @@ class TestSemanticIndexCollectionUnit:
     def test_existing_collection_with_another_configuration_is_an_error(self, size, distance):
         client = FakeQdrantClient()
         create_collection(client, "items", vector_size=128, distance=Distance.COSINE)
-        with pytest.raises(ValueError):
+        with pytest.raises(CollectionConfigurationMismatchError) as exc_info:
             create_collection(client, "items", vector_size=size, distance=distance)
+
+        msg = str(exc_info.value)
+        assert "items" in msg
+        assert "128" in msg and str(Distance.COSINE) in msg
+        assert str(size) in msg and str(distance) in msg
+
         vectors = client.get_collection("items").config.params.vectors
         assert (vectors.size, vectors.distance) == (128, Distance.COSINE)
 
@@ -171,8 +182,13 @@ class TestSemanticIndexCollectionUnit:
     def test_losing_a_creation_race_to_another_configuration_is_an_error(self):
         client = RacingClient()
         client.created_as = VectorParams(size=256, distance=Distance.DOT)
-        with pytest.raises(ValueError):
+        with pytest.raises(CollectionConfigurationMismatchError) as exc_info:
             create_collection(client, "items", 128, Distance.COSINE)
+
+        msg = str(exc_info.value)
+        assert "items" in msg
+        assert "256" in msg and str(Distance.DOT) in msg
+        assert "128" in msg and str(Distance.COSINE) in msg
 
     def test_create_collection_requires_explicit_vector_size_and_distance(self):
         client = FakeQdrantClient()

@@ -4,7 +4,12 @@ import uuid
 import pytest
 from qdrant_client import models
 
-from semantic_index import check_health, create_collection, get_qdrant_client
+from semantic_index import (
+    CollectionConfigurationMismatchError,
+    check_health,
+    create_collection,
+    get_qdrant_client,
+)
 
 
 @pytest.fixture
@@ -68,7 +73,7 @@ class TestQdrantIntegration:
                 live_qdrant_client.delete_collection(collection_name)
 
     def test_create_collection_with_different_configuration_raises_error(self, live_qdrant_client):
-        """Integration: creating collection with conflicting configuration raises ValueError."""
+        """Integration: creating collection with conflicting configuration raises error."""
         collection_name = f"test_semantic_index_{uuid.uuid4().hex[:8]}"
         try:
             create_collection(
@@ -77,13 +82,18 @@ class TestQdrantIntegration:
                 vector_size=384,
                 distance=models.Distance.EUCLID,
             )
-            with pytest.raises(ValueError):
+            with pytest.raises(CollectionConfigurationMismatchError) as exc_info:
                 create_collection(
                     live_qdrant_client,
                     collection_name=collection_name,
                     vector_size=512,
                     distance=models.Distance.COSINE,
                 )
+            msg = str(exc_info.value)
+            assert collection_name in msg
+            assert "384" in msg and str(models.Distance.EUCLID) in msg
+            assert "512" in msg and str(models.Distance.COSINE) in msg
+
             info = live_qdrant_client.get_collection(collection_name)
             assert info.config.params.vectors.size == 384
             assert info.config.params.vectors.distance == models.Distance.EUCLID
