@@ -9,40 +9,75 @@ from .estimation import calculate_mean, calculate_median, calculate_min, require
 from .ranking import compute_proximity, format_proximity, parse_expected_price, rank_candidates
 
 
+class EstimatePanel(dict):
+    """Estimate panel data dictionary preserving counted candidate IDs for template agreement."""
+
+    def __init__(self, data: dict, counted_candidate_ids: set[int] | None = None):
+        super().__init__(data)
+        self.counted_candidate_ids = (
+            counted_candidate_ids if counted_candidate_ids is not None else set()
+        )
+
+    def __getitem__(self, item):
+        if item == "counted_candidate_ids":
+            return self.counted_candidate_ids
+        return super().__getitem__(item)
+
+    def get(self, key, default=None):
+        if key == "counted_candidate_ids":
+            return self.counted_candidate_ids
+        return super().get(key, default)
+
+    def __contains__(self, key):
+        if key == "counted_candidate_ids":
+            return True
+        return super().__contains__(key)
+
+
 def build_estimate_panel(item, decisions: dict) -> dict:
     if item is None:
-        return {
-            "mean": None,
-            "median": None,
-            "min": None,
-            "count": 0,
-            "requires_justification": False,
-        }
+        return EstimatePanel(
+            {
+                "mean": None,
+                "median": None,
+                "min": None,
+                "count": 0,
+                "requires_justification": False,
+            },
+            counted_candidate_ids=set(),
+        )
 
     candidates = demo_data.candidates_for(item.id)
-    prices = [
-        candidate.price
+    counted_candidate_ids = {
+        candidate.id
         for candidate in candidates
         if decisions.get(candidate.id) == "accept" and candidate.unit == item.unit
-    ]
+    }
+    prices = [candidate.price for candidate in candidates if candidate.id in counted_candidate_ids]
 
     count = len(prices)
     if count == 0:
-        return {
-            "mean": None,
-            "median": None,
-            "min": None,
-            "count": 0,
-            "requires_justification": False,
-        }
+        return EstimatePanel(
+            {
+                "mean": None,
+                "median": None,
+                "min": None,
+                "count": 0,
+                "requires_justification": False,
+            },
+            counted_candidate_ids=set(),
+        )
 
-    return {
-        "mean": calculate_mean(prices),
-        "median": calculate_median(prices),
-        "min": calculate_min(prices),
-        "count": count,
-        "requires_justification": requires_justification(prices),
-    }
+    return EstimatePanel(
+        {
+            "mean": calculate_mean(prices),
+            "median": calculate_median(prices),
+            "min": calculate_min(prices),
+            "count": count,
+            "requires_justification": requires_justification(prices),
+        },
+        counted_candidate_ids=counted_candidate_ids,
+    )
 
 
 @require_POST

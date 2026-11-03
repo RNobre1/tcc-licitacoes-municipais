@@ -12,7 +12,13 @@
     <td>{% if proximity %}{{ proximity }}{% else %}—{% endif %}</td>
     <td>
         {% if decision == "accept" %}
-            {% if item_unit and candidate.unit != item_unit %}
+            {% if estimate %}
+                {% if candidate.id in estimate.counted_candidate_ids %}
+                    Aceito
+                {% else %}
+                    fora do cálculo: unidade diferente
+                {% endif %}
+            {% elif item_unit and candidate.unit != item_unit %}
                 fora do cálculo: unidade diferente
             {% else %}
                 Aceito
