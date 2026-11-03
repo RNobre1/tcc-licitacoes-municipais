@@ -15,7 +15,15 @@ def load_environment(env=None):
         host for host in map(str.strip, env.get("ALLOWED_HOSTS", "").split(",")) if host
     ]
 
-    return debug, secret_key, allowed_hosts
+    db_config = {
+        "HOST": env.get("DATABASE_HOST", "127.0.0.1"),
+        "PORT": env.get("DATABASE_PORT", "5433"),
+        "NAME": env.get("DATABASE_NAME", "preparatory_phase"),
+        "USER": env.get("DATABASE_USER", "preparatory_phase"),
+        "PASSWORD": env.get("DATABASE_PASSWORD", ""),
+    }
+
+    return debug, secret_key, allowed_hosts, db_config
 
 
-DEBUG, SECRET_KEY, ALLOWED_HOSTS = load_environment()
+DEBUG, SECRET_KEY, ALLOWED_HOSTS, DATABASE_CONFIG = load_environment()

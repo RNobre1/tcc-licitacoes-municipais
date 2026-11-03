@@ -6,7 +6,7 @@ from config.environment import load_environment
 def test_missing_debug_defaults_to_false():
     """When DEBUG is not set, it should default to False."""
     fake_env = {"SECRET_KEY": "any-valid-key"}
-    debug, _, _ = load_environment(fake_env)
+    debug, _, _, _ = load_environment(fake_env)
     assert not debug
 
 
@@ -16,21 +16,21 @@ def test_debug_is_true_with_different_values():
         "SECRET_KEY": "any-valid-key",
         "DEBUG": "1",
     }
-    debug, _, _ = load_environment(fake_env)
+    debug, _, _, _ = load_environment(fake_env)
     assert debug
 
     fake_env = {
         "SECRET_KEY": "any-valid-key",
         "DEBUG": "true",
     }
-    debug, _, _ = load_environment(fake_env)
+    debug, _, _, _ = load_environment(fake_env)
     assert debug
 
     fake_env = {
         "SECRET_KEY": "any-valid-key",
         "DEBUG": "yes",
     }
-    debug, _, _ = load_environment(fake_env)
+    debug, _, _, _ = load_environment(fake_env)
     assert debug
 
 
@@ -59,7 +59,7 @@ def test_allowed_hosts_parsed_from_comma_separated_string():
         "SECRET_KEY": "any-valid-key",
         "ALLOWED_HOSTS": "localhost, 127.0.0.1, example.gov.br",
     }
-    _, _, allowed_hosts = load_environment(fake_env)
+    _, _, allowed_hosts, _ = load_environment(fake_env)
 
     assert allowed_hosts == ["localhost", "127.0.0.1", "example.gov.br"]
 
@@ -70,7 +70,7 @@ def test_allowed_hosts_handles_empty_string():
         "SECRET_KEY": "any-valid-key",
         "ALLOWED_HOSTS": "",
     }
-    _, _, allowed_hosts = load_environment(fake_env)
+    _, _, allowed_hosts, _ = load_environment(fake_env)
 
     assert allowed_hosts == []
 
@@ -81,6 +81,6 @@ def test_allowed_hosts_handles_whitespace_string():
         "SECRET_KEY": "any-valid-key",
         "ALLOWED_HOSTS": " ",
     }
-    _, _, allowed_hosts = load_environment(fake_env)
+    _, _, allowed_hosts, _ = load_environment(fake_env)
 
     assert allowed_hosts == []

@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 
-from config.environment import ALLOWED_HOSTS, DEBUG, SECRET_KEY  # noqa: F401
+from config.environment import ALLOWED_HOSTS, DATABASE_CONFIG, DEBUG, SECRET_KEY  # noqa: F401
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -72,8 +72,12 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": DATABASE_CONFIG["NAME"],
+        "USER": DATABASE_CONFIG["USER"],
+        "PASSWORD": DATABASE_CONFIG["PASSWORD"],
+        "HOST": DATABASE_CONFIG["HOST"],
+        "PORT": DATABASE_CONFIG["PORT"],
     }
 }
 
