@@ -190,6 +190,34 @@ def test_insumo_normativo_sob_docs_continua_versionado():
 # --- Política de exclusão local -----------------------------------------------
 
 
+def test_o_arquivo_de_exclusoes_e_o_do_repositorio_mesmo_dentro_de_worktree(tmp_path: Path):
+    """Numa worktree, ``.git`` é um arquivo, e não uma pasta.
+
+    As exclusões locais moram no diretório comum do repositório, que todas as
+    worktrees compartilham. Procurar ``.git/info/exclude`` a partir da raiz da
+    worktree não acha nada, e a guarda acusa política ausente onde ela está em
+    vigor. Foi o que aconteceu em 28/10 e em 03/11, nas worktrees dos revisores.
+    """
+    principal = tmp_path / "principal"
+    identidade = ["-c", "user.name=Teste", "-c", "user.email=teste@example.org"]
+    executar(["git", "init", "-q", str(principal)], exigir_sucesso=True)
+    (principal / "leia.txt").write_text("conteúdo\n", encoding="utf-8")
+    executar(["git", "-C", str(principal), "add", "leia.txt"], exigir_sucesso=True)
+    executar(
+        ["git", "-C", str(principal), *identidade, "commit", "-q", "-m", "inicial"],
+        exigir_sucesso=True,
+    )
+    worktree = tmp_path / "worktree"
+    executar(
+        ["git", "-C", str(principal), "worktree", "add", "-q", "--detach", str(worktree)],
+        exigir_sucesso=True,
+    )
+    esperado = (principal / ".git" / "info" / "exclude").resolve()
+
+    assert _arquivo_de_exclusoes_locais(principal).resolve() == esperado
+    assert _arquivo_de_exclusoes_locais(worktree).resolve() == esperado
+
+
 def test_o_arquivo_de_exclusoes_locais_existe():
     """Clone novo não herda ``.git/info/exclude``, e nada avisa.
 
