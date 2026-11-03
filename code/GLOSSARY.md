@@ -63,6 +63,10 @@ the code, not about interface text.
 | ordenação | `ranking` | Ordering candidates by the two dimensions above, **never merged into one score** |
 | valor estimado | `estimated_value` | The value the price survey produces |
 | critério de cálculo | `estimation_method` | The statistical criterion used to reach the estimated value, among those the regulation allows |
+| média | `mean` | The arithmetic mean of the prices. One of the three methods of art. 6 of IN 65/2021 |
+| mediana | `median` | The middle price; with an even count, the mean of the two middle prices. One of the three methods of art. 6 |
+| menor valor | `min` | The lowest of the prices. One of the three methods of art. 6 |
+| justificativa | `justification` | The written reason the process needs when the estimated value rests on fewer than three prices (RN06, IN 65/2021, art. 6, § 5) |
 | memória de cálculo | `calculation_memo` | The record of how the estimated value was reached |
 | mapa de cotação | `QuotationMap` | The comparison sheet listing each accepted price and where it came from |
 | procedência | `provenance` | Where a price comes from, resolved down to the original record |
