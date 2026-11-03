@@ -38,8 +38,17 @@ RAIZ = Path(__file__).resolve().parent.parent
 
 
 def _arquivo_de_exclusoes_locais(raiz: Path) -> Path:
-    """Onde mora o ``.git/info/exclude`` que vale para o checkout em ``raiz``."""
-    return raiz / ".git" / "info" / "exclude"
+    """Onde mora o ``.git/info/exclude`` que vale para o checkout em ``raiz``.
+
+    Pergunta ao git pelo diretório comum, em vez de montar ``raiz/.git``: numa
+    worktree, ``.git`` é um arquivo que aponta para o repositório principal, e é
+    lá que as exclusões vivem.
+    """
+    resultado = executar(["git", "rev-parse", "--git-common-dir"], cwd=raiz, exigir_sucesso=True)
+    comum = Path(resultado.stdout.strip())
+    if not comum.is_absolute():
+        comum = raiz / comum
+    return comum / "info" / "exclude"
 
 
 EXCLUSOES_LOCAIS = _arquivo_de_exclusoes_locais(RAIZ)
@@ -233,7 +242,7 @@ def test_o_arquivo_de_exclusoes_locais_existe():
     if os.environ.get("CI"):
         pytest.skip("clone da CI não carrega as exclusões locais; a guarda vale na máquina local")
     assert EXCLUSOES_LOCAIS.is_file(), (
-        f"{EXCLUSOES_LOCAIS.relative_to(RAIZ)} não existe. Em clone novo isso é "
+        f"{EXCLUSOES_LOCAIS} não existe. Em clone novo isso é "
         "esperado, e significa que a política de exclusão NÃO está ativa: "
         "recriar o arquivo antes de qualquer `git add`."
     )
