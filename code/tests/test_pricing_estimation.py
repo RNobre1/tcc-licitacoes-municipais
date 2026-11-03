@@ -13,11 +13,32 @@ from pricing.estimation import (
 class TestEstimatedValueCaput:
     """Tests for the three estimation methods from Art. 6 caput of IN 65/2021."""
 
-    def test_art6_caput_mean_computes_exact_decimal_without_rounding(self):
-        """Art. 6 caput: mean returns exact Decimal with no float precision loss."""
+    def test_mean_computes_exact_decimal_without_rounding(self):
+        """Contract (D14): mean returns exact Decimal with no float precision loss."""
         prices = [Decimal("0.10"), Decimal("0.20")]
         result = calculate_mean(prices)
         assert result == Decimal("0.15")
+        assert isinstance(result, Decimal)
+
+    def test_mean_differentiates_from_median_with_asymmetric_distribution(self):
+        """Art. 6 caput: mean of asymmetric distribution differs from median and midrange."""
+        prices = [Decimal("10.00"), Decimal("10.00"), Decimal("40.00")]
+        result = calculate_mean(prices)
+        assert result == Decimal("20.00")
+        assert isinstance(result, Decimal)
+
+    def test_mean_exact_unrounded_cents(self):
+        """Contract (D14): mean of two adjacent cent values produces exact half-cent."""
+        prices = [Decimal("10.00"), Decimal("10.01")]
+        result = calculate_mean(prices)
+        assert result == Decimal("10.005")
+        assert isinstance(result, Decimal)
+
+    def test_mean_exact_fractional_scale_without_four_decimal_rounding(self):
+        """Contract (D14): mean at 4-decimal minimum scale produces exact 5-decimal result."""
+        prices = [Decimal("0.0001"), Decimal("0.0002")]
+        result = calculate_mean(prices)
+        assert result == Decimal("0.00015")
         assert isinstance(result, Decimal)
 
     def test_art6_caput_mean_three_prices(self):
@@ -46,8 +67,8 @@ class TestEstimatedValueCaput:
         result = calculate_median(prices)
         assert result == Decimal("25.00")
 
-    def test_art6_caput_median_even_count_is_mean_of_two_middle_values(self):
-        """Art. 6 caput: median of even count is the mean of two middle values."""
+    def test_median_even_count_is_mean_of_two_middle_values(self):
+        """Statistical convention: median of even count is the mean of two middle values."""
         prices = [
             Decimal("10.00"),
             Decimal("20.00"),
@@ -58,8 +79,8 @@ class TestEstimatedValueCaput:
         assert result == Decimal("25.00")
         assert isinstance(result, Decimal)
 
-    def test_art6_caput_median_even_count_unsorted_exact_decimal(self):
-        """Art. 6 caput: median of even count unsorted without rounding."""
+    def test_median_even_count_unsorted_exact_decimal(self):
+        """Contract (D14): median of even count unsorted without rounding."""
         prices = [
             Decimal("0.40"),
             Decimal("0.10"),
@@ -68,6 +89,20 @@ class TestEstimatedValueCaput:
         ]
         result = calculate_median(prices)
         assert result == Decimal("0.25")
+        assert isinstance(result, Decimal)
+
+    def test_median_exact_unrounded_cents(self):
+        """Contract (D14): median of two adjacent cent values produces exact half-cent."""
+        prices = [Decimal("10.00"), Decimal("10.01")]
+        result = calculate_median(prices)
+        assert result == Decimal("10.005")
+        assert isinstance(result, Decimal)
+
+    def test_median_even_count_does_not_leak_through_float(self):
+        """Contract (D14): median of 0.10 and 0.20 produces exact 0.15 without float leak."""
+        prices = [Decimal("0.10"), Decimal("0.20")]
+        result = calculate_median(prices)
+        assert result == Decimal("0.15")
         assert isinstance(result, Decimal)
 
     def test_art6_caput_min_computes_lowest_value(self):
