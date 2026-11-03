@@ -97,6 +97,7 @@ def _render_candidate_fragment(
     decision: str | None = None,
     proximity: str | None = None,
     expected_price: Decimal | None = None,
+    item_unit: str | None = None,
 ) -> str:
     request = RequestFactory().get("/")
     return render_to_string(
@@ -106,6 +107,7 @@ def _render_candidate_fragment(
             "decision": decision,
             "proximity": proximity,
             "expected_price": expected_price,
+            "item_unit": item_unit,
         },
         request=request,
     )
@@ -375,3 +377,84 @@ def test_screening_renders_ignored_expected_price_notice_when_input_was_unusable
         request=RequestFactory().get("/items/1/screening/"),
     )
     assert "Preço esperado ignorado" not in rendered_clean
+
+
+def test_estimate_panel_renders_three_methods_dashes_and_zero_count_when_empty():
+    estimate = {
+        "mean": None,
+        "median": None,
+        "min": None,
+        "count": 0,
+        "requires_justification": False,
+    }
+    rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": estimate})
+    assert 'id="estimate-panel"' in rendered
+    assert "Média" in rendered
+    assert "Mediana" in rendered
+    assert "Menor valor" in rendered
+    assert "Preços no cálculo" in rendered
+    assert "0" in rendered
+    assert "—" in rendered
+    assert "Menos de três preços" not in rendered
+    assert "hx-swap-oob" not in rendered
+
+
+def test_estimate_panel_renders_values_in_brazilian_currency_and_justification_notice():
+    estimate = {
+        "mean": Decimal("26.50"),
+        "median": Decimal("26.50"),
+        "min": Decimal("26.50"),
+        "count": 1,
+        "requires_justification": True,
+    }
+    rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": estimate})
+    assert "R$ 26,50" in rendered
+    assert "Preços no cálculo" in rendered and "1" in rendered
+    assert (
+        "Menos de três preços: a pesquisa exige justificativa (IN 65/2021, art. 6º, § 5º; RN06)."
+        in rendered
+    )
+
+
+def test_estimate_panel_renders_without_notice_when_count_is_three_or_more():
+    estimate = {
+        "mean": Decimal("27.80"),
+        "median": Decimal("27.90"),
+        "min": Decimal("26.50"),
+        "count": 3,
+        "requires_justification": False,
+    }
+    rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": estimate})
+    assert "R$ 27,80" in rendered
+    assert "R$ 27,90" in rendered
+    assert "R$ 26,50" in rendered
+    assert "Menos de três preços" not in rendered
+
+
+def test_estimate_panel_renders_hx_swap_oob_attribute_when_flagged():
+    estimate = {
+        "mean": None,
+        "median": None,
+        "min": None,
+        "count": 0,
+        "requires_justification": False,
+    }
+    rendered = render_to_string(
+        "pricing/_estimate_panel.html", {"estimate": estimate, "hx_swap_oob": True}
+    )
+    assert 'id="estimate-panel"' in rendered
+    assert 'hx-swap-oob="true"' in rendered
+
+
+def test_candidate_fragment_renders_fora_do_calculo_when_accepted_with_unit_mismatch():
+    candidate = _make_candidate(id=4, unit="unidade")
+    rendered = _render_candidate_fragment(candidate, decision="accept", item_unit="pacote")
+    assert "fora do cálculo: unidade diferente" in rendered
+    assert "Aceito" not in rendered
+
+
+def test_candidate_fragment_renders_aceito_when_accepted_with_matching_unit():
+    candidate = _make_candidate(id=1, unit="pacote")
+    rendered = _render_candidate_fragment(candidate, decision="accept", item_unit="pacote")
+    assert "Aceito" in rendered
+    assert "fora do cálculo: unidade diferente" not in rendered

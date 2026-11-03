@@ -8,7 +8,12 @@ from django.urls import reverse
 
 from pricing import demo_data
 from pricing.ranking import rank_candidates
+from pricing.views import build_estimate_panel
 from procurement.demo_data import get_item
+
+
+def _flat(text: str) -> str:
+    return " ".join(text.split())
 
 
 def test_pricing_decide_route_matches_contract():
@@ -361,3 +366,225 @@ def test_an_ignored_expected_price_leaves_the_order_without_a_price(client):
 
     assert priced != plain  # the price does reorder this item, so the comparison means something
     assert ignored == plain
+
+
+# =====================================================================
+# Step 5: Estimate Panel and Parity Tests (T07.2)
+# =====================================================================
+
+
+def test_build_estimate_panel_with_zero_accepted_prices_returns_none_values():
+    item = get_item(1)
+    assert item is not None
+    panel = build_estimate_panel(item, {})
+    assert panel == {
+        "mean": None,
+        "median": None,
+        "min": None,
+        "count": 0,
+        "requires_justification": False,
+    }
+
+
+def test_build_estimate_panel_with_one_accepted_price_requires_justification():
+    item = get_item(1)
+    assert item is not None
+    # Candidate 1: price 26.50, unit "pacote"
+    panel = build_estimate_panel(item, {1: "accept"})
+    assert panel == {
+        "mean": Decimal("26.50"),
+        "median": Decimal("26.50"),
+        "min": Decimal("26.50"),
+        "count": 1,
+        "requires_justification": True,
+    }
+
+
+def test_build_estimate_panel_with_two_accepted_prices_requires_justification():
+    item = get_item(1)
+    assert item is not None
+    # Candidates 1 (26.50) and 2 (27.90)
+    panel = build_estimate_panel(item, {1: "accept", 2: "accept"})
+    assert panel == {
+        "mean": Decimal("27.20"),
+        "median": Decimal("27.20"),
+        "min": Decimal("26.50"),
+        "count": 2,
+        "requires_justification": True,
+    }
+
+
+def test_build_estimate_panel_with_three_accepted_prices_does_not_require_justification():
+    item = get_item(1)
+    assert item is not None
+    # Candidates 1 (26.50), 2 (27.90), and 3 (29.00)
+    panel = build_estimate_panel(item, {1: "accept", 2: "accept", 3: "accept"})
+    assert panel == {
+        "mean": Decimal("27.80"),
+        "median": Decimal("27.90"),
+        "min": Decimal("26.50"),
+        "count": 3,
+        "requires_justification": False,
+    }
+
+
+def test_build_estimate_panel_rn13_excludes_unit_mismatch_and_does_not_count_them():
+    item = get_item(1)
+    assert item is not None
+    # Candidate 4 belongs to item 1, but has unit "unidade" whereas item 1 is "pacote"
+    panel_only_mismatch = build_estimate_panel(item, {4: "accept"})
+    assert panel_only_mismatch == {
+        "mean": None,
+        "median": None,
+        "min": None,
+        "count": 0,
+        "requires_justification": False,
+    }
+
+    panel_with_valid = build_estimate_panel(item, {1: "accept", 4: "accept"})
+    assert panel_with_valid == {
+        "mean": Decimal("26.50"),
+        "median": Decimal("26.50"),
+        "min": Decimal("26.50"),
+        "count": 1,
+        "requires_justification": True,
+    }
+
+
+def test_build_estimate_panel_preserves_exact_decimal_without_rounding():
+    # Item 6: candidate 24 (4.90), candidate 23 (4.60), candidate 25 (5.10)
+    # 4.90 + 4.60 = 9.50 / 2 = 4.75
+    item6 = get_item(6)
+    assert item6 is not None
+    panel = build_estimate_panel(item6, {23: "accept", 24: "accept"})
+    assert panel["mean"] == Decimal("4.75")
+    assert isinstance(panel["mean"], Decimal)
+    assert panel["median"] == Decimal("4.75")
+    assert isinstance(panel["median"], Decimal)
+
+
+def test_screening_view_provides_estimate_context_with_zero_prices(client):
+    url = reverse("pricing:screening", args=[1])
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert "estimate" in response.context
+    assert response.context["estimate"] == {
+        "mean": None,
+        "median": None,
+        "min": None,
+        "count": 0,
+        "requires_justification": False,
+    }
+    html = response.content.decode()
+    assert 'id="estimate-panel"' in html
+    assert "Preços no cálculo" in html and "0" in html
+    assert "Menos de três preços" not in html
+
+
+def test_screening_view_provides_estimate_context_with_accepted_candidates(client):
+    _decide(client, 1, "accept")
+    _decide(client, 2, "accept")
+
+    url = reverse("pricing:screening", args=[1])
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.context["estimate"]["count"] == 2
+    assert response.context["estimate"]["mean"] == Decimal("27.20")
+    assert response.context["estimate"]["requires_justification"] is True
+
+    html = response.content.decode()
+    assert 'id="estimate-panel"' in html
+    assert "R$ 27,20" in html
+    assert "Preços no cálculo" in html and "2" in html
+    assert (
+        "Menos de três preços: a pesquisa exige justificativa (IN 65/2021, art. 6º, § 5º; RN06)."
+        in html
+    )
+
+
+def test_screening_view_lists_unit_mismatched_accepted_candidate_as_fora_do_calculo(client):
+    _decide(client, 4, "accept")
+
+    url = reverse("pricing:screening", args=[1])
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.context["estimate"]["count"] == 0
+    assert response.context["estimate"]["requires_justification"] is False
+
+    html = response.content.decode()
+    assert "fora do cálculo: unidade diferente" in html
+    assert "Menos de três preços" not in html
+
+
+def test_decide_post_returns_candidate_row_and_out_of_band_estimate_panel(client):
+    url = reverse("pricing:decide", args=[1])
+    response = client.post(url, {"decision": "accept"})
+
+    assert response.status_code == 200
+    html = response.content.decode()
+
+    # The candidate row is returned
+    assert html.lstrip().startswith('<tr id="candidate-1">')
+    assert html.count("<tr") == 1
+    assert "Aceito" in html
+
+    # The estimate panel is returned as an out-of-band swap with stable id
+    assert 'id="estimate-panel"' in html
+    assert 'hx-swap-oob="true"' in html
+    assert "Preços no cálculo" in html and "1" in html
+    assert "R$ 26,50" in html
+    assert (
+        "Menos de três preços: a pesquisa exige justificativa (IN 65/2021, art. 6º, § 5º; RN06)."
+        in html
+    )
+
+
+def test_decide_post_unit_mismatch_shows_fora_do_calculo_and_panel_zero(client):
+    url = reverse("pricing:decide", args=[4])
+    response = client.post(url, {"decision": "accept"})
+
+    assert response.status_code == 200
+    html = response.content.decode()
+
+    assert html.lstrip().startswith('<tr id="candidate-4">')
+    assert "fora do cálculo: unidade diferente" in html
+    assert "Aceito" not in html
+
+    assert 'id="estimate-panel"' in html
+    assert 'hx-swap-oob="true"' in html
+    assert "Preços no cálculo" in html and "0" in html
+    assert "Menos de três preços" not in html
+
+
+def test_estimate_panel_page_and_swap_parity(client):
+    # Verify that screening GET and decide POST return identical panel content
+    for item_id in (1, 2, 6):
+        url = reverse("pricing:screening", args=[item_id])
+        page = client.get(url)
+        assert page.status_code == 200
+
+        cands = demo_data.candidates_for(item_id)
+        if cands:
+            cand = cands[0]
+            swap_resp = client.post(
+                reverse("pricing:decide", args=[cand.id]),
+                {"decision": "accept"},
+            )
+            assert swap_resp.status_code == 200
+            updated_page = client.get(url)
+
+            # Context estimate parity
+            assert swap_resp.context["estimate"] == updated_page.context["estimate"]
+
+            # Panel content parity (excluding hx-swap-oob attribute)
+            swap_panel = re.search(
+                r'<section id="estimate-panel".*?</section>', swap_resp.content.decode(), re.S
+            ).group(0)
+            page_panel = re.search(
+                r'<section id="estimate-panel".*?</section>', updated_page.content.decode(), re.S
+            ).group(0)
+            swap_panel_clean = re.sub(r'\s+hx-swap-oob="true"', "", swap_panel)
+            assert _flat(swap_panel_clean) == _flat(page_panel)

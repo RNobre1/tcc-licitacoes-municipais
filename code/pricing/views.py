@@ -8,6 +8,11 @@ from . import demo_data
 from .ranking import compute_proximity, format_proximity, parse_expected_price, rank_candidates
 
 
+def build_estimate_panel(item, decisions):
+    """Build estimated value panel data for screening view and decide swap."""
+    return None
+
+
 @require_POST
 def decide(request, candidate_id):
     candidate = demo_data.get_candidate(candidate_id)
