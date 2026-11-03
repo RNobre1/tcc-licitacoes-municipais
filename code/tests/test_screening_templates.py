@@ -11,6 +11,14 @@ from django.test import RequestFactory
 
 from pricing.templatetags.pricing_extras import lookup
 
+NO_PRICES = {
+    "mean": None,
+    "median": None,
+    "min": None,
+    "count": 0,
+    "requires_justification": False,
+}
+
 
 @dataclass(frozen=True)
 class ItemStub:
@@ -379,24 +387,43 @@ def test_screening_renders_ignored_expected_price_notice_when_input_was_unusable
     assert "Preço esperado ignorado" not in rendered_clean
 
 
-def test_estimate_panel_renders_three_methods_dashes_and_zero_count_when_empty():
+def test_the_panel_without_prices_shows_three_dashes_and_no_zero_value():
+    rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": NO_PRICES})
+    assert rendered.count("—") == 3 and "0,00" not in rendered
+    assert re.search(r"Preços no cálculo:</strong>\s*0\s*</p>", rendered)
+    assert "Menos de três preços" not in rendered
+
+
+def test_the_panel_shows_how_many_prices_are_in_the_calculation():
+    for count in (1, 2, 3, 7):
+        estimate = {
+            "mean": Decimal("10"),
+            "median": Decimal("10"),
+            "min": Decimal("10"),
+            "count": count,
+            "requires_justification": count < 3,
+        }
+        rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": estimate})
+        assert re.search(rf"Preços no cálculo:</strong>\s*{count}\s*</p>", rendered)
+
+
+def test_the_panel_prints_each_value_with_exactly_two_decimals():
     estimate = {
-        "mean": None,
-        "median": None,
-        "min": None,
-        "count": 0,
+        "mean": Decimal("27.8"),
+        "median": Decimal("27.9"),
+        "min": Decimal("26.5"),
+        "count": 3,
         "requires_justification": False,
     }
     rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": estimate})
-    assert 'id="estimate-panel"' in rendered
-    assert "Média" in rendered
-    assert "Mediana" in rendered
-    assert "Menor valor" in rendered
-    assert "Preços no cálculo" in rendered
-    assert "0" in rendered
-    assert "—" in rendered
-    assert "Menos de três preços" not in rendered
-    assert "hx-swap-oob" not in rendered
+    for value in ("27,80", "27,90", "26,50"):
+        assert re.search(rf"R\$ {value}(?!\d)", rendered)
+
+
+def test_estimate_panel_renders_wrapper_with_grid_class_and_aria_live():
+    rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": NO_PRICES})
+    assert 'aria-live="polite"' in rendered
+    assert re.search(r'class="[^"]*\bgrid\b[^"]*"', rendered)
 
 
 def test_estimate_panel_renders_values_in_brazilian_currency_and_justification_notice():
@@ -408,39 +435,17 @@ def test_estimate_panel_renders_values_in_brazilian_currency_and_justification_n
         "requires_justification": True,
     }
     rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": estimate})
-    assert "R$ 26,50" in rendered
-    assert "Preços no cálculo" in rendered and "1" in rendered
+    assert re.search(r"R\$ 26,50(?!\d)", rendered)
+    assert re.search(r"Preços no cálculo:</strong>\s*1\s*</p>", rendered)
     assert (
         "Menos de três preços: a pesquisa exige justificativa (IN 65/2021, art. 6º, § 5º; RN06)."
         in rendered
     )
 
 
-def test_estimate_panel_renders_without_notice_when_count_is_three_or_more():
-    estimate = {
-        "mean": Decimal("27.80"),
-        "median": Decimal("27.90"),
-        "min": Decimal("26.50"),
-        "count": 3,
-        "requires_justification": False,
-    }
-    rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": estimate})
-    assert "R$ 27,80" in rendered
-    assert "R$ 27,90" in rendered
-    assert "R$ 26,50" in rendered
-    assert "Menos de três preços" not in rendered
-
-
 def test_estimate_panel_renders_hx_swap_oob_attribute_when_flagged():
-    estimate = {
-        "mean": None,
-        "median": None,
-        "min": None,
-        "count": 0,
-        "requires_justification": False,
-    }
     rendered = render_to_string(
-        "pricing/_estimate_panel.html", {"estimate": estimate, "hx_swap_oob": True}
+        "pricing/_estimate_panel.html", {"estimate": NO_PRICES, "hx_swap_oob": True}
     )
     assert 'id="estimate-panel"' in rendered
     assert 'hx-swap-oob="true"' in rendered

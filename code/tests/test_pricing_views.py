@@ -11,9 +11,21 @@ from pricing.ranking import rank_candidates
 from pricing.views import build_estimate_panel
 from procurement.demo_data import get_item
 
+NO_PRICES = {
+    "mean": None,
+    "median": None,
+    "min": None,
+    "count": 0,
+    "requires_justification": False,
+}
+
 
 def _flat(text: str) -> str:
     return " ".join(text.split())
+
+
+def _estimate(client, item_id):
+    return client.get(reverse("pricing:screening", args=[item_id])).context["estimate"]
 
 
 def test_pricing_decide_route_matches_contract():
@@ -463,23 +475,50 @@ def test_build_estimate_panel_preserves_exact_decimal_without_rounding():
     assert isinstance(panel["median"], Decimal)
 
 
+def test_a_rejected_candidate_stays_out_of_the_estimate(client):
+    _decide(client, 1, "accept")
+    _decide(client, 2, "accept")
+    _decide(client, 3, "reject")
+    estimate = _estimate(client, 1)
+    assert (estimate["count"], estimate["mean"]) == (2, Decimal("27.20"))
+
+
+def test_rejecting_an_accepted_candidate_takes_its_price_out(client):
+    for candidate_id in (1, 2, 3):
+        _decide(client, candidate_id, "accept")
+    _decide(client, 1, "reject")
+    estimate = _estimate(client, 1)
+    assert (estimate["count"], estimate["mean"], estimate["min"]) == (
+        2,
+        Decimal("28.45"),
+        Decimal("27.90"),
+    )
+
+
+def test_a_decision_on_another_item_never_enters_this_items_estimate(client):
+    _decide(client, 21, "accept")  # item 5, unit "pacote" like item 1
+    assert _estimate(client, 1) == NO_PRICES
+    assert _estimate(client, 5)["count"] == 1
+
+
 def test_screening_view_provides_estimate_context_with_zero_prices(client):
     url = reverse("pricing:screening", args=[1])
     response = client.get(url)
 
     assert response.status_code == 200
     assert "estimate" in response.context
-    assert response.context["estimate"] == {
-        "mean": None,
-        "median": None,
-        "min": None,
-        "count": 0,
-        "requires_justification": False,
-    }
+    assert response.context["estimate"] == NO_PRICES
     html = response.content.decode()
     assert 'id="estimate-panel"' in html
-    assert "Preços no cálculo" in html and "0" in html
+    assert re.search(r"Preços no cálculo:</strong>\s*0\s*</p>", html)
     assert "Menos de três preços" not in html
+
+
+def test_the_page_shows_the_count_of_the_accepted_prices(client):
+    _decide(client, 1, "accept")
+    _decide(client, 2, "accept")
+    html = client.get(reverse("pricing:screening", args=[1])).content.decode()
+    assert re.search(r"Preços no cálculo:</strong>\s*2\s*</p>", html)
 
 
 def test_screening_view_provides_estimate_context_with_accepted_candidates(client):
@@ -496,8 +535,8 @@ def test_screening_view_provides_estimate_context_with_accepted_candidates(clien
 
     html = response.content.decode()
     assert 'id="estimate-panel"' in html
-    assert "R$ 27,20" in html
-    assert "Preços no cálculo" in html and "2" in html
+    assert re.search(r"R\$ 27,20(?!\d)", html)
+    assert re.search(r"Preços no cálculo:</strong>\s*2\s*</p>", html)
     assert (
         "Menos de três preços: a pesquisa exige justificativa (IN 65/2021, art. 6º, § 5º; RN06)."
         in html
@@ -534,8 +573,8 @@ def test_decide_post_returns_candidate_row_and_out_of_band_estimate_panel(client
     # The estimate panel is returned as an out-of-band swap with stable id
     assert 'id="estimate-panel"' in html
     assert 'hx-swap-oob="true"' in html
-    assert "Preços no cálculo" in html and "1" in html
-    assert "R$ 26,50" in html
+    assert re.search(r"Preços no cálculo:</strong>\s*1\s*</p>", html)
+    assert re.search(r"R\$ 26,50(?!\d)", html)
     assert (
         "Menos de três preços: a pesquisa exige justificativa (IN 65/2021, art. 6º, § 5º; RN06)."
         in html
@@ -555,7 +594,7 @@ def test_decide_post_unit_mismatch_shows_fora_do_calculo_and_panel_zero(client):
 
     assert 'id="estimate-panel"' in html
     assert 'hx-swap-oob="true"' in html
-    assert "Preços no cálculo" in html and "0" in html
+    assert re.search(r"Preços no cálculo:</strong>\s*0\s*</p>", html)
     assert "Menos de três preços" not in html
 
 
