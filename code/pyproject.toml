@@ -14,6 +14,12 @@ dev = [
     "ruff>=0.17.3",
 ]
 
+[tool.uv]
+# Supply-chain cooldown: ignore releases published after this instant, so a
+# compromised release has time to be caught before it reaches the lock. Move it
+# forward deliberately, keeping it about a week behind the day of the update.
+exclude-newer = "2026-10-28T00:00:00Z"
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 pythonpath = ["."]
