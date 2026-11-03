@@ -107,6 +107,10 @@ class TestSemanticIndexHealthUnit:
 class TestSemanticIndexCollectionUnit:
     """Unit tests for collection management, idempotency, and error handling."""
 
+    def test_mismatch_error_is_subclass_of_value_error(self):
+        """N8: CollectionConfigurationMismatchError must inherit from ValueError."""
+        assert issubclass(CollectionConfigurationMismatchError, ValueError)
+
     @pytest.mark.parametrize(
         ("size", "distance"),
         [
@@ -154,9 +158,9 @@ class TestSemanticIndexCollectionUnit:
             create_collection(client, "items", vector_size=size, distance=distance)
 
         msg = str(exc_info.value)
-        assert "items" in msg
-        assert "128" in msg and str(Distance.COSINE) in msg
-        assert str(size) in msg and str(distance) in msg
+        # N9: Anchored pattern matching ensures configurations aren't swapped
+        assert "Collection 'items' exists with configuration (128, Cosine)" in msg
+        assert f"conflicting with requested ({size}, {distance.value})" in msg
 
         vectors = client.get_collection("items").config.params.vectors
         assert (vectors.size, vectors.distance) == (128, Distance.COSINE)
@@ -186,9 +190,8 @@ class TestSemanticIndexCollectionUnit:
             create_collection(client, "items", 128, Distance.COSINE)
 
         msg = str(exc_info.value)
-        assert "items" in msg
-        assert "256" in msg and str(Distance.DOT) in msg
-        assert "128" in msg and str(Distance.COSINE) in msg
+        assert "Collection 'items' exists with configuration (256, Dot)" in msg
+        assert "conflicting with requested (128, Cosine)" in msg
 
     def test_create_collection_requires_explicit_vector_size_and_distance(self):
         client = FakeQdrantClient()
