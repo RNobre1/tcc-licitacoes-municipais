@@ -35,7 +35,14 @@ import pytest
 from tests.execucao import executar
 
 RAIZ = Path(__file__).resolve().parent.parent
-EXCLUSOES_LOCAIS = RAIZ / ".git" / "info" / "exclude"
+
+
+def _arquivo_de_exclusoes_locais(raiz: Path) -> Path:
+    """Onde mora o ``.git/info/exclude`` que vale para o checkout em ``raiz``."""
+    return raiz / ".git" / "info" / "exclude"
+
+
+EXCLUSOES_LOCAIS = _arquivo_de_exclusoes_locais(RAIZ)
 
 
 def _rastreados() -> list[str]:
