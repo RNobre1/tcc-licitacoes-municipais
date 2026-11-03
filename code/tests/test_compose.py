@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -167,13 +168,23 @@ def test_compose_variables_declared_in_env_example():
     assert not undeclared, f"compose.yaml references undeclared variables: {undeclared}"
 
 
-def test_postgres_password_not_hardcoded_in_compose():
-    """Ensure POSTGRES_PASSWORD is read from an environment variable and not hardcoded."""
+@pytest.mark.parametrize(
+    "var_name",
+    [
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+    ],
+)
+def test_postgres_variables_not_hardcoded_in_compose(var_name):
+    """Ensure PostgreSQL variables come from environment variables (${...}), never literals."""
     compose_text = (CODE_DIR / "compose.yaml").read_text()
-    match = re.search(r"POSTGRES_PASSWORD:\s*(\S+)", compose_text)
-    assert match, "POSTGRES_PASSWORD must be defined in compose.yaml"
-    val = match.group(1)
-    assert val.startswith("${"), f"POSTGRES_PASSWORD must start with '${{', got: {val}"
+    match = re.search(rf"{var_name}:\s*(\S+)", compose_text)
+    assert match, f"{var_name} must be defined in compose.yaml"
+    val = match.group(1).strip("\"'")
+    assert val.startswith("${") and val.endswith("}"), (
+        f"{var_name} in compose.yaml must come from '${{...}}', got literal: '{match.group(1)}'"
+    )
 
 
 def test_env_example_ports_match_contract():
@@ -211,12 +222,47 @@ def test_makefile_recipes_match_contract():
     assert "--volumes" not in res_down.stdout
 
 
-def test_makefile_up_requires_env_file(tmp_path):
-    """Ensure make up fails fast with a clear message when .env is missing."""
+@pytest.fixture
+def fake_docker_env(tmp_path):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_docker = bin_dir / "docker"
+    log_file = tmp_path / "docker.log"
+    fake_docker.write_text(f'#!/bin/sh\necho "$@" >> "{log_file}"\nexit 0\n')
+    fake_docker.chmod(0o755)
+
     makefile_content = (CODE_DIR / "Makefile").read_text()
     (tmp_path / "Makefile").write_text(makefile_content)
 
-    res = subprocess.run(["make", "up"], cwd=tmp_path, capture_output=True, text=True)
+    env = dict(os.environ)
+    env["PATH"] = f"{bin_dir}:{env.get('PATH', '')}"
+    return tmp_path, log_file, env
+
+
+def test_makefile_up_fails_without_env_file(fake_docker_env):
+    """Ensure make up fails with a clear message and does not run docker when .env is missing."""
+    work_dir, log_file, env = fake_docker_env
+    res = subprocess.run(["make", "up"], cwd=work_dir, env=env, capture_output=True, text=True)
     assert res.returncode != 0
     output = f"{res.stdout}\n{res.stderr}"
     assert "copy .env.example to .env first" in output
+    assert not log_file.exists(), "fake docker executable should not be called when .env is missing"
+
+
+def test_makefile_up_succeeds_with_env_file(fake_docker_env):
+    """Ensure make up succeeds and runs docker compose up when .env is present."""
+    work_dir, log_file, env = fake_docker_env
+    (work_dir / ".env").touch()
+    res = subprocess.run(["make", "up"], cwd=work_dir, env=env, capture_output=True, text=True)
+    assert res.returncode == 0
+    assert log_file.exists(), "fake docker executable should be called when .env is present"
+    assert log_file.read_text().strip() == "compose up -d --wait"
+
+
+def test_makefile_down_works_without_env_file(fake_docker_env):
+    """Ensure make down succeeds and runs docker compose down even when .env is missing."""
+    work_dir, log_file, env = fake_docker_env
+    res = subprocess.run(["make", "down"], cwd=work_dir, env=env, capture_output=True, text=True)
+    assert res.returncode == 0
+    assert log_file.exists(), "fake docker executable should be called by make down"
+    assert log_file.read_text().strip() == "compose down"
