@@ -17,6 +17,10 @@ dev = [
 DJANGO_SETTINGS_MODULE = "config.settings"
 pythonpath = ["."]
 testpaths = ["tests"]
+addopts = "-m 'not integration'"
+markers = [
+    "integration: marks tests requiring external container services like PostgreSQL or Qdrant",
+]
 
 [tool.ruff]
 line-length = 100
