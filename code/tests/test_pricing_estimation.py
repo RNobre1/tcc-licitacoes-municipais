@@ -105,6 +105,13 @@ class TestEstimatedValueCaput:
         assert result == Decimal("0.15")
         assert isinstance(result, Decimal)
 
+    def test_median_exact_fractional_scale_without_four_decimal_rounding(self):
+        """Contract (D14): median at 4-decimal minimum scale produces exact 5-decimal result."""
+        prices = [Decimal("0.0001"), Decimal("0.0002")]
+        result = calculate_median(prices)
+        assert result == Decimal("0.00015")
+        assert isinstance(result, Decimal)
+
     def test_art6_caput_min_computes_lowest_value(self):
         """Art. 6 caput: lowest value method returns the minimum price."""
         prices = [Decimal("30.00"), Decimal("12.50"), Decimal("45.00")]
@@ -116,6 +123,13 @@ class TestEstimatedValueCaput:
         """Art. 6 caput: lowest value correctly finds minimum regardless of position."""
         prices = [Decimal("99.90"), Decimal("15.00"), Decimal("25.00")]
         assert calculate_min(prices) == Decimal("15.00")
+
+    def test_art6_caput_min_below_one_centavo(self):
+        """Contract (D14): lowest value below one centavo preserves fractional scale."""
+        prices = [Decimal("0.0004"), Decimal("0.0009")]
+        result = calculate_min(prices)
+        assert result == Decimal("0.0004")
+        assert isinstance(result, Decimal)
 
 
 class TestEstimatedValueEdgeCases:
