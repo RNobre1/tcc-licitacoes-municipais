@@ -96,6 +96,7 @@ class TestDatabaseSettingsDjango:
         )
         out = subprocess.run(
             [sys.executable, "-c", code],
+            cwd=CODE_DIR,
             env=env,
             capture_output=True,
             text=True,
