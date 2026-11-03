@@ -5,12 +5,45 @@ from django.views.decorators.http import require_POST
 from procurement.demo_data import get_item
 
 from . import demo_data
+from .estimation import calculate_mean, calculate_median, calculate_min, requires_justification
 from .ranking import compute_proximity, format_proximity, parse_expected_price, rank_candidates
 
 
-def build_estimate_panel(item, decisions):
-    """Build estimated value panel data for screening view and decide swap."""
-    return None
+def build_estimate_panel(item, decisions: dict) -> dict:
+    if item is None:
+        return {
+            "mean": None,
+            "median": None,
+            "min": None,
+            "count": 0,
+            "requires_justification": False,
+        }
+
+    candidates = demo_data.candidates_for(item.id)
+    prices = [
+        candidate.price
+        for candidate in candidates
+        if (decisions.get(candidate.id) == "accept" or decisions.get(str(candidate.id)) == "accept")
+        and candidate.unit == item.unit
+    ]
+
+    count = len(prices)
+    if count == 0:
+        return {
+            "mean": None,
+            "median": None,
+            "min": None,
+            "count": 0,
+            "requires_justification": False,
+        }
+
+    return {
+        "mean": calculate_mean(prices),
+        "median": calculate_median(prices),
+        "min": calculate_min(prices),
+        "count": count,
+        "requires_justification": requires_justification(prices),
+    }
 
 
 @require_POST
@@ -33,6 +66,9 @@ def decide(request, candidate_id):
     prox = compute_proximity(candidate.price, expected_price, candidate.unit, item_unit)
     proximity = format_proximity(candidate.price, expected_price, prox, candidate.unit, item_unit)
 
+    adapted_decisions = {int(k): v for k, v in decisions.items()}
+    estimate = build_estimate_panel(item, adapted_decisions)
+
     return render(
         request,
         "pricing/_candidate.html",
@@ -41,6 +77,9 @@ def decide(request, candidate_id):
             "decision": decision,
             "proximity": proximity,
             "expected_price": expected_price,
+            "item_unit": item_unit,
+            "estimate": estimate,
+            "oob_estimate": estimate,
         },
     )
 
@@ -59,6 +98,7 @@ def screening(request, item_id):
     candidates = rank_candidates(demo_data.candidates_for(item_id), expected_price, item.unit)
 
     decisions = {int(k): v for k, v in request.session.get("screening_decisions", {}).items()}
+    estimate = build_estimate_panel(item, decisions)
 
     proximities = {
         candidate.id: format_proximity(
@@ -81,5 +121,6 @@ def screening(request, item_id):
             "proximities": proximities,
             "expected_price": expected_price,
             "expected_price_ignored": expected_price_ignored,
+            "estimate": estimate,
         },
     )

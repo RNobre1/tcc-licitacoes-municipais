@@ -1,1 +1,34 @@
-<!-- Estimate panel stub -->
+{% load l10n %}
+<section id="estimate-panel"{% if hx_swap_oob %} hx-swap-oob="true"{% endif %}>
+    <h2>Valor estimado</h2>
+    <div class="estimate-grid">
+        <p>
+            <strong>Média:</strong>
+            {% if estimate.mean is not None %}
+                R$ {{ estimate.mean|floatformat:2 }}
+            {% else %}
+                —
+            {% endif %}
+        </p>
+        <p>
+            <strong>Mediana:</strong>
+            {% if estimate.median is not None %}
+                R$ {{ estimate.median|floatformat:2 }}
+            {% else %}
+                —
+            {% endif %}
+        </p>
+        <p>
+            <strong>Menor valor:</strong>
+            {% if estimate.min is not None %}
+                R$ {{ estimate.min|floatformat:2 }}
+            {% else %}
+                —
+            {% endif %}
+        </p>
+    </div>
+    <p><strong>Preços no cálculo:</strong> {{ estimate.count }}</p>
+    {% if estimate.requires_justification %}
+        <p class="notice"><small>Menos de três preços: a pesquisa exige justificativa (IN 65/2021, art. 6º, § 5º; RN06).</small></p>
+    {% endif %}
+</section>

@@ -12,7 +12,11 @@
     <td>{% if proximity %}{{ proximity }}{% else %}—{% endif %}</td>
     <td>
         {% if decision == "accept" %}
-            Aceito
+            {% if item_unit and candidate.unit != item_unit %}
+                fora do cálculo: unidade diferente
+            {% else %}
+                Aceito
+            {% endif %}
         {% elif decision == "reject" %}
             Descartado
         {% endif %}
@@ -26,3 +30,6 @@
         </form>
     </td>
 </tr>
+{% if oob_estimate %}
+    {% include "pricing/_estimate_panel.html" with estimate=oob_estimate hx_swap_oob=True %}
+{% endif %}
