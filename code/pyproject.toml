@@ -19,7 +19,7 @@ pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-m 'not integration'"
 markers = [
-    "integration: marks tests requiring external container services like PostgreSQL or Qdrant",
+    "integration: marks tests requiring external container services like PostgreSQL or Qdrant (run with pytest -m integration after make up)",
 ]
 
 [tool.ruff]

@@ -169,21 +169,21 @@ def test_compose_variables_declared_in_env_example():
 
 
 @pytest.mark.parametrize(
-    "var_name",
+    ("env_var", "expected_var_name"),
     [
-        "POSTGRES_DB",
-        "POSTGRES_USER",
-        "POSTGRES_PASSWORD",
+        ("POSTGRES_DB", "DATABASE_NAME"),
+        ("POSTGRES_USER", "DATABASE_USER"),
+        ("POSTGRES_PASSWORD", "DATABASE_PASSWORD"),
     ],
 )
-def test_postgres_variables_not_hardcoded_in_compose(var_name):
-    """Ensure PostgreSQL variables come from environment variables (${...}), never literals."""
+def test_compose_yaml_maps_postgres_setting_to_exact_variable(env_var, expected_var_name):
+    """Ensure compose.yaml maps postgres variables to their exact contract environment variable."""
     compose_text = (CODE_DIR / "compose.yaml").read_text()
-    match = re.search(rf"{var_name}:\s*(\S+)", compose_text)
-    assert match, f"{var_name} must be defined in compose.yaml"
+    match = re.search(rf"{env_var}:\s*(\S+)", compose_text)
+    assert match, f"{env_var} must be defined in compose.yaml"
     val = match.group(1).strip("\"'")
-    assert val.startswith("${") and val.endswith("}"), (
-        f"{var_name} in compose.yaml must come from '${{...}}', got literal: '{match.group(1)}'"
+    assert val == f"${{{expected_var_name}}}", (
+        f"{env_var} in compose.yaml must map to '${{{expected_var_name}}}', got: '{val}'"
     )
 
 
