@@ -5,30 +5,28 @@ status: aceita
 tags: [repositório, github, autoria]
 ---
 
-# Repositório público, sem ferramental de assistente
+# Repositório público, com a configuração local fora do versionamento
 
 ## Contexto
 
 O repositório serve a três públicos ao mesmo tempo: a banca, que avalia o
 trabalho; quem no futuro quiser reaproveitar a solução; e o mercado, que lê o
 perfil do autor. Isso favorece deixá-lo público desde o começo. Em paralelo, o
-projeto lida com dado sensível e usa ferramental de assistente de código no
-desenvolvimento.
+projeto lida com dado sensível e com arquivos de configuração do ambiente local
+que não fazem parte do trabalho.
 
 ## Decisão
 
 **Repositório público desde o primeiro commit**, com duas exclusões:
 
 1. Dado real de processo licitatório, conforme [[2026-08-16-politica-de-dados-de-dominio]].
-2. Qualquer vestígio de ferramental de assistente — arquivos de configuração,
-   diretórios de agente, e menção em mensagem de commit ou em conteúdo
-   versionado.
+2. A configuração do ambiente local de trabalho, e menção a ela em mensagem de
+   commit ou em conteúdo versionado.
 
 Para não perder histórico do que importa, o conteúdo do projeto — identidade,
 decisões, cronograma, política de dados, estrutura — fica em `docs/projeto.md`,
-versionado e escrito como documentação de projeto. As instruções de trabalho com
-o assistente ficam num arquivo à parte, fora do versionamento, que importa
-aquele.
+versionado e escrito como documentação de projeto. As instruções de trabalho do
+ambiente local ficam num arquivo à parte, fora do versionamento.
 
 ## Justificativa
 
@@ -41,9 +39,9 @@ sem histórico, sem diff e sem backup.
 
 ## Consequência
 
-- Antes de qualquer commit, conferir que nenhum arquivo de ferramental entrou no
-  índice.
-- Mensagens de commit sem trailer de coautoria.
+- Antes de qualquer commit, conferir que nenhum arquivo de configuração local
+  entrou no índice.
+- Mensagens de commit com autoria única.
 - `docs/projeto.md` precisa ser mantido legível para quem chega de fora, não
   apenas para quem já conhece o projeto.
 

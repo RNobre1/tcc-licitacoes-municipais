@@ -97,7 +97,6 @@ foram conferidos** e nenhuma destas pode ser citada antes disso.
 | Geração de documento jurídico | "Enhancing legal document building with Retrieval-Augmented Generation" | ScienceDirect |
 | Panorama de IA em compras públicas | Open Contracting Partnership, 2026 | open-contracting.org |
 
-Para ampliar a lista, use `docs/pesquisas/prompt-levantamento-literatura.md`.
 
 ## Ordem sugerida dos dois dias
 

@@ -6,7 +6,6 @@ criado: 2026-08-24
 autor: Rafael Nobre de Souza
 relacionado:
   - docs/projeto.md
-  - docs/pesquisas/prompt-levantamento-literatura.md
   - docs/pesquisas/escolha-do-banco-vetorial.md
   - docs/pesquisas/api-pncp-viabilidade-pesquisa-de-precos.md
 tags: [pesquisa, literatura, trabalhos-relacionados, rag, pesquisa-de-precos]
@@ -42,8 +41,8 @@ feito por alguém?** e **qual é exatamente a lacuna que ele ocupa?** Chegar à
 banca reivindicando novidade que a literatura já cobre é o risco que esta nota
 existe para eliminar.
 
-O protocolo usado está em `prompt-levantamento-literatura.md`, escrito antes
-desta rodada.
+O protocolo de busca foi definido antes desta rodada. Os cinco eixos, a base e
+os filtros estão na seção 4.
 
 ## 2. Pergunta central
 
