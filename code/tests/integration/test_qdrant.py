@@ -39,14 +39,14 @@ class TestQdrantIntegration:
         assert check_health(live_qdrant_client) is True
 
     def test_create_collection_idempotent_with_explicit_vector_params(self, live_qdrant_client):
-        """Integration: creates collection twice with same parameters, asserting idempotency."""
+        """Integration: creates collection twice with non-default vector params."""
         collection_name = f"test_semantic_index_{uuid.uuid4().hex[:8]}"
         try:
             res1 = create_collection(
                 live_qdrant_client,
                 collection_name=collection_name,
-                vector_size=128,
-                distance=models.Distance.COSINE,
+                vector_size=384,
+                distance=models.Distance.EUCLID,
             )
             assert res1 is True
 
@@ -54,15 +54,39 @@ class TestQdrantIntegration:
             res2 = create_collection(
                 live_qdrant_client,
                 collection_name=collection_name,
-                vector_size=128,
-                distance=models.Distance.COSINE,
+                vector_size=384,
+                distance=models.Distance.EUCLID,
             )
             assert res2 is True
 
             assert live_qdrant_client.collection_exists(collection_name)
             info = live_qdrant_client.get_collection(collection_name)
-            assert info.config.params.vectors.size == 128
-            assert info.config.params.vectors.distance == models.Distance.COSINE
+            assert info.config.params.vectors.size == 384
+            assert info.config.params.vectors.distance == models.Distance.EUCLID
+        finally:
+            with contextlib.suppress(Exception):
+                live_qdrant_client.delete_collection(collection_name)
+
+    def test_create_collection_with_different_configuration_raises_error(self, live_qdrant_client):
+        """Integration: creating collection with conflicting configuration raises ValueError."""
+        collection_name = f"test_semantic_index_{uuid.uuid4().hex[:8]}"
+        try:
+            create_collection(
+                live_qdrant_client,
+                collection_name=collection_name,
+                vector_size=384,
+                distance=models.Distance.EUCLID,
+            )
+            with pytest.raises(ValueError):
+                create_collection(
+                    live_qdrant_client,
+                    collection_name=collection_name,
+                    vector_size=512,
+                    distance=models.Distance.COSINE,
+                )
+            info = live_qdrant_client.get_collection(collection_name)
+            assert info.config.params.vectors.size == 384
+            assert info.config.params.vectors.distance == models.Distance.EUCLID
         finally:
             with contextlib.suppress(Exception):
                 live_qdrant_client.delete_collection(collection_name)
@@ -70,15 +94,17 @@ class TestQdrantIntegration:
     def test_service_down_clean_failure_handling(self):
         """Integration: verifies unreachable Qdrant raises connection error for clean reporting."""
         client = get_qdrant_client(url="http://127.0.0.1:59999")
-        failure = None
         try:
-            client.get_collections()
-        except Exception as exc:
-            failure = str(exc)
+            # Test check_health directly against unreachable host without prior client.close()
+            assert check_health(client) is False
+
+            failure = None
+            try:
+                client.get_collections()
+            except Exception as exc:
+                failure = str(exc)
+
+            assert failure is not None
+            assert "connection" in failure.lower() or "refused" in failure.lower()
         finally:
             client.close()
-
-        assert failure is not None
-        assert "connection" in failure.lower() or "refused" in failure.lower()
-        # check_health against dead service returns False without unhandled crash
-        assert check_health(client) is False

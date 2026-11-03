@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import subprocess
+import tomllib
 import urllib.parse
 from pathlib import Path
 
@@ -184,6 +185,30 @@ def test_compose_yaml_maps_postgres_setting_to_exact_variable(env_var, expected_
     val = match.group(1).strip("\"'")
     assert val == f"${{{expected_var_name}}}", (
         f"{env_var} in compose.yaml must map to '${{{expected_var_name}}}', got: '{val}'"
+    )
+
+
+def test_qdrant_client_version_matches_compose_image(compose_config):
+    """Ensure qdrant-client major.minor in uv.lock matches qdrant image in compose.yaml."""
+    services = compose_config.get("services", {})
+    image = services.get("qdrant", {}).get("image", "")
+    assert image.startswith("qdrant/qdrant:v"), f"Unexpected qdrant image: {image}"
+    image_tag = image.split(":")[-1].lstrip("v")
+    server_major_minor = ".".join(image_tag.split(".")[:2])
+
+    lock_file = CODE_DIR / "uv.lock"
+    assert lock_file.is_file(), f"uv.lock not found at {lock_file}"
+    lock_data = tomllib.loads(lock_file.read_text())
+    client_version = None
+    for pkg in lock_data.get("package", []):
+        if pkg.get("name") == "qdrant-client":
+            client_version = pkg.get("version")
+            break
+
+    assert client_version is not None, "qdrant-client not found in uv.lock"
+    client_major_minor = ".".join(client_version.split(".")[:2])
+    assert client_major_minor == server_major_minor, (
+        f"qdrant-client version ({client_version}) does not match server tag ({image_tag})"
     )
 
 
