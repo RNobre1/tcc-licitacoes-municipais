@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 import pytest
+
 from pricing.estimation import (
     calculate_mean,
     calculate_median,
