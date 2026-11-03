@@ -627,3 +627,25 @@ def test_estimate_panel_page_and_swap_parity(client):
             ).group(0)
             swap_panel_clean = re.sub(r'\s+hx-swap-oob="true"', "", swap_panel)
             assert _flat(swap_panel_clean) == _flat(page_panel)
+
+
+def test_candidate_calculation_label_agrees_with_builder_counted_candidates(client):
+    _decide(client, 1, "accept")
+    _decide(client, 2, "accept")
+    _decide(client, 4, "accept")
+
+    estimate = _estimate(client, 1)
+    assert estimate["count"] == 2
+    assert estimate["counted_candidate_ids"] == {1, 2}
+
+    page_html = client.get(reverse("pricing:screening", args=[1])).content.decode()
+    row_1 = re.search(r'<tr id="candidate-1".*?</tr>', page_html, re.S).group(0)
+    row_2 = re.search(r'<tr id="candidate-2".*?</tr>', page_html, re.S).group(0)
+    row_4 = re.search(r'<tr id="candidate-4".*?</tr>', page_html, re.S).group(0)
+
+    assert "Aceito" in row_1 and "fora do cálculo: unidade diferente" not in row_1
+    assert "Aceito" in row_2 and "fora do cálculo: unidade diferente" not in row_2
+    assert "fora do cálculo: unidade diferente" in row_4 and "Aceito" not in row_4
+
+    swap_4 = _decide(client, 4, "accept").content.decode()
+    assert "fora do cálculo: unidade diferente" in swap_4 and "Aceito" not in swap_4

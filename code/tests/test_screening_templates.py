@@ -463,3 +463,22 @@ def test_candidate_fragment_renders_aceito_when_accepted_with_matching_unit():
     rendered = _render_candidate_fragment(candidate, decision="accept", item_unit="pacote")
     assert "Aceito" in rendered
     assert "fora do cálculo: unidade diferente" not in rendered
+
+
+def test_candidate_fragment_derives_decision_label_from_estimate_counted_ids():
+    candidate = _make_candidate(id=1, unit="pacote")
+    estimate_excluding = {"counted_candidate_ids": set()}
+    rendered = render_to_string(
+        "pricing/_candidate.html",
+        {"candidate": candidate, "decision": "accept", "estimate": estimate_excluding},
+    )
+    assert "fora do cálculo: unidade diferente" in rendered
+    assert "Aceito" not in rendered
+
+    estimate_including = {"counted_candidate_ids": {1}}
+    rendered_inc = render_to_string(
+        "pricing/_candidate.html",
+        {"candidate": candidate, "decision": "accept", "estimate": estimate_including},
+    )
+    assert "Aceito" in rendered_inc
+    assert "fora do cálculo: unidade diferente" not in rendered_inc
