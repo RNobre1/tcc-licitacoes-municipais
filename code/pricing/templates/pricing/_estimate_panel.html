@@ -1,7 +1,7 @@
 {% load l10n %}
-<section id="estimate-panel"{% if hx_swap_oob %} hx-swap-oob="true"{% endif %}>
+<section id="estimate-panel" aria-live="polite"{% if hx_swap_oob %} hx-swap-oob="true"{% endif %}>
     <h2>Valor estimado</h2>
-    <div class="estimate-grid">
+    <div class="estimate-grid grid">
         <p>
             <strong>Média:</strong>
             {% if estimate.mean is not None %}

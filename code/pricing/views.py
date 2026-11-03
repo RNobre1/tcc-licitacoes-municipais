@@ -23,8 +23,7 @@ def build_estimate_panel(item, decisions: dict) -> dict:
     prices = [
         candidate.price
         for candidate in candidates
-        if (decisions.get(candidate.id) == "accept" or decisions.get(str(candidate.id)) == "accept")
-        and candidate.unit == item.unit
+        if decisions.get(candidate.id) == "accept" and candidate.unit == item.unit
     ]
 
     count = len(prices)
