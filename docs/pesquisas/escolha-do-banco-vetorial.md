@@ -65,10 +65,10 @@ caso raro aqui.
 ## 4. Por que a literatura de terceiros não decide isto
 
 Há trabalho publicado favorecendo o pgvector, e ele **não contradiz** o dado
-acima — mede outra coisa. [Benchmarking Open Source Vector Databases](https://consensus.app/papers/details/1ad8f058522f5f2daa4919b070c3be86/)
+acima — mede outra coisa. [Benchmarking Open Source Vector Databases](https://doi.org/10.54116/jbdai.v4i1.80)
 compara sete sistemas, incluindo os três avaliados aqui, e conclui que o pgvector
 com HNSW supera os dedicados exceto o Chroma. [Comparative Analysis of Performance
-Aspects Between Chroma and Pgvector](https://consensus.app/papers/details/cd5a463b6d6b5f24ade14e8c73ae586b/)
+Aspects Between Chroma and Pgvector](https://doi.org/10.32877/bt.v8i2.3198)
 conclui que o pgvector é mais viável em produção, com overhead de armazenamento de
 3 a 4 vezes contra 395 do Chroma.
 
