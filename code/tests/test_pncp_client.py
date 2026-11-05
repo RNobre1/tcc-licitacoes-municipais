@@ -1,4 +1,5 @@
 import http.server
+import inspect
 import json
 import threading
 import urllib.error
@@ -103,6 +104,32 @@ def test_fetch_publications_raises_on_null_or_invalid_payload():
     assert "payload" in str(exc_info.value).lower()
 
 
+def test_fetch_publications_returns_empty_list_on_204_on_first_page():
+    def no_content_transport(url, params=None):
+        return 204, None
+
+    records = fetch_publications(transport=no_content_transport, save=False)
+    assert records == []
+
+
+def test_fetch_publications_raises_on_204_on_later_page():
+    def later_204_transport(url, params=None):
+        p = params.get("pagina", 1) if params else 1
+        if p == 1:
+            return 200, {
+                "data": [{"numeroControlePNCP": "00000000000000-1-000001/2026"}],
+                "totalRegistros": 2,
+                "totalPaginas": 2,
+                "numeroPagina": 1,
+                "paginasRestantes": 1,
+            }
+        return 204, None
+
+    with pytest.raises(PncpResponseError) as exc_info:
+        fetch_publications(transport=later_204_transport, save=False)
+    assert exc_info.value.status == 204
+
+
 def test_fetch_items_reads_quantidade_and_walks_pages():
     items_p1 = _read_json("items_page_1.json")
     items_p2 = _read_json("items_page_2.json")
@@ -184,7 +211,11 @@ def test_items_over_long_is_an_error():
 
 def test_the_endpoint_names_the_api_that_answered():
     pub = fetch_publications(
-        transport=lambda url, params: (200, {"data": [], "paginasRestantes": 0}), save=False
+        transport=lambda url, params: (
+            200,
+            {"data": [], "numeroPagina": 1, "totalPaginas": 1, "paginasRestantes": 0},
+        ),
+        save=False,
     )
     assert pub[0].endpoint == "/api/consulta/v1/contratacoes/publicacao"
     items = fetch_items(
@@ -210,6 +241,43 @@ def test_a_walk_that_never_advances_is_stopped():
     with pytest.raises(PncpResponseError):
         fetch_publications(transport=stuck, save=False)
     assert len(calls) <= 3
+
+
+def test_fetch_publications_requires_numero_pagina_as_int():
+    payload = {
+        "data": [],
+        "totalPaginas": 1,
+        "paginasRestantes": 0,
+    }
+    with pytest.raises(PncpResponseError) as exc_info:
+        fetch_publications(transport=lambda u, p: (200, payload), save=False)
+    assert "numeroPagina" in str(exc_info.value)
+
+
+def test_fetch_publications_requires_total_paginas_as_int():
+    payload = {
+        "data": [],
+        "numeroPagina": 1,
+        "paginasRestantes": 0,
+    }
+    with pytest.raises(PncpResponseError) as exc_info:
+        fetch_publications(transport=lambda u, p: (200, payload), save=False)
+    assert "totalPaginas" in str(exc_info.value)
+
+
+def test_fetch_publications_stops_at_hard_page_cap():
+    def endless_transport(url, params=None):
+        p = params.get("pagina", 1) if params else 1
+        return 200, {
+            "data": [],
+            "numeroPagina": p,
+            "totalPaginas": 100000,
+            "paginasRestantes": 1,
+        }
+
+    with pytest.raises(PncpResponseError) as exc_info:
+        fetch_publications(transport=endless_transport, save=False)
+    assert "cap" in str(exc_info.value).lower() or "limit" in str(exc_info.value).lower()
 
 
 def test_fetch_publications_raises_on_count_mismatch_with_total_registros():
@@ -293,7 +361,12 @@ def test_fetch_items_raises_on_null_or_invalid_items_page():
 
 
 def test_pncp_client_instance_and_injected_transport():
-    mock_transport = MagicMock(return_value=(200, {"data": [], "paginasRestantes": 0}))
+    mock_transport = MagicMock(
+        return_value=(
+            200,
+            {"data": [], "numeroPagina": 1, "totalPaginas": 1, "paginasRestantes": 0},
+        )
+    )
     client = PncpClient(base_url="https://example.test", transport=mock_transport)
 
     records = client.fetch_publications(params={"pagina": 1}, save=False)
@@ -307,6 +380,11 @@ def test_pncp_client_instance_and_injected_transport():
 def test_pncp_response_error_carries_status():
     err = PncpResponseError("Gateway timeout", status=504)
     assert err.status == 504
+
+
+def test_urllib_transport_default_timeout_is_thirty_seconds():
+    sig = inspect.signature(urllib_transport)
+    assert sig.parameters["timeout"].default == 30.0
 
 
 def test_urllib_transport_success():
@@ -348,6 +426,27 @@ def test_urllib_transport_non_json_body():
         assert "valid json" in str(exc_info.value).lower()
 
 
+def test_urllib_transport_handles_http_204_no_content():
+    class NoContentHandler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            self.send_response(204)
+            self.end_headers()
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), NoContentHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/api/consulta/v1/empty"
+        status, data = urllib_transport(url)
+        assert status == 204
+        assert data is None
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 def test_urllib_transport_sends_the_path_the_query_and_the_accept_header():
     seen = []
 
@@ -370,6 +469,7 @@ def test_urllib_transport_sends_the_path_the_query_and_the_accept_header():
         assert urllib_transport(url, {"pagina": 2, "uf": "PA"}) == (200, {"ok": True})
     finally:
         server.shutdown()
+        server.server_close()
     assert seen == [("/api/consulta/v1/x?pagina=2&uf=PA", "application/json")]
 
 
@@ -393,3 +493,4 @@ def test_urllib_transport_times_out():
             urllib_transport(url, timeout=0.05)
     finally:
         server.shutdown()
+        server.server_close()

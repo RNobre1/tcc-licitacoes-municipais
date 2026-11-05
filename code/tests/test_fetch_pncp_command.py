@@ -212,6 +212,24 @@ def test_fetch_pncp_command_requires_valid_dates():
     assert "YYYY-MM-DD" in str(exc_info.value)
 
 
+def test_fetch_pncp_command_handles_empty_window_204():
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        uf="PA",
+        modality=6,
+        transport=lambda u, p: (204, None),
+        stdout=out,
+    )
+    output = out.getvalue()
+    assert "Publications: 0" in output
+    assert "Item pages: 0" in output
+    assert "Items: 0" in output
+    assert "Failures: 0" in output
+
+
 @pytest.mark.integration
 @pytest.mark.django_db
 def test_fetch_pncp_command_runs_pipeline_and_prints_summary():

@@ -156,7 +156,12 @@ def test_a_failed_items_walk_leaves_no_records():
 def test_a_failed_publications_walk_leaves_no_records():
     def flaky(url, params):
         if params["pagina"] == 1:
-            return 200, {"data": [], "paginasRestantes": 1}
+            return 200, {
+                "data": [],
+                "numeroPagina": 1,
+                "totalPaginas": 2,
+                "paginasRestantes": 1,
+            }
         return 500, {"message": "down"}
 
     with pytest.raises(PncpResponseError):
