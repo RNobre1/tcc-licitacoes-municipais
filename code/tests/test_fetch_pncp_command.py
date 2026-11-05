@@ -1,11 +1,13 @@
 import io
 import json
+import urllib.error
 from pathlib import Path
 
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
+from ingestion.client import PncpResponseError
 from ingestion.management.commands.fetch_pncp import (
     RetryingTransport,
     create_retrying_transport,
@@ -132,6 +134,77 @@ def test_retrying_transport_retries_on_timeout_or_connection_error():
     assert sleep_calls == [0.1]
 
 
+def test_retrying_transport_does_not_retry_pncp_response_error_with_4xx():
+    calls = []
+
+    def client_error_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        raise PncpResponseError("Bad Request", status=400)
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=client_error_transport,
+        max_attempts=5,
+        backoff_factor=1.0,
+        sleep_func=sleep_calls.append,
+    )
+
+    with pytest.raises(PncpResponseError) as exc_info:
+        transport("https://example.test", None)
+
+    assert exc_info.value.status == 400
+    assert len(calls) == 1
+    assert sleep_calls == []
+
+
+def test_retrying_transport_retries_pncp_response_error_with_5xx():
+    calls = []
+
+    def gateway_error_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        if len(calls) < 2:
+            raise PncpResponseError("Bad Gateway", status=502)
+        return 200, {"recovered": True}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=gateway_error_transport,
+        max_attempts=3,
+        backoff_factor=0.2,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test", None)
+    assert status == 200
+    assert data == {"recovered": True}
+    assert len(calls) == 2
+    assert sleep_calls == [0.2]
+
+
+def test_retrying_transport_retries_urllib_url_error():
+    calls = []
+
+    def network_error_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        if len(calls) < 2:
+            raise urllib.error.URLError("Connection refused")
+        return 200, {"online": True}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=network_error_transport,
+        max_attempts=3,
+        backoff_factor=0.2,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test", None)
+    assert status == 200
+    assert data == {"online": True}
+    assert len(calls) == 2
+    assert sleep_calls == [0.2]
+
+
 def test_fetch_pncp_command_requires_valid_dates():
     out = io.StringIO()
     with pytest.raises(CommandError) as exc_info:
@@ -203,6 +276,9 @@ def test_fetch_pncp_skips_publication_on_item_failure_and_counts_it():
     page_1 = _read_json("publications_page_1.json")
     single_pub_envelope = dict(page_1)
     single_pub_envelope["data"] = [page_1["data"][0]]
+    single_pub_envelope["totalRegistros"] = 1
+    single_pub_envelope["totalPaginas"] = 1
+    single_pub_envelope["numeroPagina"] = 1
     single_pub_envelope["paginasRestantes"] = 0
 
     def mock_failing_items_transport(url: str, params: dict | None = None):
