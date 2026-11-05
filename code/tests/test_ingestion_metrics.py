@@ -149,6 +149,12 @@ class TestMedianDescriptionLength:
         ]
         assert median_description_length(items) == 15.0
 
+    def test_the_median_is_not_the_mean_on_skewed_lengths(self):
+        odd = [{"descricao": "a" * n} for n in (1, 2, 100)]
+        even = [{"descricao": "a" * n} for n in (1, 2, 3, 100)]
+        assert median_description_length(odd) == 2.0
+        assert median_description_length(even) == 2.5
+
     def test_returns_float_type(self):
         items = [{"descricao": "item"}]
         result = median_description_length(items)
@@ -200,6 +206,13 @@ class TestDistinctUnits:
             {"unidadeMedida": " kg "},
         ]
         assert distinct_units(items) == 2
+
+    def test_casefold_distinguishes_from_lower(self):
+        items = [
+            {"unidadeMedida": "ß"},
+            {"unidadeMedida": "SS"},
+        ]
+        assert distinct_units(items) == 1
 
     def test_missing_and_none_units_ignored(self):
         items = [
