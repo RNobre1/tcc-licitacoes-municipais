@@ -44,6 +44,12 @@ class RetryingTransport:
                     raise
                 if isinstance(exc, urllib.error.HTTPError) and exc.code < 500:
                     raise
+                if (
+                    isinstance(exc, PncpResponseError)
+                    and exc.status is not None
+                    and exc.status < 500
+                ):
+                    raise
 
             # Retry with exponential backoff
             sleep_duration = self.backoff_factor * (2 ** (attempt - 1))
