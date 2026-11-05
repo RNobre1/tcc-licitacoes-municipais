@@ -1,0 +1,31 @@
+[
+  {
+    "numeroItem": 4,
+    "descricao": "DEMO-Caneta esferográfica ponta média 1.0mm tinta azul",
+    "quantidade": 500.0,
+    "valorUnitarioEstimado": 1.25,
+    "criterioJulgamentoNome": "Menor Preço",
+    "temResultado": true,
+    "orcamentoSigiloso": false
+  },
+  {
+    "numeroItem": 5,
+    "descricao": "DEMO-Fita adesiva transparente 45mm x 50m",
+    "quantidade": 80.0,
+    "unidadeMedida": "PACOTE",
+    "valorUnitarioEstimado": 6.8,
+    "criterioJulgamentoNome": "Menor Preço",
+    "temResultado": true,
+    "orcamentoSigiloso": false
+  },
+  {
+    "numeroItem": 6,
+    "descricao": "DEMO-Toner para impressora laser monocromática",
+    "quantidade": 10.0,
+    "unidadeMedida": "UNIDADE",
+    "valorUnitarioEstimado": 0.0,
+    "criterioJulgamentoNome": "Menor Preço",
+    "temResultado": false,
+    "orcamentoSigiloso": true
+  }
+]

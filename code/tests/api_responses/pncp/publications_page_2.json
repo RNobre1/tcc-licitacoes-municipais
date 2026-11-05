@@ -1,0 +1,44 @@
+{
+  "data": [
+    {
+      "orgaoEntidade": {
+        "cnpj": "99999999999999",
+        "razaoSocial": "Prefeitura Fictícia C"
+      },
+      "anoCompra": 2026,
+      "sequencialCompra": 3,
+      "numeroControlePNCP": "99999999999999-1-000003/2026",
+      "objetoCompra": "DEMO-Contratação de serviços de limpeza predial e conservação",
+      "dataPublicacaoPncp": "2026-11-02T09:00:00",
+      "modalidadeId": 6,
+      "unidadeOrgao": {
+        "ufSigla": "PA",
+        "municipioNome": "Município Fictício Gama",
+        "codigoIbge": "1500003"
+      },
+      "valorTotalEstimado": 72000.0
+    },
+    {
+      "orgaoEntidade": {
+        "cnpj": "99999999999999",
+        "razaoSocial": "Prefeitura Fictícia D"
+      },
+      "anoCompra": 2026,
+      "sequencialCompra": 4,
+      "numeroControlePNCP": "99999999999999-1-000004/2026",
+      "objetoCompra": "DEMO-Aquisição de gêneros alimentícios para merenda escolar",
+      "dataPublicacaoPncp": "2026-11-02T16:45:00",
+      "modalidadeId": 6,
+      "unidadeOrgao": {
+        "ufSigla": "PA",
+        "municipioNome": "Município Fictício Delta",
+        "codigoIbge": "1500004"
+      },
+      "valorTotalEstimado": 34000.0
+    }
+  ],
+  "totalRegistros": 4,
+  "totalPaginas": 2,
+  "numeroPagina": 2,
+  "paginasRestantes": 0
+}

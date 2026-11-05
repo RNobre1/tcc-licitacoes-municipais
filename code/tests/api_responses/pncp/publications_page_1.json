@@ -1,0 +1,44 @@
+{
+  "data": [
+    {
+      "orgaoEntidade": {
+        "cnpj": "00000000000000",
+        "razaoSocial": "Prefeitura Fictícia A"
+      },
+      "anoCompra": 2026,
+      "sequencialCompra": 1,
+      "numeroControlePNCP": "00000000000000-1-000001/2026",
+      "objetoCompra": "DEMO-Aquisição de material de escritório e expediente",
+      "dataPublicacaoPncp": "2026-11-01T08:30:00",
+      "modalidadeId": 6,
+      "unidadeOrgao": {
+        "ufSigla": "PA",
+        "municipioNome": "Município Fictício Alfa",
+        "codigoIbge": "1500001"
+      },
+      "valorTotalEstimado": 25000.0
+    },
+    {
+      "orgaoEntidade": {
+        "cnpj": "00000000000000",
+        "razaoSocial": "Prefeitura Fictícia B"
+      },
+      "anoCompra": 2026,
+      "sequencialCompra": 2,
+      "numeroControlePNCP": "00000000000000-1-000002/2026",
+      "objetoCompra": "DEMO-Aquisição de equipamentos de informática e periféricos",
+      "dataPublicacaoPncp": "2026-11-01T14:15:00",
+      "modalidadeId": 6,
+      "unidadeOrgao": {
+        "ufSigla": "PA",
+        "municipioNome": "Município Fictício Beta",
+        "codigoIbge": "1500002"
+      },
+      "valorTotalEstimado": 48000.0
+    }
+  ],
+  "totalRegistros": 4,
+  "totalPaginas": 2,
+  "numeroPagina": 1,
+  "paginasRestantes": 1
+}

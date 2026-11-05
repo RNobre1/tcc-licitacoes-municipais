@@ -1,0 +1,32 @@
+[
+  {
+    "numeroItem": 1,
+    "descricao": "DEMO-Papel sulfite A4 75g/m2 resma com 500 folhas",
+    "quantidade": 100.0,
+    "unidadeMedida": "UNIDADE",
+    "valorUnitarioEstimado": 28.5,
+    "criterioJulgamentoNome": "Menor Preço",
+    "temResultado": true,
+    "orcamentoSigiloso": false
+  },
+  {
+    "numeroItem": 2,
+    "descricao": "",
+    "quantidade": 50.0,
+    "unidadeMedida": "CAIXA",
+    "valorUnitarioEstimado": 45.0,
+    "criterioJulgamentoNome": "Menor Preço",
+    "temResultado": false,
+    "orcamentoSigiloso": false
+  },
+  {
+    "numeroItem": 3,
+    "descricao": "DEMO-Grampeador de mesa metálico para até 25 folhas",
+    "quantidade": 20.0,
+    "unidadeMedida": " unidade ",
+    "valorUnitarioEstimado": 19.9,
+    "criterioJulgamentoNome": "Menor Preço",
+    "temResultado": true,
+    "orcamentoSigiloso": false
+  }
+]
