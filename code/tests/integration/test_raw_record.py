@@ -9,11 +9,11 @@ from ingestion.models import RawRecord
 def test_save_and_filter_by_key_inside_payload():
     now = timezone.now()
     record = RawRecord.objects.create(
-        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        endpoint="/v1/contratacoes/publicacao",
         params={"dataInicial": "20260101", "dataFinal": "20260131", "pagina": 1},
         fetched_at=now,
         payload={
-            "numeroControlePNCP": "12345678000195-1-000001/2026",
+            "numeroControlePNCP": "00000000000000-1-000001/2026",
             "detalhes": {"modalidade": "Pregão Eletrônico", "itensCount": 5},
             "itens": [{"numeroItem": 1, "descricao": "Item 1"}],
         },
@@ -22,11 +22,11 @@ def test_save_and_filter_by_key_inside_payload():
 
     # Filter by top-level key inside payload
     filtered = RawRecord.objects.filter(
-        payload__numeroControlePNCP="12345678000195-1-000001/2026"
+        payload__numeroControlePNCP="00000000000000-1-000001/2026"
     ).first()
     assert filtered is not None
     assert filtered.pk == record.pk
-    assert filtered.endpoint == "/api/consulta/v1/contratacoes/publicacao"
+    assert filtered.endpoint == "/v1/contratacoes/publicacao"
     assert filtered.params == {"dataInicial": "20260101", "dataFinal": "20260131", "pagina": 1}
     assert filtered.fetched_at == now
     assert filtered.status_code == 200
@@ -47,7 +47,7 @@ def test_save_and_filter_by_key_inside_payload():
 def test_raw_record_status_code_is_optional():
     now = timezone.now()
     record = RawRecord.objects.create(
-        endpoint="/api/pncp/v1/orgaos/12345678000195/compras/2026/1/itens",
+        endpoint="/v1/orgaos/00000000000000/compras/2026/1/itens",
         params={"pagina": 1},
         fetched_at=now,
         payload=[{"numeroItem": 1, "descricao": "Item 1"}],
