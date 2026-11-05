@@ -417,6 +417,28 @@ declarando qual dispositivo atende, e a ordem adotada pelo município não coinc
 com a ordem dos incisos, de modo que as duas convenções precisam ser respeitadas
 ao mesmo tempo.
 
+\subsubsection{Casos de uso}
+\label{subsec:casos-de-uso}
+
+A Figura~\ref{fig:casos-de-uso} apresenta o diagrama geral de casos de uso do
+sistema. São dois atores: o operador do setor de licitações, como ator principal
+que conduz a fase preparatória e opera a solução, e a interface pública do Portal
+Nacional de Contratações Públicas (PNCP), como sistema externo de onde provêm os
+registros de preços. O diagrama reúne os casos de uso principais da rotina:
+importação e validação da demanda, consolidação entre secretarias, triagem de
+candidatos a preço de referência, cálculo do valor estimado e emissão das peças
+da contratação. Os fluxos detalhados e os demais casos de uso constam do
+repositório público do trabalho, em
+\url{https://github.com/RNobre1/tcc-licitacoes-municipais/blob/master/docs/casos-de-uso/README.md}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.75\textwidth]{figuras/casos-de-uso.pdf}
+  \caption{Diagrama geral de casos de uso da fase preparatória}
+  \label{fig:casos-de-uso}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
+
 \subsubsection{Alcance do que foi modelado}
 \label{subsec:alcance}
 
