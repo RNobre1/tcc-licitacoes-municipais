@@ -40,5 +40,6 @@
   "totalRegistros": 4,
   "totalPaginas": 2,
   "numeroPagina": 1,
-  "paginasRestantes": 1
+  "paginasRestantes": 1,
+  "empty": false
 }
