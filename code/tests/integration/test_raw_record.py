@@ -1,7 +1,17 @@
+import json
+from pathlib import Path
+
 import pytest
 from django.utils import timezone
 
+from ingestion.client import fetch_items, fetch_publications
 from ingestion.models import RawRecord
+
+PNCP_RESPONSES_DIR = Path(__file__).resolve().parent.parent / "api_responses" / "pncp"
+
+
+def _read_json(filename: str):
+    return json.loads((PNCP_RESPONSES_DIR / filename).read_text(encoding="utf-8"))
 
 
 @pytest.mark.integration
@@ -55,3 +65,64 @@ def test_raw_record_status_code_is_optional():
     assert record.status_code is None
     assert record.pk is not None
     assert record.payload == [{"numeroItem": 1, "descricao": "Item 1"}]
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_publications_stores_raw_records_in_database():
+    page_1 = _read_json("publications_page_1.json")
+    page_2 = _read_json("publications_page_2.json")
+
+    def mock_transport(url: str, params: dict | None = None):
+        if params and params.get("pagina") == 1:
+            return 200, page_1
+        return 200, page_2
+
+    initial_count = RawRecord.objects.count()
+    records = fetch_publications(
+        params={"dataInicial": "20261101", "dataFinal": "20261102"},
+        transport=mock_transport,
+        save=True,
+    )
+
+    assert len(records) == 2
+    for record in records:
+        assert record.pk is not None
+        assert record.endpoint == "/v1/contratacoes/publicacao"
+    assert RawRecord.objects.count() == initial_count + 2
+
+    # Query key inside stored payload in PostgreSQL
+    persisted = RawRecord.objects.filter(
+        payload__data__0__numeroControlePNCP="00000000000000-1-000001/2026"
+    ).first()
+    assert persisted is not None
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_items_stores_raw_records_in_database():
+    items_p1 = _read_json("items_page_1.json")
+    items_p2 = _read_json("items_page_2.json")
+    quantity = _read_json("items_quantity.json")
+
+    def mock_transport(url: str, params: dict | None = None):
+        if url.endswith("/quantidade"):
+            return 200, quantity
+        if params and params.get("pagina") == 1:
+            return 200, items_p1
+        return 200, items_p2
+
+    initial_count = RawRecord.objects.count()
+    records = fetch_items(
+        cnpj="00000000000000",
+        ano=2026,
+        sequencial=1,
+        transport=mock_transport,
+        save=True,
+    )
+
+    assert len(records) == 2
+    for record in records:
+        assert record.pk is not None
+        assert record.endpoint == "/v1/orgaos/00000000000000/compras/2026/1/itens"
+    assert RawRecord.objects.count() == initial_count + 2
