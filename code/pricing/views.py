@@ -34,18 +34,18 @@ class EstimatePanel(dict):
         return super().__contains__(key)
 
 
+EMPTY_PANEL = {
+    "mean": None,
+    "median": None,
+    "min": None,
+    "count": 0,
+    "requires_justification": False,
+}
+
+
 def build_estimate_panel(item, decisions: dict) -> dict:
     if item is None:
-        return EstimatePanel(
-            {
-                "mean": None,
-                "median": None,
-                "min": None,
-                "count": 0,
-                "requires_justification": False,
-            },
-            counted_candidate_ids=set(),
-        )
+        return EstimatePanel(EMPTY_PANEL, counted_candidate_ids=set())
 
     candidates = demo_data.candidates_for(item.id)
     counted_candidate_ids = {
@@ -57,16 +57,7 @@ def build_estimate_panel(item, decisions: dict) -> dict:
 
     count = len(prices)
     if count == 0:
-        return EstimatePanel(
-            {
-                "mean": None,
-                "median": None,
-                "min": None,
-                "count": 0,
-                "requires_justification": False,
-            },
-            counted_candidate_ids=set(),
-        )
+        return EstimatePanel(EMPTY_PANEL, counted_candidate_ids=set())
 
     return EstimatePanel(
         {
