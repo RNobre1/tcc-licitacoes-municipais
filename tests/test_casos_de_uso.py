@@ -20,9 +20,10 @@ O que se verifica:
 2. **Nenhum caso de uso cita requisito que não existe.** É o erro de digitação
    que passaria despercebido no item 1.
 3. **O diagrama e a lista têm exatamente os mesmos casos.**
+4. **O texto do TCC inclui a figura de casos de uso** e aponta para a relação
+   completa no repositório público.
 
-As três são regras, e não listas: o caso de uso e o requisito de amanhã já
-entram nelas.
+As regras cobrem o caso de uso e o requisito que entrarem amanhã.
 """
 
 from __future__ import annotations
@@ -36,6 +37,13 @@ REQUISITOS = RAIZ / "docs" / "requisitos" / "README.md"
 CASOS = RAIZ / "docs" / "casos-de-uso" / "README.md"
 DIAGRAMA = RAIZ / "docs" / "arquitetura" / "arquitetura.drawio"
 PAGINA = "Casos de uso"
+
+SECOES = RAIZ / "texto" / "tcc1" / "secoes"
+FIGURAS = RAIZ / "texto" / "tcc1" / "figuras"
+FIGURA_CASOS = FIGURAS / "casos-de-uso.pdf"
+URL_CASOS = (
+    "https://github.com/RNobre1/tcc-licitacoes-municipais/blob/master/docs/casos-de-uso/README.md"
+)
 
 RF = re.compile(r"\bRF\d{2}\b")
 UC = re.compile(r"\bUC\d{2}\b")
@@ -119,4 +127,22 @@ def test_o_diagrama_tem_exatamente_os_casos_de_uso_da_lista():
         f"só na lista: {sorted(na_lista - no_diagrama)}; "
         f"só no diagrama: {sorted(no_diagrama - na_lista)}. "
         "A lista é a fonte: corrija o diagrama."
+    )
+
+
+def test_o_texto_inclui_a_figura_de_casos_de_uso():
+    """O texto do TCC deve incluir a figura casos-de-uso.pdf gerada do diagrama."""
+    secoes = list(SECOES.glob("*.tex"))
+    texto = "\n".join(arquivo.read_text(encoding="utf-8") for arquivo in secoes)
+    assert "casos-de-uso.pdf" in texto, (
+        f"a figura casos-de-uso.pdf não está referenciada em {SECOES.relative_to(RAIZ)}"
+    )
+
+
+def test_o_texto_aponta_para_o_repositorio_de_casos_de_uso():
+    """O texto deve indicar o repositório público com a relação completa de casos de uso."""
+    secoes = list(SECOES.glob("*.tex"))
+    texto = "\n".join(arquivo.read_text(encoding="utf-8") for arquivo in secoes)
+    assert URL_CASOS in texto, (
+        f"o link {URL_CASOS} não foi encontrado em {SECOES.relative_to(RAIZ)}"
     )

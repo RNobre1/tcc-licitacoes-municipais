@@ -26,11 +26,12 @@ DIAGRAMA = RAIZ / "docs" / "arquitetura" / "arquitetura.drawio"
 FIGURAS = RAIZ / "texto" / "tcc1" / "figuras"
 PROCEDENCIA = FIGURAS / "procedencia.txt"
 
-# As três páginas do diagrama, na ordem em que aparecem no arquivo.
+# As páginas do diagrama, na ordem em que aparecem no arquivo.
 ESPERADAS = (
     "arquitetura-nivel1-contexto.pdf",
     "arquitetura-nivel2-conteineres.pdf",
     "arquitetura-fluxo-processo.pdf",
+    "casos-de-uso.pdf",
 )
 
 
@@ -53,7 +54,11 @@ def test_todas_as_figuras_foram_exportadas():
 
 def test_as_figuras_nao_estao_vazias():
     """Exportação que falha no meio deixa arquivo de zero byte, e o LaTeX aceita."""
-    vazias = [nome for nome in ESPERADAS if (FIGURAS / nome).stat().st_size == 0]
+    vazias = [
+        nome
+        for nome in ESPERADAS
+        if (FIGURAS / nome).is_file() and (FIGURAS / nome).stat().st_size == 0
+    ]
     assert vazias == [], f"figura(s) de tamanho zero: {vazias}. A exportação falhou."
 
 
