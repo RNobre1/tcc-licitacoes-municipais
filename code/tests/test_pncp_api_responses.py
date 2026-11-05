@@ -38,6 +38,10 @@ def _publications():
     return page_1["data"] + page_2["data"]
 
 
+def _readme() -> str:
+    return (PNCP_RESPONSES_DIR / "README.md").read_text(encoding="utf-8")
+
+
 def test_pncp_response_files_exist():
     assert PNCP_RESPONSES_DIR.is_dir()
     expected_files = [
@@ -186,7 +190,7 @@ def test_items_count_equals_quantity():
 def test_readme_documents_synthetic_data_and_endpoints():
     readme_path = PNCP_RESPONSES_DIR / "README.md"
     assert readme_path.is_file()
-    content = readme_path.read_text(encoding="utf-8")
+    content = _readme()
 
     assert "synthetic" in content.lower()
     assert "/api/consulta/v1/contratacoes/publicacao" in content
@@ -230,3 +234,21 @@ def test_items_belong_to_publication_in_page_1():
         and pub["sequencialCompra"] == 1
     ]
     assert len(matching) == 1
+
+
+def test_readme_states_the_page_sizes_the_files_actually_have():
+    pubs_1 = _read_json("publications_page_1.json")["data"]
+    pubs_2 = _read_json("publications_page_2.json")["data"]
+    items_1, items_2 = _read_json("items_page_1.json"), _read_json("items_page_2.json")
+    assert len(pubs_1) == 2 and 1 <= len(pubs_2) <= 2
+    assert len(items_1) == 3 and 1 <= len(items_2) <= 3
+    readme = _readme()
+    assert readme.count("`tamanhoPagina=2`") == 2 and readme.count("`tamanhoPagina=3`") == 2
+
+
+def test_readme_names_the_publication_the_items_belong_to():
+    first = _read_json("publications_page_1.json")["data"][0]
+    readme = _readme()
+    assert f"`cnpj`: `{first['orgaoEntidade']['cnpj']}`" in readme
+    assert f"`anoCompra`: `{first['anoCompra']}`" in readme
+    assert f"`sequencialCompra`: `{first['sequencialCompra']}`" in readme
