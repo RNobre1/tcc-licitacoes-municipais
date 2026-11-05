@@ -11,6 +11,7 @@ from django.utils import timezone
 from ingestion.models import RawRecord
 
 DEFAULT_PNCP_BASE_URL = "https://pncp.gov.br"
+MAX_PUBLICATIONS_PAGES = 10000
 
 TransportCallable = Callable[..., tuple[int, Any]]
 
@@ -52,6 +53,9 @@ def urllib_transport(
     except urllib.error.HTTPError as exc:
         status = exc.code
         body = exc.read()
+
+    if status == 204:
+        return 204, None
 
     try:
         decoded = body.decode("utf-8") if isinstance(body, bytes) else str(body)
@@ -95,10 +99,18 @@ class PncpClient:
         expected_total_registros: int | None = None
 
         while True:
+            if pagina > MAX_PUBLICATIONS_PAGES:
+                raise PncpResponseError(
+                    f"Publications walk exceeded hard page cap ({MAX_PUBLICATIONS_PAGES})"
+                )
+
             current_params = dict(query_params)
             current_params["pagina"] = pagina
 
             status, payload = self.transport(url, current_params)
+
+            if pagina == 1 and status == 204:
+                return []
 
             if status != 200:
                 raise PncpResponseError(
@@ -131,7 +143,16 @@ class PncpClient:
                 )
 
             numero_pagina = payload.get("numeroPagina")
-            if numero_pagina is not None and numero_pagina != pagina:
+            if (
+                numero_pagina is None
+                or not isinstance(numero_pagina, int)
+                or isinstance(numero_pagina, bool)
+            ):
+                raise PncpResponseError(
+                    f"Missing or invalid numeroPagina in payload: {payload}",
+                    status=status,
+                )
+            if numero_pagina != pagina:
                 raise PncpResponseError(
                     f"API returned numeroPagina {numero_pagina} but requested {pagina}",
                     status=status,
@@ -139,10 +160,15 @@ class PncpClient:
 
             total_paginas = payload.get("totalPaginas")
             if (
-                total_paginas is not None
-                and isinstance(total_paginas, int)
-                and pagina > total_paginas
+                total_paginas is None
+                or not isinstance(total_paginas, int)
+                or isinstance(total_paginas, bool)
             ):
+                raise PncpResponseError(
+                    f"Missing or invalid totalPaginas in payload: {payload}",
+                    status=status,
+                )
+            if pagina > total_paginas:
                 raise PncpResponseError(
                     f"Current page {pagina} exceeds totalPaginas {total_paginas}",
                     status=status,
