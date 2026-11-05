@@ -1,0 +1,241 @@
+import io
+import json
+from pathlib import Path
+
+import pytest
+from django.core.management import call_command
+from django.core.management.base import CommandError
+
+from ingestion.management.commands.fetch_pncp import (
+    RetryingTransport,
+    create_retrying_transport,
+)
+from ingestion.models import RawRecord
+
+PNCP_RESPONSES_DIR = Path(__file__).resolve().parent / "api_responses" / "pncp"
+
+
+def _read_json(filename: str):
+    return json.loads((PNCP_RESPONSES_DIR / filename).read_text(encoding="utf-8"))
+
+
+def test_retrying_transport_succeeds_on_first_try():
+    calls = []
+
+    def mock_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        return 200, {"data": []}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=mock_transport,
+        max_attempts=3,
+        backoff_factor=1.0,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test", {"p": 1})
+    assert status == 200
+    assert data == {"data": []}
+    assert len(calls) == 1
+    assert sleep_calls == []
+
+
+def test_retrying_transport_retries_on_5xx_and_succeeds():
+    calls = []
+
+    def failing_then_success_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        if len(calls) < 3:
+            return 503, {"message": "Unavailable"}
+        return 200, {"data": "ok"}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=failing_then_success_transport,
+        max_attempts=5,
+        backoff_factor=0.5,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test", None)
+    assert status == 200
+    assert data == {"data": "ok"}
+    assert len(calls) == 3
+    # Attempt 1 failed -> sleep 0.5 * 2^0 = 0.5; Attempt 2 failed -> sleep 0.5 * 2^1 = 1.0
+    assert sleep_calls == [0.5, 1.0]
+
+
+def test_retrying_transport_exhausts_retries_on_5xx():
+    calls = []
+
+    def server_error_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        return 500, {"message": "Server Error"}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=server_error_transport,
+        max_attempts=3,
+        backoff_factor=1.0,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test", None)
+    assert status == 500
+    assert len(calls) == 3
+    assert len(sleep_calls) == 2
+
+
+def test_retrying_transport_does_not_retry_4xx():
+    calls = []
+
+    def not_found_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        return 404, {"message": "Not Found"}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=not_found_transport,
+        max_attempts=5,
+        backoff_factor=1.0,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test", None)
+    assert status == 404
+    assert len(calls) == 1
+    assert sleep_calls == []
+
+
+def test_retrying_transport_retries_on_timeout_or_connection_error():
+    calls = []
+
+    def timeout_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        if len(calls) == 1:
+            raise TimeoutError("timed out")
+        return 200, {"result": "recovered"}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=timeout_transport,
+        max_attempts=3,
+        backoff_factor=0.1,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test", None)
+    assert status == 200
+    assert data == {"result": "recovered"}
+    assert len(calls) == 2
+    assert sleep_calls == [0.1]
+
+
+def test_fetch_pncp_command_requires_valid_dates():
+    out = io.StringIO()
+    with pytest.raises(CommandError) as exc_info:
+        call_command("fetch_pncp", start="invalid-date", end="2026-11-05", stdout=out)
+    assert "YYYY-MM-DD" in str(exc_info.value)
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_command_runs_pipeline_and_prints_summary():
+    page_1 = _read_json("publications_page_1.json")  # 2 publications
+    page_2 = _read_json("publications_page_2.json")  # 2 publications
+    items_p1 = _read_json("items_page_1.json")  # 3 items
+    items_p2 = _read_json("items_page_2.json")  # 3 items
+    quantity = _read_json("items_quantity.json")  # 6
+
+    def mock_transport(url: str, params: dict | None = None):
+        if "/api/consulta/v1/contratacoes/publicacao" in url:
+            p = params.get("pagina", 1) if params else 1
+            if p == 1:
+                return 200, page_1
+            return 200, page_2
+        if url.endswith("/quantidade"):
+            return 200, quantity
+        if "/itens" in url:
+            p = params.get("pagina", 1) if params else 1
+            if p == 1:
+                return 200, items_p1
+            return 200, items_p2
+        return 404, {}
+
+    retrying_transport = create_retrying_transport(
+        base_transport=mock_transport,
+        max_attempts=2,
+        backoff_factor=0.0,
+        sleep_func=lambda s: None,
+    )
+
+    out = io.StringIO()
+    initial_records = RawRecord.objects.count()
+
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-02",
+        uf="PA",
+        modality=6,
+        transport=retrying_transport,
+        stdout=out,
+    )
+
+    output = out.getvalue()
+    # 2 publication pages (total 4 publications)
+    # Each publication fetches 1 quantity + 2 item pages = 2 RawRecords for items per publication
+    # 4 publications * 2 item pages = 8 item page records
+    # Total new records = 2 (pub pages) + 8 (item pages) = 10 RawRecords
+    assert "Publications: 4" in output
+    assert "Item pages: 8" in output
+    assert "Items: 24" in output  # 4 * 6 items
+    assert "Failures: 0" in output
+    assert "Elapsed:" in output
+
+    assert RawRecord.objects.count() == initial_records + 10
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_skips_publication_on_item_failure_and_counts_it():
+    page_1 = _read_json("publications_page_1.json")
+    single_pub_envelope = dict(page_1)
+    single_pub_envelope["data"] = [page_1["data"][0]]
+    single_pub_envelope["paginasRestantes"] = 0
+
+    def mock_failing_items_transport(url: str, params: dict | None = None):
+        if "/api/consulta/v1/contratacoes/publicacao" in url:
+            return 200, single_pub_envelope
+        if url.endswith("/quantidade"):
+            # Continuous 500 error for items quantity
+            return 500, {"message": "Items unavailable"}
+        return 404, {}
+
+    retrying_transport = create_retrying_transport(
+        base_transport=mock_failing_items_transport,
+        max_attempts=2,
+        backoff_factor=0.0,
+        sleep_func=lambda s: None,
+    )
+
+    out = io.StringIO()
+    err = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        uf="PA",
+        modality=6,
+        transport=retrying_transport,
+        stdout=out,
+        stderr=err,
+    )
+
+    output = out.getvalue()
+    assert "Publications: 1" in output
+    assert "Item pages: 0" in output
+    assert "Items: 0" in output
+    assert "Failures: 1" in output
+    assert "Skipping publication" in err.getvalue() or "Skipping publication" in output
