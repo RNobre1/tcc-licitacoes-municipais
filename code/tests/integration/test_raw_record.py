@@ -4,7 +4,12 @@ from pathlib import Path
 import pytest
 from django.utils import timezone
 
-from ingestion.client import fetch_items, fetch_publications
+from ingestion.client import (
+    ItemCountMismatchError,
+    PncpResponseError,
+    fetch_items,
+    fetch_publications,
+)
 from ingestion.models import RawRecord
 
 PNCP_RESPONSES_DIR = Path(__file__).resolve().parent.parent / "api_responses" / "pncp"
@@ -14,12 +19,21 @@ def _read_json(filename: str):
     return json.loads((PNCP_RESPONSES_DIR / filename).read_text(encoding="utf-8"))
 
 
+def items_transport(quantity, pages):
+    def transport(url, params=None):
+        if url.endswith("/quantidade"):
+            return 200, quantity
+        return 200, pages.get(params["pagina"], [])
+
+    return transport
+
+
 @pytest.mark.integration
 @pytest.mark.django_db
 def test_save_and_filter_by_key_inside_payload():
     now = timezone.now()
     record = RawRecord.objects.create(
-        endpoint="/v1/contratacoes/publicacao",
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
         params={"dataInicial": "20260101", "dataFinal": "20260131", "pagina": 1},
         fetched_at=now,
         payload={
@@ -36,7 +50,7 @@ def test_save_and_filter_by_key_inside_payload():
     ).first()
     assert filtered is not None
     assert filtered.pk == record.pk
-    assert filtered.endpoint == "/v1/contratacoes/publicacao"
+    assert filtered.endpoint == "/api/consulta/v1/contratacoes/publicacao"
     assert filtered.params == {"dataInicial": "20260101", "dataFinal": "20260131", "pagina": 1}
     assert filtered.fetched_at == now
     assert filtered.status_code == 200
@@ -57,7 +71,7 @@ def test_save_and_filter_by_key_inside_payload():
 def test_raw_record_status_code_is_optional():
     now = timezone.now()
     record = RawRecord.objects.create(
-        endpoint="/v1/orgaos/00000000000000/compras/2026/1/itens",
+        endpoint="/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens",
         params={"pagina": 1},
         fetched_at=now,
         payload=[{"numeroItem": 1, "descricao": "Item 1"}],
@@ -88,7 +102,7 @@ def test_fetch_publications_stores_raw_records_in_database():
     assert len(records) == 2
     for record in records:
         assert record.pk is not None
-        assert record.endpoint == "/v1/contratacoes/publicacao"
+        assert record.endpoint == "/api/consulta/v1/contratacoes/publicacao"
     assert RawRecord.objects.count() == initial_count + 2
 
     # Query key inside stored payload in PostgreSQL
@@ -124,5 +138,27 @@ def test_fetch_items_stores_raw_records_in_database():
     assert len(records) == 2
     for record in records:
         assert record.pk is not None
-        assert record.endpoint == "/v1/orgaos/00000000000000/compras/2026/1/itens"
+        assert record.endpoint == "/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens"
     assert RawRecord.objects.count() == initial_count + 2
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_a_failed_items_walk_leaves_no_records():
+    page = [{"numeroItem": 1}, {"numeroItem": 2}, {"numeroItem": 3}]
+    with pytest.raises(ItemCountMismatchError):
+        fetch_items("00000000000000", 2026, 1, transport=items_transport(6, {1: page}), save=True)
+    assert RawRecord.objects.count() == 0
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_a_failed_publications_walk_leaves_no_records():
+    def flaky(url, params):
+        if params["pagina"] == 1:
+            return 200, {"data": [], "paginasRestantes": 1}
+        return 500, {"message": "down"}
+
+    with pytest.raises(PncpResponseError):
+        fetch_publications(transport=flaky, save=True)
+    assert RawRecord.objects.count() == 0
