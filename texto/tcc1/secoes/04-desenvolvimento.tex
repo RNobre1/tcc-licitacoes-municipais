@@ -433,7 +433,7 @@ repositório público do trabalho, em
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.75\textwidth]{figuras/casos-de-uso.pdf}
+  \includegraphics[width=0.70\textwidth]{figuras/casos-de-uso.pdf}
   \caption{Diagrama geral de casos de uso da fase preparatória}
   \label{fig:casos-de-uso}
   \fonte{Elaborado pelo autor.}
@@ -553,31 +553,16 @@ duas puxou cada candidato para cima.
 \subsubsection{Pilha tecnológica}
 \label{subsec:pilha}
 
-A implementação usa Python, com o arcabouço Django e a biblioteca HTMX para as
-interações de tela, sobre PostgreSQL. O índice semântico permanece em banco
-vetorial dedicado, pela medição já relatada.
+A implementação adota Python, com o arcabouço Django e a biblioteca HTMX para as
+interações de tela, sobre PostgreSQL, e banco vetorial dedicado para o índice
+semântico.
 
-Duas dessas escolhas têm razão técnica ligada ao problema, e duas não têm. A
-distinção é declarada porque alegar vantagem onde não há seria afirmação que o
-trabalho não consegue sustentar.
-
-As que têm razão são as do banco relacional. A primeira é o tipo de dado
-documental indexável: a resposta da base pública de contratações é aninhada e
-muda de forma entre versões da interface, e é preciso guardá-la como veio e
-ainda assim consultar campo dentro dela. A segunda é o tipo de intervalo
-temporal com restrição de exclusão por sobreposição, que resolve no próprio
-banco o versionamento exigido pela regra RN08 --- reproduzir uma pesquisa de
-preços exatamente como ela era numa data ---, em vez de deixá-lo a cargo de
-código de aplicação, que é justamente o que não se consegue auditar.
-
-As que não têm são a linguagem e o arcabouço. Python é continuidade com o
-ferramental em que a avaliação descrita na seção~\ref{sec:metodologia} é
-executada, e não escolha de desempenho; Django poupa esforço em autenticação,
-migrações e formulários, que não são objeto de avaliação neste trabalho.
-Nenhuma das duas altera o que será medido: o mesmo experimento produziria o
-mesmo resultado em qualquer linguagem de uso geral. Registrá-las sem alegar
-superioridade é o que mantém a comparação de alternativas onde ela de fato
-pesa, que é a representação das descrições.
+A única escolha com razão técnica ligada ao problema é a do banco relacional: o
+tipo de dado \code{JSONB} para guardar a resposta aninhada da base pública de
+contratações permitindo consultar campos internos, e o tipo de intervalo temporal
+com restrição de exclusão por sobreposição para resolver no próprio banco o
+versionamento exigido pela regra RN08 --- reproduzir uma pesquisa de preços como
+ela era na data em que foi realizada.
 
 \subsubsection{Decisões ainda abertas}
 \label{subsec:decisoes-abertas}
