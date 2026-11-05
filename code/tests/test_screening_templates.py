@@ -423,7 +423,27 @@ def test_the_panel_prints_each_value_with_exactly_two_decimals():
 def test_estimate_panel_renders_wrapper_with_grid_class_and_aria_live():
     rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": NO_PRICES})
     assert 'aria-live="polite"' in rendered
-    assert re.search(r'class="[^"]*\bgrid\b[^"]*"', rendered)
+    wrapper = re.search(r'<div class="([^"]*)">\s*<p>', rendered)
+    assert wrapper and "grid" in wrapper.group(1).split()
+
+
+def test_the_estimate_wrapper_carries_the_grid_class_as_a_token():
+    rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": NO_PRICES})
+    wrapper = re.search(r'<div class="([^"]*)">\s*<p>', rendered)
+    assert wrapper and "grid" in wrapper.group(1).split()
+
+
+def test_no_justification_notice_from_three_prices_on():
+    for count in (3, 4, 7):
+        estimate = {
+            "mean": Decimal("10"),
+            "median": Decimal("10"),
+            "min": Decimal("10"),
+            "count": count,
+            "requires_justification": False,
+        }
+        rendered = render_to_string("pricing/_estimate_panel.html", {"estimate": estimate})
+        assert "Menos de três preços" not in rendered
 
 
 def test_estimate_panel_renders_values_in_brazilian_currency_and_justification_notice():

@@ -6,7 +6,7 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
-from pricing import demo_data
+from pricing import demo_data, views
 from pricing.ranking import rank_candidates
 from pricing.views import build_estimate_panel
 from procurement.demo_data import get_item
@@ -22,6 +22,11 @@ NO_PRICES = {
 
 def _flat(text: str) -> str:
     return " ".join(text.split())
+
+
+def _row(html: str, candidate_id: int) -> str:
+    match = re.search(rf'<tr id="candidate-{candidate_id}".*?</tr>', html, re.S)
+    return match.group(0) if match else ""
 
 
 def _estimate(client, item_id):
@@ -649,3 +654,25 @@ def test_candidate_calculation_label_agrees_with_builder_counted_candidates(clie
 
     swap_4 = _decide(client, 4, "accept").content.decode()
     assert "fora do cálculo: unidade diferente" in swap_4 and "Aceito" not in swap_4
+
+
+def test_the_page_has_no_justification_notice_with_three_accepted_prices(client):
+    for candidate_id in (1, 2, 3):
+        _decide(client, candidate_id, "accept")
+    html = client.get(reverse("pricing:screening", args=[1])).content.decode()
+    assert "Menos de três preços" not in html
+
+
+def test_the_row_label_follows_the_builder_and_not_a_rule_of_its_own(client, monkeypatch):
+    real = views.build_estimate_panel
+
+    def builder_that_counts_nothing(item, decisions):
+        panel = real(item, decisions)
+        panel.counted_candidate_ids = set()
+        return panel
+
+    monkeypatch.setattr(views, "build_estimate_panel", builder_that_counts_nothing)
+    swapped = _decide(client, 1, "accept").content.decode()  # candidate 1: same unit as item 1
+    assert "fora do cálculo: unidade diferente" in swapped and "Aceito" not in swapped
+    page = client.get(reverse("pricing:screening", args=[1])).content.decode()
+    assert "fora do cálculo: unidade diferente" in _row(page, 1)
