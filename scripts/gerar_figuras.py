@@ -38,6 +38,7 @@ PAGINAS = {
     1: "arquitetura-nivel1-contexto.pdf",
     2: "arquitetura-nivel2-conteineres.pdf",
     3: "arquitetura-fluxo-processo.pdf",
+    4: "casos-de-uso.pdf",
 }
 
 
