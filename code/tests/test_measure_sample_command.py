@@ -7,6 +7,82 @@ from django.core.management.base import CommandError
 
 from ingestion.models import RawRecord
 
+PUBLICATIONS = "/api/consulta/v1/contratacoes/publicacao"
+T1 = datetime(2026, 11, 3, 10, 0, tzinfo=UTC)
+T2 = datetime(2026, 11, 3, 11, 0, tzinfo=UTC)
+T3 = datetime(2026, 11, 3, 12, 0, tzinfo=UTC)
+
+
+def window(**changes):
+    params = {
+        "dataInicial": "20261101",
+        "dataFinal": "20261102",
+        "uf": "PA",
+        "codigoModalidadeContratacao": 6,
+        "pagina": 1,
+        "tamanhoPagina": 50,
+    }
+    return {**params, **changes}
+
+
+def publication(seq, day="2026-11-01"):
+    return {
+        "orgaoEntidade": {"cnpj": "00000000000000"},
+        "anoCompra": 2026,
+        "sequencialCompra": seq,
+        "dataPublicacaoPncp": f"{day}T10:00:00",
+    }
+
+
+def publication_page(publications, fetched_at=T2, **changes):
+    RawRecord.objects.create(
+        endpoint=PUBLICATIONS,
+        params=window(**changes),
+        fetched_at=fetched_at,
+        status_code=200,
+        payload={
+            "data": publications,
+            "totalRegistros": len(publications),
+            "totalPaginas": 1,
+            "numeroPagina": 1,
+            "paginasRestantes": 0,
+        },
+    )
+
+
+def item_page(seq, items, page=1, fetched_at=T2):
+    RawRecord.objects.create(
+        endpoint=f"/api/pncp/v1/orgaos/00000000000000/compras/2026/{seq}/itens",
+        params={"pagina": page, "tamanhoPagina": 500},
+        fetched_at=fetched_at,
+        status_code=200,
+        payload=items,
+    )
+
+
+def item(number, description="item", unit="UN", quantity=1, value=1.0):
+    return {
+        "numeroItem": number,
+        "descricao": description,
+        "unidadeMedida": unit,
+        "quantidade": quantity,
+        "valorUnitarioEstimado": value,
+    }
+
+
+def measure(**options):
+    out = io.StringIO()
+    call_command(
+        "measure_sample",
+        start="2026-11-01",
+        end="2026-11-02",
+        uf="PA",
+        modality=6,
+        stdout=out,
+        **options,
+    )
+    return out.getvalue()
+
 
 @pytest.mark.integration
 @pytest.mark.django_db
@@ -228,3 +304,66 @@ def test_measure_sample_requires_valid_dates():
     with pytest.raises(CommandError) as exc_info:
         call_command("measure_sample", start="2026-11-05", end="2026-11-01", stdout=out)
     assert "cannot be after" in str(exc_info.value).lower()
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_the_latest_copy_of_a_page_is_the_one_measured():
+    publication_page([publication(1)])
+    item_page(1, [item(1)], fetched_at=T1)  # older copy, inserted first: one item
+    item_page(1, [item(1), item(2)], fetched_at=T2)  # newer copy: two items
+    assert "Items: 2" in measure()
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_every_page_of_a_purchase_is_measured():
+    publication_page([publication(1)])
+    item_page(1, [item(1), item(2)], page=1)
+    item_page(1, [item(3)], page=2)
+    report = measure()
+    assert "Item pages: 2" in report
+    assert "Items: 3" in report
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_the_report_carries_every_value_in_a_fixed_order():
+    publication_page(
+        [publication(2, day="2026-11-02"), publication(1, day="2026-11-01")],
+        fetched_at=T2,
+    )
+    item_page(
+        1,
+        [item(1, description="a" * 2, quantity=None), item(2, description="a" * 3)],
+        fetched_at=T1,
+    )
+    item_page(2, [item(1, description="a" * 100, unit=None)], fetched_at=T3)
+    report = measure()
+    assert "Median description length: 3.0" in report  # the mean would be 35.0
+    assert "quantidade: 0.3333" in report
+    assert "unidadeMedida: 0.3333" in report
+    assert "Distinct units: 1" in report
+    assert "Fetch time: 2026-11-03T10:00:00+00:00 to 2026-11-03T12:00:00+00:00" in report
+    assert report.index("2026-11-01: 1") < report.index("2026-11-02: 1")
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "difference",
+    [
+        {"dataInicial": "20261031"},
+        {"dataFinal": "20261103"},
+        {"uf": "MA"},
+        {"codigoModalidadeContratacao": 8},
+    ],
+)
+def test_only_the_window_the_uf_and_the_modality_asked_for_are_measured(difference):
+    publication_page([publication(1)])
+    item_page(1, [item(1)])
+    publication_page([publication(2)], **difference)
+    item_page(2, [item(1), item(2), item(3)])
+    report = measure()
+    assert "Publications: 1" in report
+    assert "Items: 1" in report
