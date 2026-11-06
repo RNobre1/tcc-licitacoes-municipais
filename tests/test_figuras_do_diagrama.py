@@ -54,11 +54,7 @@ def test_todas_as_figuras_foram_exportadas():
 
 def test_as_figuras_nao_estao_vazias():
     """Exportação que falha no meio deixa arquivo de zero byte, e o LaTeX aceita."""
-    vazias = [
-        nome
-        for nome in ESPERADAS
-        if (FIGURAS / nome).stat().st_size == 0
-    ]
+    vazias = [nome for nome in ESPERADAS if (FIGURAS / nome).stat().st_size == 0]
     assert vazias == [], f"figura(s) de tamanho zero: {vazias}. A exportação falhou."
 
 
