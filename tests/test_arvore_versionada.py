@@ -227,7 +227,8 @@ def test_o_arquivo_de_exclusoes_e_o_do_repositorio_mesmo_dentro_de_worktree(tmp_
     assert _arquivo_de_exclusoes_locais(worktree).resolve() == esperado
 
 
-def test_importar_este_modulo_nao_depende_do_git():
+@pytest.mark.parametrize("modulo", sorted(p.stem for p in (RAIZ / "tests").glob("*.py")))
+def test_importar_um_modulo_de_testes_nao_depende_do_git(modulo: str):
     """A coleta não pode chamar o git, só os testes que precisam dele.
 
     O job do PDF roda num contêiner como root, sobre um checkout de outro
@@ -236,10 +237,13 @@ def test_importar_este_modulo_nao_depende_do_git():
     git no nível do módulo derrubou a coleta inteira, e com ela a CI, de 05/11 a
     06/11. Aqui o git é tornado inutilizável de propósito, e a importação tem de
     passar mesmo assim.
+
+    Vale para todo módulo de ``tests/``, inclusive o que nascer amanhã: a lista
+    sai da pasta, e não deste arquivo.
     """
     ambiente = {**os.environ, "GIT_DIR": str(RAIZ / "nao-existe")}
     resultado = subprocess.run(
-        [sys.executable, "-c", "import tests.test_arvore_versionada"],
+        [sys.executable, "-c", f"import tests.{modulo}"],
         cwd=RAIZ,
         env=ambiente,
         capture_output=True,
