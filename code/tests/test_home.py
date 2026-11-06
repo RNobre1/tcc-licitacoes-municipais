@@ -1,4 +1,7 @@
+import re
+
 from django.conf import settings
+from django.urls import reverse
 
 
 def test_home_page_renders_system_name_and_header(client):
@@ -16,3 +19,16 @@ def test_home_page_renders_system_name_and_header(client):
 
     # 3. The page has its own <h1>
     assert "<h1>" in content
+
+
+def test_home_page_links_to_procurement_list(client):
+    response = client.get("/")
+
+    assert response.status_code == 200
+
+    content = response.content.decode("utf-8")
+    list_url = reverse("procurement:list")
+    assert re.search(
+        rf'<a\s+[^>]*href="{re.escape(list_url)}"[^>]*>\s*Ver processos\s*</a>',
+        content,
+    )

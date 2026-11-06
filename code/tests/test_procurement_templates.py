@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -5,6 +6,7 @@ import pytest
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.test import RequestFactory
+from django.urls import reverse
 
 
 @dataclass(frozen=True)
@@ -26,6 +28,11 @@ class ProcurementStub:
 pytestmark = pytest.mark.urls("tests.urls")
 
 
+def _render_home() -> str:
+    request = RequestFactory().get("/")
+    return render_to_string("procurement/home.html", request=request)
+
+
 def _render_procurement_list(procurements: list[ProcurementStub]) -> str:
     request = RequestFactory().get("/procurements/")
     return render_to_string(
@@ -41,6 +48,15 @@ def _render_procurement_detail(procurement: ProcurementStub) -> str:
         "procurement/procurement_detail.html",
         {"procurement": procurement},
         request=request,
+    )
+
+
+def test_home_renders_link_to_procurement_list():
+    rendered = _render_home()
+    list_url = reverse("procurement:list")
+    assert re.search(
+        rf'<a\s+[^>]*href="{re.escape(list_url)}"[^>]*>\s*Ver processos\s*</a>',
+        rendered,
     )
 
 
