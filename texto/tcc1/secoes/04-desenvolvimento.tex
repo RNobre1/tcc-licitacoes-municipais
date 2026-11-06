@@ -422,10 +422,11 @@ ao mesmo tempo.
 
 A Figura~\ref{fig:casos-de-uso} apresenta o diagrama geral de casos de uso do
 sistema. São dois atores: o operador do setor de licitações, que conduz a fase
-preparatória e opera a solução, e a Base pública de contratações (PNCP), de onde
-provêm os registros de preços. O diagrama reúne os onze casos de uso do sistema.
-A relação completa, com o objetivo e os requisitos de cada um, consta do
-repositório público do trabalho\footnote{\url{https://github.com/RNobre1/tcc-licitacoes-municipais/blob/master/docs/casos-de-uso/README.md}};
+preparatória e opera a solução, e a base pública de contratações, o Portal
+Nacional de Contratações Públicas (PNCP), de onde provêm os registros de preços.
+O diagrama reúne os onze casos de uso. A relação completa, com o objetivo e os
+requisitos de cada um, consta do repositório público do
+trabalho\footnote{\url{https://github.com/RNobre1/tcc-licitacoes-municipais/blob/master/docs/casos-de-uso/README.md}};
 o detalhamento de cada caso será escrito quando ele for implementado.
 
 \begin{figure}[H]
@@ -554,8 +555,8 @@ A implementação adota Python, com o arcabouço Django e a biblioteca HTMX para
 interações de tela, sobre PostgreSQL. O índice semântico permanece em banco
 vetorial dedicado, pela medição já relatada.
 
-A escolha com razão técnica ligada ao problema no banco relacional decorre de
-duas necessidades. A primeira é o tipo de dado \code{JSONB}: a resposta da base
+No banco relacional, duas necessidades do problema pesaram. A primeira é o tipo
+de dado \code{JSONB}: a resposta da base
 pública de contratações é aninhada e muda de forma entre versões da interface, e
 é preciso guardá-la como veio e ainda assim consultar campos dentro dela. A
 segunda é o tipo de intervalo temporal com restrição de exclusão por
