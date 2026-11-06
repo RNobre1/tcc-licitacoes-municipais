@@ -27,7 +27,7 @@ e 35 no do SIBI, e a versão de trabalho, com os marcadores de pendência, em 28
 | Opção | Prós | Contras |
 |---|---|---|
 | A. Manter o teto e cortar texto | Segue o número fixado em 19/08 | Corta o que a orientação pediu depois, e o texto ainda não tem resultados nem conclusão: o corte se repetiria a cada seção |
-| B. Retirar o teto da guarda e registrar a contagem | O texto cresce com o que é pedido. A contagem segue visível em cada compilação | Precisa de confirmação da orientação, que foi quem fixou o número |
+| B. Retirar o teto da guarda | O texto cresce com o que é pedido | Precisa de confirmação da orientação, que foi quem fixou o número |
 
 ## Decisão
 

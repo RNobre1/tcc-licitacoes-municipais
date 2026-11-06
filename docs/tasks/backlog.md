@@ -198,7 +198,7 @@ As três candidatas deste trabalho, nenhuma dependente de o sistema existir:
 | ~~Seção de resultados esperados~~ | Autor | fechado — R1 a R8; falta o instrumento de usabilidade |
 | Trabalhos relacionados: escrever o quadro com quatro referências citadas | Autor | em andamento |
 | ~~Figuras dos diagramas~~ | Autor | fechado — exportadas e guardadas por teste de frescor |
-| ~~Reduzir a subseção da pilha tecnológica a uma declaração~~: a orientação dispensou justificar a linguagem (24/10) | Autor | fechado em 06/11 — fica só a razão do banco relacional. O teto de 25 páginas deixou de barrar, a confirmar com a orientação em 07/11: `TCC/decisões/2026-11-06-sem-teto-de-paginas.md` |
+| ~~Reduzir a subseção da pilha tecnológica a uma declaração~~: a orientação dispensou justificar a linguagem (24/10) | Autor | fechado em 06/11 — fica a razão do banco relacional. O teto de 25 páginas deixou de barrar, a confirmar com a orientação em 07/11: `TCC/decisões/2026-11-06-sem-teto-de-paginas.md` |
 | ~~Diagrama geral de casos de uso no texto; os demais por link ao repositório (orientação, 24/10)~~ | Autor | fechado em 06/11 — o diagrama está na seção de desenvolvimento, e a relação completa em `docs/casos-de-uso/README.md` |
 | Resultados no TCC II com teste de aceitação com usuário e estatística descritiva (orientação, 24/10) | Autor | TCC II |
 | Fonte publicada para a afirmação sobre municípios de pequeno porte | Autor | bloqueado em pesquisa |

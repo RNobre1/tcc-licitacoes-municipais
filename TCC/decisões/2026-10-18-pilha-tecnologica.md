@@ -127,6 +127,9 @@ dispensa, ela pode encolher para uma declaração, mantendo só a razão do banc
 relacional, que é a única ligada ao problema. O espaço recuperado volta para o
 alvo da SBC.
 
+A redução foi feita em 06/11. No mesmo dia, o teto de 25 páginas deixou de
+barrar o texto: ver [[2026-11-06-sem-teto-de-paginas]].
+
 ## Backlinks
 
 - [[2026-09-22-um-unico-perfil-de-usuario]]
