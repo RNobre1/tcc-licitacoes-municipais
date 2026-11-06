@@ -31,7 +31,7 @@ O que destrava mais coisa adiante, em ordem.
 
 | # | O que | Dono | Estado | Destrava |
 |---|---|---|---|---|
-| C1 | Medir volume, ritmo de publicação e formato das descrições da base pública | Autor | aberto | Decisão A3, e dimensiona o índice |
+| C1 | ~~Medir volume, ritmo de publicação e formato das descrições da base pública~~ | Autor | fechado em 05/11 — uma semana de pregão eletrônico no Pará: 5.116 itens, mediana de 77 caracteres, 94 unidades, 16,4% com orçamento sigiloso. Nota em `TCC/validações/2026-11-05-medicao-exploratoria-da-base-publica.md` | Decisão A3, e dimensiona o índice |
 | C2 | Montar o conjunto de avaliação a partir dos relatórios de cotação já recebidos | Autor | aberto | Decisão A2, que é a que mais afeta o resultado |
 | C3 | Levantar candidatos a modelo de representação e rodar a bateria contra C2 | Autor | aberto | Fecha A2 |
 | C4 | ~~Escrever a seção de resultados esperados~~ | Autor | **fechado** | R1 a R8 escritos, um indicador cada; os limiares ficam em C11 |
@@ -244,6 +244,7 @@ não deste arquivo.
 | D14 | Arredondamento do valor estimado. A IN 65/2021 não fixa casas decimais nem regra. Como o valor estimado é teto (RN05), arredondar para cima ou para baixo muda quais propostas ficam abaixo dele. As funções do dia 06 devolvem o valor exato em `Decimal` **Estado do protótipo (03/11):** a tela da triagem exibe os três métodos com duas casas, arredondando meio para cima (`floatformat:2`). Assim, `10,005` aparece como `R$ 10,01` e um valor abaixo de um centavo aparece como `R$ 0,00`, que é o que a RN05 diz que o valor estimado nunca pode ser. As funções e o contexto continuam exatos. | Autor | aberto — aguarda a memória de cálculo do RF25 e a prática da fonte de domínio |
 | D15 | Carência para pacotes novos em `code/pyproject.toml` (`[tool.uv] exclude-newer`), hoje em 28/10/2026. A data é um retrato, não uma janela: pacote publicado depois dela não entra, nem por `uv add`. Rotina: toda segunda-feira, mover a data para a segunda anterior, refazer o lock e rodar a suíte. Exceção imediata, por `exclude-newer-package`, só para versão de segurança do Django que toque o que o projeto usa (admin roteado, upload, GIS, cache, sessão ou template) | Autor | rotina — a próxima atualização é em 09/11 |
 | D16 | A tabela de candidatos da triagem tem doze colunas e fica mais larga que a tela de um notebook. Numa janela de 1.470 px, a página só cabe com o navegador em 75%. Resolver junto com a forma final da tela, que a sessão C5 vai exercitar | Autor | aberto |
+| D17 | Coletar o preço homologado dos itens (`/itens/{n}/resultados`). A coleta de hoje traz os itens com o preço **estimado** de cada compra; o preço que a IN 65/2021 aceita como referência é o **homologado**, que vem de outro endereço da API (ver `docs/pesquisas/api-pncp-viabilidade-pesquisa-de-precos.md`, §5.2). Pede uma requisição por item, e por isso o tempo de ingestão medido em 05/11 não vale para ela | Autor | aberto |
 
 **Convenção de citação daqui em diante**, fixada em 24/10: biblioteca usada é
 mencionada no texto com link para a documentação técnica dela. Não exige a

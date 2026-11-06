@@ -213,9 +213,12 @@ envelhece num deles, e quem lê não descobre qual.
 
 O caminho crítico de hoje, só para orientar a leitura:
 
-1. Medir volume e descrições da base pública, que dimensiona o índice.
-2. Montar o conjunto de avaliação a partir dos relatórios de cotação recebidos.
-3. Rodar a bateria de modelos de representação contra ele.
+1. Montar o conjunto de avaliação a partir dos relatórios de cotação recebidos.
+2. Fixar o limiar de aceitação de cada resultado esperado, antes de medir.
+3. Rodar a bateria de modelos de representação contra o conjunto de avaliação.
+
+A medição da base pública, que dimensiona o índice, foi feita em 05/11/2026 e
+está registrada em `TCC/validações/`.
 
 As decisões de escopo dos dois módulos e do desenho da avaliação foram fechadas
 em 06/09/2026 e estão registradas em `TCC/decisões/`.
