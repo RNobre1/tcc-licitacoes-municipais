@@ -57,7 +57,7 @@ def test_as_figuras_nao_estao_vazias():
     vazias = [
         nome
         for nome in ESPERADAS
-        if (FIGURAS / nome).is_file() and (FIGURAS / nome).stat().st_size == 0
+        if (FIGURAS / nome).stat().st_size == 0
     ]
     assert vazias == [], f"figura(s) de tamanho zero: {vazias}. A exportação falhou."
 

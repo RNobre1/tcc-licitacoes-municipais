@@ -130,19 +130,29 @@ def test_o_diagrama_tem_exatamente_os_casos_de_uso_da_lista():
     )
 
 
-def test_o_texto_inclui_a_figura_de_casos_de_uso():
-    """O texto do TCC deve incluir a figura casos-de-uso.pdf gerada do diagrama."""
-    secoes = list(SECOES.glob("*.tex"))
-    texto = "\n".join(arquivo.read_text(encoding="utf-8") for arquivo in secoes)
-    assert "casos-de-uso.pdf" in texto, (
-        f"a figura casos-de-uso.pdf não está referenciada em {SECOES.relative_to(RAIZ)}"
-    )
+def _texto_sem_comentarios() -> str:
+    linhas = []
+    for arquivo in SECOES.glob("*.tex"):
+        for linha in arquivo.read_text(encoding="utf-8").splitlines():
+            linhas.append(re.sub(r"(?<!\\)%.*", "", linha))
+    return "\n".join(linhas)
 
 
-def test_o_texto_aponta_para_o_repositorio_de_casos_de_uso():
-    """O texto deve indicar o repositório público com a relação completa de casos de uso."""
-    secoes = list(SECOES.glob("*.tex"))
-    texto = "\n".join(arquivo.read_text(encoding="utf-8") for arquivo in secoes)
-    assert URL_CASOS in texto, (
-        f"o link {URL_CASOS} não foi encontrado em {SECOES.relative_to(RAIZ)}"
+def test_a_figura_esta_num_ambiente_figure_completo_e_e_citada_no_texto():
+    texto = _texto_sem_comentarios()
+    achado = re.search(
+        r"\\begin\{figure\}(?:(?!\\end\{figure\}).)*?casos-de-uso\.pdf(?:(?!\\end\{figure\}).)*\\end\{figure\}",
+        texto,
+        re.S,
     )
+    assert achado, "a figura casos-de-uso.pdf não está num ambiente figure fora de comentário"
+    bloco = achado.group(0)
+    assert re.search(r"\\includegraphics\[[^\]]*\]\{figuras/casos-de-uso\.pdf\}", bloco)
+    assert r"\caption{" in bloco and r"\label{fig:casos-de-uso}" in bloco and r"\fonte{" in bloco
+    largura = re.search(r"width=([\d.]+)\\textwidth", bloco)
+    assert largura and 0 < float(largura.group(1)) <= 1.0
+    assert r"\ref{fig:casos-de-uso}" in texto, "a figura existe mas nenhum parágrafo a cita"
+
+
+def test_o_link_dos_casos_de_uso_esta_num_url_fora_de_comentario():
+    assert rf"\url{{{URL_CASOS}}}" in _texto_sem_comentarios()
