@@ -146,4 +146,8 @@ def get_item(item_id: int) -> RequestedItem | None:
 
 
 def get_procurement_for_item(item_id: int) -> Procurement | None:
-    raise NotImplementedError
+    for procurement in _PROCUREMENTS:
+        for item in procurement.items:
+            if item.id == item_id:
+                return procurement
+    return None
