@@ -421,15 +421,12 @@ ao mesmo tempo.
 \label{subsec:casos-de-uso}
 
 A Figura~\ref{fig:casos-de-uso} apresenta o diagrama geral de casos de uso do
-sistema. São dois atores: o operador do setor de licitações, como ator principal
-que conduz a fase preparatória e opera a solução, e a interface pública do Portal
-Nacional de Contratações Públicas (PNCP), como sistema externo de onde provêm os
-registros de preços. O diagrama reúne os casos de uso principais da rotina:
-importação e validação da demanda, consolidação entre secretarias, triagem de
-candidatos a preço de referência, cálculo do valor estimado e emissão das peças
-da contratação. Os fluxos detalhados e os demais casos de uso constam do
-repositório público do trabalho, em
-\url{https://github.com/RNobre1/tcc-licitacoes-municipais/blob/master/docs/casos-de-uso/README.md}.
+sistema. São dois atores: o operador do setor de licitações, que conduz a fase
+preparatória e opera a solução, e a Base pública de contratações (PNCP), de onde
+provêm os registros de preços. O diagrama reúne os onze casos de uso do sistema.
+A relação completa, com o objetivo e os requisitos de cada um, consta do
+repositório público do trabalho\footnote{\url{https://github.com/RNobre1/tcc-licitacoes-municipais/blob/master/docs/casos-de-uso/README.md}};
+o detalhamento de cada caso será escrito quando ele for implementado.
 
 \begin{figure}[H]
   \centering
@@ -554,15 +551,16 @@ duas puxou cada candidato para cima.
 \label{subsec:pilha}
 
 A implementação adota Python, com o arcabouço Django e a biblioteca HTMX para as
-interações de tela, sobre PostgreSQL, e banco vetorial dedicado para o índice
-semântico.
+interações de tela, sobre PostgreSQL. O índice semântico permanece em banco
+vetorial dedicado, pela medição já relatada.
 
-A única escolha com razão técnica ligada ao problema é a do banco relacional: o
-tipo de dado \code{JSONB} para guardar a resposta aninhada da base pública de
-contratações permitindo consultar campos internos, e o tipo de intervalo temporal
-com restrição de exclusão por sobreposição para resolver no próprio banco o
-versionamento exigido pela regra RN08 --- reproduzir uma pesquisa de preços como
-ela era na data em que foi realizada.
+A escolha com razão técnica ligada ao problema no banco relacional decorre de
+duas necessidades. A primeira é o tipo de dado \code{JSONB}: a resposta da base
+pública de contratações é aninhada e muda de forma entre versões da interface, e
+é preciso guardá-la como veio e ainda assim consultar campos dentro dela. A
+segunda é o tipo de intervalo temporal com restrição de exclusão por
+sobreposição, que resolve no próprio banco o versionamento exigido pela regra
+RN08 --- reproduzir uma pesquisa de preços exatamente como ela era numa data.
 
 \subsubsection{Decisões ainda abertas}
 \label{subsec:decisoes-abertas}
