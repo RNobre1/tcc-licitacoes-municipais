@@ -9,6 +9,7 @@ from procurement.demo_data import (
     RequestedItem,
     get_item,
     get_procurement,
+    get_procurement_for_item,
     list_procurements,
 )
 
@@ -81,6 +82,20 @@ def test_get_item_known_and_unknown():
     assert item.id == 1
 
     assert get_item(999) is None
+
+
+def test_get_procurement_for_item_known_and_unknown():
+    procurement = get_procurement_for_item(1)
+    assert procurement is not None
+    assert procurement.id == 1
+
+    assert get_procurement_for_item(999) is None
+
+
+def test_every_item_resolves_to_its_containing_procurement():
+    for procurement in list_procurements():
+        for item in procurement.items:
+            assert get_procurement_for_item(item.id) is procurement
 
 
 def test_every_procurement_is_found_by_its_own_id():
