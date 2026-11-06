@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.staticfiles import finders
 from django.template.loader import render_to_string
 from django.test import RequestFactory
+from django.urls import reverse
 
 from pricing.templatetags.pricing_extras import lookup
 
@@ -18,6 +19,12 @@ NO_PRICES = {
     "count": 0,
     "requires_justification": False,
 }
+
+
+@dataclass(frozen=True)
+class ProcurementStub:
+    id: int
+    title: str = ""
 
 
 @dataclass(frozen=True)
@@ -85,6 +92,7 @@ def _render_screening(
     decisions: dict[int, str] | None = None,
     proximities: dict[int, str] | None = None,
     expected_price: Decimal | None = None,
+    procurement: ProcurementStub | None = None,
 ) -> str:
     request = RequestFactory().get(f"/items/{item.id}/screening/")
     return render_to_string(
@@ -95,6 +103,7 @@ def _render_screening(
             "decisions": decisions or {},
             "proximities": proximities or {},
             "expected_price": expected_price,
+            "procurement": procurement,
         },
         request=request,
     )
@@ -502,3 +511,14 @@ def test_candidate_fragment_derives_decision_label_from_estimate_counted_ids():
     )
     assert "Aceito" in rendered_inc
     assert "fora do cálculo: unidade diferente" not in rendered_inc
+
+
+def test_screening_renders_back_link_to_procurement():
+    item = _make_item()
+    procurement = ProcurementStub(id=7, title="Processo 7")
+    rendered = _render_screening(item, candidates=[], procurement=procurement)
+    detail_url = reverse("procurement:detail", args=[procurement.id])
+    assert re.search(
+        rf'<a\s+[^>]*href="{re.escape(detail_url)}"[^>]*>\s*Voltar para o processo\s*</a>',
+        rendered,
+    )
