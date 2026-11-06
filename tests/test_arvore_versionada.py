@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -225,6 +227,29 @@ def test_o_arquivo_de_exclusoes_e_o_do_repositorio_mesmo_dentro_de_worktree(tmp_
 
     assert _arquivo_de_exclusoes_locais(principal).resolve() == esperado
     assert _arquivo_de_exclusoes_locais(worktree).resolve() == esperado
+
+
+def test_importar_este_modulo_nao_depende_do_git():
+    """A coleta não pode chamar o git, só os testes que precisam dele.
+
+    O job do PDF roda num contêiner como root, sobre um checkout de outro
+    usuário, e lá o git recusa o repositório. Esse job não seleciona nenhum teste
+    deste arquivo, mas o ``pytest`` importa o módulo para coletar. Uma chamada ao
+    git no nível do módulo derrubou a coleta inteira, e com ela a CI, de 05/11 a
+    06/11. Aqui o git é tornado inutilizável de propósito, e a importação tem de
+    passar mesmo assim.
+    """
+    ambiente = {**os.environ, "GIT_DIR": str(RAIZ / "nao-existe")}
+    resultado = subprocess.run(
+        [sys.executable, "-c", "import tests.test_arvore_versionada"],
+        cwd=RAIZ,
+        env=ambiente,
+        capture_output=True,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    assert resultado.returncode == 0, resultado.stderr
 
 
 def test_o_arquivo_de_exclusoes_locais_existe():
