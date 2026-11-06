@@ -9,7 +9,7 @@ from django.urls import reverse
 from pricing import demo_data, views
 from pricing.ranking import rank_candidates
 from pricing.views import build_estimate_panel
-from procurement.demo_data import get_item, get_procurement_for_item
+from procurement.demo_data import get_item, get_procurement_for_item, list_procurements
 
 NO_PRICES = {
     "mean": None,
@@ -166,6 +166,18 @@ def test_pricing_screening_provides_procurement_in_context_and_links_back(client
         rf'<a\s+[^>]*href="{re.escape(detail_url)}"[^>]*>\s*Voltar para o processo\s*</a>',
         response.content.decode(),
     )
+
+
+def test_screening_links_back_to_the_procurement_of_every_item(client):
+    for procurement in list_procurements():
+        for item in procurement.items:
+            response = client.get(reverse("pricing:screening", args=[item.id]))
+            detail_url = reverse("procurement:detail", args=[procurement.id])
+            assert response.context["procurement"] is procurement
+            assert re.search(
+                rf'<a\s+[^>]*href="{re.escape(detail_url)}"[^>]*>\s*Voltar para o processo\s*</a>',
+                response.content.decode(),
+            ), f"item {item.id}"
 
 
 def test_pricing_screening_context_without_expected_price(client):
