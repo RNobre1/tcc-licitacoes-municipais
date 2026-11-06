@@ -23,7 +23,7 @@ Web application supporting municipal public procurement.
 
 ## Local Services
 
-PostgreSQL 18.6 and Qdrant v1.20.0 run in containers defined in `compose.yaml`, bound to `127.0.0.1` only: PostgreSQL on port 5433 and Qdrant on port 6333.
+PostgreSQL and Qdrant run in containers defined in `compose.yaml`, bound to `127.0.0.1` only. The images and ports are set there, and `.env` must point to the same ports.
 
 ```bash
 make up    # starts both services and waits until they are healthy; requires .env
@@ -31,7 +31,7 @@ make down  # stops them; the data volumes are kept
 uv run --env-file .env python manage.py migrate
 ```
 
-The prototype screens run without these services: they read demo data from memory and keep screening decisions in a signed-cookie session. The ingestion commands and the integration tests need them.
+The prototype screens never query the database: they read demo data from memory and keep screening decisions in a signed-cookie session. `runserver` still connects to PostgreSQL on startup to check migrations, so run `make up` first; Qdrant is not needed for the screens. The ingestion commands need PostgreSQL, and the integration tests need both services.
 
 ## Public Data Ingestion
 
@@ -39,10 +39,10 @@ Fetch one window of procurement data from the public PNCP API, then measure it:
 
 ```bash
 uv run --env-file .env python manage.py fetch_pncp --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
-uv run --env-file .env python manage.py measure_sample --start 2026-10-26 --end 2026-10-30
+uv run --env-file .env python manage.py measure_sample --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
 ```
 
-- `fetch_pncp` stores every API page whole, as a `RawRecord`. It retries server errors and timeouts with exponential backoff, checks the item count against the API's own count, and writes each walk all or nothing. `--uf` defaults to `PA` and `--modality` to `6`, electronic reverse auction.
+- `fetch_pncp` stores every API page whole, as a `RawRecord`. It retries server errors and timeouts with exponential backoff, checks the item count against the API's own count, and writes each walk all or nothing. In both commands, `--uf` defaults to `PA` and `--modality` to `6`, electronic reverse auction.
 - `measure_sample` prints a deterministic report on the fetched window: counts, volume per day, missing fields, median description length and distinct units. Running it twice gives the same text.
 
 Fetched data is real and stays in the local database. It is never committed.
