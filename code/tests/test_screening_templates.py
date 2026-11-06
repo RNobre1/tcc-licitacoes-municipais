@@ -522,3 +522,9 @@ def test_screening_renders_back_link_to_procurement():
         rf'<a\s+[^>]*href="{re.escape(detail_url)}"[^>]*>\s*Voltar para o processo\s*</a>',
         rendered,
     )
+
+
+def test_screening_renders_no_back_link_when_procurement_is_none():
+    item = _make_item()
+    rendered = _render_screening(item, candidates=[], procurement=None)
+    assert "Voltar para o processo" not in rendered
