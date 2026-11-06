@@ -15,6 +15,16 @@ from ingestion.management.commands.fetch_pncp import (
 from ingestion.models import RawRecord
 
 PNCP_RESPONSES_DIR = Path(__file__).resolve().parent / "api_responses" / "pncp"
+ENVELOPE = {"totalPaginas": 1, "numeroPagina": 1, "paginasRestantes": 0}
+
+
+def publication(i: int) -> dict:
+    return {
+        "numeroControlePNCP": f"DEMO-{i}",
+        "anoCompra": 2026,
+        "sequencialCompra": i,
+        "orgaoEntidade": {"cnpj": "00000000000000"},
+    }
 
 
 def _read_json(filename: str):
@@ -205,6 +215,47 @@ def test_retrying_transport_retries_urllib_url_error():
     assert sleep_calls == [0.2]
 
 
+def test_the_backoff_doubles_with_every_attempt():
+    sleeps = []
+    transport = RetryingTransport(
+        base_transport=lambda url, params: (503, {}),
+        max_attempts=5,
+        backoff_factor=1.0,
+        sleep_func=sleeps.append,
+    )
+    transport("https://example.test", None)
+    assert sleeps == [1.0, 2.0, 4.0, 8.0]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        TimeoutError("timed out"),
+        urllib.error.URLError("refused"),
+        PncpResponseError("bad gateway", status=502),
+    ],
+)
+def test_a_failure_that_does_not_go_away_is_raised_after_max_attempts(error):
+    calls, sleeps = [], []
+
+    def always_failing(url, params):
+        calls.append(1)
+        if len(calls) > 20:
+            pytest.fail("still retrying after 20 attempts")
+        raise error
+
+    transport = RetryingTransport(
+        base_transport=always_failing,
+        max_attempts=3,
+        backoff_factor=1.0,
+        sleep_func=sleeps.append,
+    )
+    with pytest.raises(type(error)):
+        transport("https://example.test", None)
+    assert len(calls) == 3
+    assert sleeps == [1.0, 2.0]
+
+
 def test_fetch_pncp_command_requires_valid_dates():
     out = io.StringIO()
     with pytest.raises(CommandError) as exc_info:
@@ -333,3 +384,96 @@ def test_fetch_pncp_skips_publication_on_item_failure_and_counts_it():
     assert "Items: 0" in output
     assert "Failures: 1" in output
     assert "Skipping publication" in err.getvalue() or "Skipping publication" in output
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_the_command_sends_the_window_the_uf_and_the_modality():
+    seen = []
+
+    def transport(url, params=None):
+        seen.append((url, dict(params)))
+        return 200, {"data": [], "totalRegistros": 0, **ENVELOPE}
+
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-03",
+        uf="MA",
+        modality=8,
+        base_url="https://example.test",
+        transport=transport,
+        stdout=io.StringIO(),
+    )
+    url, params = seen[0]
+    assert url == "https://example.test/api/consulta/v1/contratacoes/publicacao"
+    assert params["dataInicial"] == "20261101"
+    assert params["dataFinal"] == "20261103"
+    assert params["uf"] == "MA"
+    assert params["codigoModalidadeContratacao"] == 8
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_the_command_defaults_are_pa_and_pregao_eletronico():
+    seen = []
+
+    def transport(url, params=None):
+        seen.append(dict(params))
+        return 200, {"data": [], "totalRegistros": 0, **ENVELOPE}
+
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        transport=transport,
+        stdout=io.StringIO(),
+    )
+    assert seen[0]["uf"] == "PA"
+    assert seen[0]["codigoModalidadeContratacao"] == 6
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_one_failing_publication_does_not_stop_the_others():
+    def transport(url, params=None):
+        if "/contratacoes/publicacao" in url:
+            return 200, {
+                "data": [publication(1), publication(2), publication(3)],
+                "totalRegistros": 3,
+                **ENVELOPE,
+            }
+        if "/compras/2026/2/" in url:
+            return 500, {"message": "unavailable"}
+        if url.endswith("/quantidade"):
+            return 200, 2
+        return 200, [{"numeroItem": 1}, {"numeroItem": 2}]
+
+    out, err = io.StringIO(), io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        transport=transport,
+        stdout=out,
+        stderr=err,
+    )
+    assert "Publications: 3" in out.getvalue()
+    assert "Item pages: 2" in out.getvalue()
+    assert "Items: 4" in out.getvalue()
+    assert "Failures: 1" in out.getvalue()
+    assert RawRecord.objects.filter(endpoint__endswith="/itens").count() == 2
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_a_failure_to_fetch_the_publications_is_fatal_and_saves_nothing():
+    with pytest.raises(CommandError):
+        call_command(
+            "fetch_pncp",
+            start="2026-11-01",
+            end="2026-11-01",
+            transport=lambda url, params=None: (500, {"message": "down"}),
+            stdout=io.StringIO(),
+        )
+    assert RawRecord.objects.count() == 0
