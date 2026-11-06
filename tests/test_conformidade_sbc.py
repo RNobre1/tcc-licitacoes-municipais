@@ -39,17 +39,10 @@ DOCUMENTOS = ["tcc1", "tcc2"]
 # os dois para que a guarda de conteúdo único valha nos dois documentos.
 ENTRADAS_DE_TEXTO = re.compile(r"\\input\{((?:secoes|capitulos)/[^}]+)\}")
 
-# Limite de páginas fixado pela orientação na reunião de 19/08/2026, com o
-# precedente declarado por ela: banca do semestre anterior cobrou um trabalho de
-# mais de 60 páginas porque artigo com esse tamanho não existe. O piso de 20 não
-# é testado — documento em estágio de projeto tem menos, por construção, e um
-# teste que exigisse o piso agora falharia por motivo legítimo.
-#
-# Mora aqui, e não em `scripts/normas_ufopa.py`, porque aquele módulo declara a
-# sua procedência como o guia do SIBI e esta exigência não vem dele. Se um
-# terceiro lugar do repositório passar a precisar deste número, aí ele vira
-# manifesto — hoje o único consumidor é este teste.
-PAGINAS_MAX = 25
+# O limite de 25 páginas, cogitado na reunião de 19/08/2026, era apenas uma ideia
+# inicial e deixou de ser exigência por decisão do autor em 06/11/2026: os
+# documentos podem passar de 25 páginas. O teste de contagem apenas registra o
+# número de páginas da entrega sem impor teto.
 
 # Ver a justificativa da mesma folga em `test_conformidade_pdf.py`: o microtype
 # projeta pontuação para fora da mancha de propósito, e isso é tipografia
@@ -93,31 +86,19 @@ def test_pagina_e_a4(pdf_sbc: Path):
     assert altura == pytest.approx(841.89, abs=1.0), f"altura fora do A4: {tamanho}"
 
 
-def test_nao_passa_do_limite_de_paginas(pdf_sbc: Path):
-    """Limite de entrega, não de estilo: orçamento de página é restrição real.
+def test_contagem_de_paginas(pdf_sbc: Path):
+    """Registra a contagem de páginas da versão apresentável da SBC.
 
-    Mede a versão **apresentável**, em ``entregas/``, e não a de trabalho: o
-    limite vale para o que chega às mãos de quem avalia, e os marcadores de
-    pendência são bilhete interno que não estará lá.
-
-    A ressalva, e ela importa: marcador vira prosa, e prosa ocupa mais espaço
-    que o marcador que a anunciava. Estar dentro do limite hoje não garante
-    estar depois de escrever o que falta — por isso a folga é reportada na
-    mensagem, e não só o veredito.
+    O limite de 25 páginas era uma ideia inicial e deixou de ser exigência por
+    decisão do autor em 06/11/2026: os documentos podem passar de 25 páginas. O
+    teste apenas registra o número de páginas sem impor teto, garantindo que
+    o documento gerado não está vazio.
     """
     entrega = RAIZ / "entregas" / "tcc1-formato-sbc.pdf"
     alvo = entrega if entrega.is_file() else pdf_sbc
     total = leitura_pdf.paginas(alvo)
-    folga = PAGINAS_MAX - total
-    assert total <= PAGINAS_MAX, (
-        f"documento com {total} páginas; a orientação fixou o máximo em "
-        f"{PAGINAS_MAX}. Cortar conteúdo, não aumentar o limite."
-    )
-    if folga <= 1:
-        print(
-            f"\n  atenção: {total} de {PAGINAS_MAX} páginas, folga de {folga}. "
-            "Escrever as pendências restantes deve estourar o limite."
-        )
+    assert total > 0, f"documento vazio: {alvo}"
+    print(f"\n  contagem SBC ({alvo.name}): {total} páginas")
 
 
 # --- Tipografia ---------------------------------------------------------------
