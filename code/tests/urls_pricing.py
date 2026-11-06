@@ -14,6 +14,16 @@ pricing_patterns = (
     "pricing",
 )
 
+procurement_patterns = (
+    [
+        path("", _stub_view, name="home"),
+        path("procurements/", _stub_view, name="list"),
+        path("procurements/<int:procurement_id>/", _stub_view, name="detail"),
+    ],
+    "procurement",
+)
+
 urlpatterns = [
     path("", include(pricing_patterns)),
+    path("", include(procurement_patterns)),
 ]
