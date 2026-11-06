@@ -53,9 +53,6 @@ def _arquivo_de_exclusoes_locais(raiz: Path) -> Path:
     return comum / "info" / "exclude"
 
 
-EXCLUSOES_LOCAIS = _arquivo_de_exclusoes_locais(RAIZ)
-
-
 def _rastreados() -> list[str]:
     """Caminhos que o git tem no índice, um por linha."""
     resultado = executar(["git", "ls-files"], cwd=RAIZ, exigir_sucesso=True)
@@ -75,9 +72,10 @@ def _padroes_de_exclusao_local() -> list[str]:
     Lê do arquivo de propósito: ele não é versionado, e é isso que permite a esta
     suíte conferir a política sem publicá-la.
     """
-    if not EXCLUSOES_LOCAIS.is_file():
+    exclusoes = _arquivo_de_exclusoes_locais(RAIZ)
+    if not exclusoes.is_file():
         return []
-    linhas = EXCLUSOES_LOCAIS.read_text(encoding="utf-8").splitlines()
+    linhas = exclusoes.read_text(encoding="utf-8").splitlines()
     return [
         linha.strip() for linha in linhas if linha.strip() and not linha.lstrip().startswith("#")
     ]
@@ -266,8 +264,9 @@ def test_o_arquivo_de_exclusoes_locais_existe():
     """
     if os.environ.get("CI"):
         pytest.skip("clone da CI não carrega as exclusões locais; a guarda vale na máquina local")
-    assert EXCLUSOES_LOCAIS.is_file(), (
-        f"{EXCLUSOES_LOCAIS} não existe. Em clone novo isso é "
+    exclusoes = _arquivo_de_exclusoes_locais(RAIZ)
+    assert exclusoes.is_file(), (
+        f"{exclusoes} não existe. Em clone novo isso é "
         "esperado, e significa que a política de exclusão NÃO está ativa: "
         "recriar o arquivo antes de qualquer `git add`."
     )
