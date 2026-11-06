@@ -11,7 +11,10 @@
     <header class="container">
         <nav>
             <ul>
-                <li><strong>{{ system_name }}</strong></li>
+                <li><a href="{% url 'procurement:home' %}"><strong>{{ system_name }}</strong></a></li>
+            </ul>
+            <ul>
+                <li><a href="{% url 'procurement:list' %}">Processos</a></li>
             </ul>
         </nav>
     </header>
