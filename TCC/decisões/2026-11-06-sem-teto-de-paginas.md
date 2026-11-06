@@ -27,12 +27,12 @@ e 35 no do SIBI, e a versão de trabalho, com os marcadores de pendência, em 28
 | Opção | Prós | Contras |
 |---|---|---|
 | A. Manter o teto e cortar texto | Segue o número fixado em 19/08 | Corta o que a orientação pediu depois, e o texto ainda não tem resultados nem conclusão: o corte se repetiria a cada seção |
-| B. Retirar o teto da guarda | O texto cresce com o que é pedido | Precisa de confirmação da orientação, que foi quem fixou o número |
+| B. Retirar o teto da guarda | O texto cresce com o que é pedido | Sem teto, o texto pode inchar. A regra passa a ser não escrever enchimento |
 
 ## Decisão
 
 **Escolhida: a opção B.** O autor a tomou em 06/11/2026. Para ele, as 25 páginas
-eram uma ideia inicial, e não um limite a defender.
+eram uma estimativa inicial de tamanho, e não um limite a defender.
 
 ## Justificativa
 
@@ -47,12 +47,12 @@ conteúdo pela contagem, e não pelo que a orientação pede.
 - A decisão de 24/08 continua valendo no resto: o formato é artigo da SBC, e o
   layout do SIBI é o alvo do depósito. Só o orçamento de página deixa de ser
   restrição de projeto.
-- **A confirmação com a orientadora fica para a reunião de 07/11.** O número foi
-  fixado por ela, e por isso a mudança é levada a ela.
+- **O texto continua sem enchimento.** Se o conteúdo couber em 25 páginas, fica
+  em 25. O número só deixa de ser motivo para cortar o que o trabalho precisa.
 
 ## Critério de revisão
 
-Reabrir se a orientadora mantiver o limite, ou se um veículo de submissão
+Reabrir se a orientadora pedir um limite, ou se um veículo de submissão
 escolhido para o artigo impuser um teto próprio.
 
 ## Backlinks
