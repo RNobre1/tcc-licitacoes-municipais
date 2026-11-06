@@ -1,5 +1,5 @@
 """Conformidade do alvo SBC com o ``.sty`` canônico da Sociedade Brasileira de
-Computação e com o limite de páginas fixado pela orientação.
+Computação.
 
 O padrão SBC é o formato do texto principal do trabalho, decidido em 24/08/2026
 (``TCC/decisões/2026-08-24-formato-do-texto-artigo-do-curso.md``). O alvo do guia
@@ -38,11 +38,6 @@ DOCUMENTOS = ["tcc1", "tcc2"]
 # TCC I organiza o texto em `secoes/`, TCC II em `capitulos/`. A expressão aceita
 # os dois para que a guarda de conteúdo único valha nos dois documentos.
 ENTRADAS_DE_TEXTO = re.compile(r"\\input\{((?:secoes|capitulos)/[^}]+)\}")
-
-# O limite de 25 páginas, cogitado na reunião de 19/08/2026, era apenas uma ideia
-# inicial e deixou de ser exigência por decisão do autor em 06/11/2026: os
-# documentos podem passar de 25 páginas. O teste de contagem apenas registra o
-# número de páginas da entrega sem impor teto.
 
 # Ver a justificativa da mesma folga em `test_conformidade_pdf.py`: o microtype
 # projeta pontuação para fora da mancha de propósito, e isso é tipografia
@@ -84,21 +79,6 @@ def test_pagina_e_a4(pdf_sbc: Path):
     largura, altura = (float(n) for n in re.findall(r"[\d.]+", tamanho)[:2])
     assert largura == pytest.approx(595.28, abs=1.0), f"largura fora do A4: {tamanho}"
     assert altura == pytest.approx(841.89, abs=1.0), f"altura fora do A4: {tamanho}"
-
-
-def test_contagem_de_paginas(pdf_sbc: Path):
-    """Registra a contagem de páginas da versão apresentável da SBC.
-
-    O limite de 25 páginas era uma ideia inicial e deixou de ser exigência por
-    decisão do autor em 06/11/2026: os documentos podem passar de 25 páginas. O
-    teste apenas registra o número de páginas sem impor teto, garantindo que
-    o documento gerado não está vazio.
-    """
-    entrega = RAIZ / "entregas" / "tcc1-formato-sbc.pdf"
-    alvo = entrega if entrega.is_file() else pdf_sbc
-    total = leitura_pdf.paginas(alvo)
-    assert total > 0, f"documento vazio: {alvo}"
-    print(f"\n  contagem SBC ({alvo.name}): {total} páginas")
 
 
 # --- Tipografia ---------------------------------------------------------------
