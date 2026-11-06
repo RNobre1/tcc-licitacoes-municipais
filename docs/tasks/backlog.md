@@ -258,7 +258,7 @@ leitura integral que vale para artigo — é referência de uso, não de argumen
 |---|---|---|---|
 | A1 | ~~Linguagem, arcabouço e banco relacional~~ | Autor | **fechado 18/10** — Python, Django, HTMX e PostgreSQL |
 | A2 | Modelo de representação das descrições | Autor | aberto — depende de C2 e C3 |
-| A3 | Estratégia de atualização da ingestão | Autor | aberto — depende de C1 |
+| A3 | Estratégia de atualização da ingestão | Autor | aberto — C1 fechado em 05/11: uma semana do Pará coletada em 49,6 s, sem falha. Falta decidir, e a coleta do preço homologado (D17) muda esse tempo |
 | A4 | Onde reside a geração dos documentos | Autor | aberto |
 | A5 | ~~Mecanismo concreto de autenticação~~ | Autor | **fechado 18/10** — o do próprio arcabouço, com o perfil único de 22/09 |
 | A6 | Proporção entre tipos de processo no setor | Fonte de domínio | aberto — limita o alcance do que se pode afirmar |
