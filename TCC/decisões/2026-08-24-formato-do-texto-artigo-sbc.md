@@ -120,7 +120,8 @@ reduzidos a um `do` de `texto/comum/latexmkrc-comum`.
 
 - **Orçamento de página é restrição de projeto.** 20 a 25 páginas com
   fundamentação, sistema e avaliação dentro. `tests/test_conformidade_sbc.py`
-  falha acima de 25.
+  falha acima de 25. **Substituído em 06/11:** o teto deixou de barrar, ver
+  [[2026-11-06-sem-teto-de-paginas]].
 - **Resumo passa a ter duas versões, e é a única duplicação de prosa
   legítima.** A SBC pede no máximo 10 linhas; a NBR 6028 pede 150 a 500
   palavras no alvo do SIBI. Não são a mesma coisa cortada.
