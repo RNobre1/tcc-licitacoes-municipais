@@ -2,7 +2,7 @@ from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
-from procurement.demo_data import get_item
+from procurement.demo_data import get_item, get_procurement_for_item
 
 from . import demo_data
 from .estimation import calculate_mean, calculate_median, calculate_min, requires_justification
@@ -114,6 +114,8 @@ def screening(request, item_id):
     if item is None:
         raise Http404("Item not found")
 
+    procurement = get_procurement_for_item(item_id)
+
     raw_expected_price = request.GET.get("expected_price")
     expected_price = parse_expected_price(raw_expected_price)
     expected_price_ignored = bool(
@@ -140,6 +142,7 @@ def screening(request, item_id):
         request,
         "pricing/screening.html",
         {
+            "procurement": procurement,
             "item": item,
             "candidates": candidates,
             "decisions": decisions,

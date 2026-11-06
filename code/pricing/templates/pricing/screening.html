@@ -8,6 +8,12 @@
 {% block content %}
 <script src="{% static 'vendor/htmx-2.0.4/htmx.min.js' %}"></script>
 
+{% if procurement %}
+<p>
+    <a href="{% url 'procurement:detail' procurement.id %}">Voltar para o processo</a>
+</p>
+{% endif %}
+
 <h1>Triagem de preços</h1>
 
 <section>
