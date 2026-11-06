@@ -19,12 +19,12 @@ Qual o volume e a forma das descrições de itens na base pública, para dimensi
 
 A coleta foi realizada em 05/11/2026 via:
 ```bash
-python code/manage.py fetch_pncp --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
+cd code && uv run --env-file .env python manage.py fetch_pncp --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
 ```
 
 A medição das métricas foi executada via:
 ```bash
-python code/manage.py measure_sample --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
+cd code && uv run --env-file .env python manage.py measure_sample --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
 ```
 O comando de medição foi executado duas vezes consecutivas sobre a base local, gerando resultado idêntico em ambas as rodadas.
 
@@ -41,11 +41,11 @@ Critérios operacionais das métricas:
 Comandos que geram cada número:
 - Os totais de publicações (105), páginas de itens (108), itens coletados (5.116), falhas (0) e tempo de execução (49,6 s) são reportados diretamente pelo comando `fetch_pncp`:
   ```bash
-  python code/manage.py fetch_pncp --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
+  cd code && uv run --env-file .env python manage.py fetch_pncp --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
   ```
 - A distribuição diária de publicações, as frações de campos ausentes, a mediana do comprimento das descrições e o número de unidades distintas são calculados e impressos pelo comando determinístico `measure_sample`:
   ```bash
-  python code/manage.py measure_sample --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
+  cd code && uv run --env-file .env python manage.py measure_sample --start 2026-10-26 --end 2026-10-30 --uf PA --modality 6
   ```
 
 Não há linha de base comparativa anterior porque esta é a primeira medição empírica realizada sobre a base real do PNCP para dimensionamento do projeto.
