@@ -143,3 +143,40 @@ def test_procurement_detail_renders_back_link_to_list():
     rendered = _render_procurement_detail(procurement)
 
     assert 'href="/procurements/"' in rendered
+
+
+def test_procurement_detail_renders_prices_column_header():
+    procurement = ProcurementStub(id=1, title="Material de expediente")
+    rendered = _render_procurement_detail(procurement)
+
+    assert "<th>Preços</th>" in rendered
+
+
+def test_procurement_detail_links_each_item_to_screening():
+    item1 = ItemStub(
+        id=101,
+        description="Resma de papel A4",
+        quantity=Decimal("50"),
+        unit="pacote",
+        requesting_department="Secretaria Municipal de Educação",
+    )
+    item2 = ItemStub(
+        id=102,
+        description="Caneta esferográfica azul",
+        quantity=Decimal("200"),
+        unit="caixa",
+        requesting_department="Secretaria Municipal de Saúde",
+    )
+    procurement = ProcurementStub(
+        id=1,
+        title="Material de expediente",
+        items=(item1, item2),
+    )
+    rendered = _render_procurement_detail(procurement)
+
+    for item in (item1, item2):
+        screening_url = reverse("pricing:screening", args=[item.id])
+        assert re.search(
+            rf'<a\s+[^>]*href="{re.escape(screening_url)}"[^>]*>\s*Triagem\s*</a>',
+            rendered,
+        )

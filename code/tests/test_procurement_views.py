@@ -1,3 +1,4 @@
+import re
 from html import escape
 
 from django.urls import reverse
@@ -65,3 +66,18 @@ def test_procurement_detail_view_renders_its_template_with_the_title_and_every_i
         assert f"<h1>{escape(procurement.title)}</h1>" in html
         for item in procurement.items:
             assert f"<td>{escape(item.description)}</td>" in html
+
+
+def test_procurement_detail_view_renders_screening_link_for_every_item(client):
+    procurement = demo_data.get_procurement(1)
+    assert procurement is not None
+    response = client.get(reverse("procurement:detail", args=[procurement.id]))
+    html = response.content.decode()
+
+    assert "<th>Preços</th>" in html
+    for item in procurement.items:
+        screening_url = reverse("pricing:screening", args=[item.id])
+        assert re.search(
+            rf'<a\s+[^>]*href="{re.escape(screening_url)}"[^>]*>\s*Triagem\s*</a>',
+            html,
+        )
