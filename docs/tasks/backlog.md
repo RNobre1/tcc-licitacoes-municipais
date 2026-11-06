@@ -198,8 +198,8 @@ As três candidatas deste trabalho, nenhuma dependente de o sistema existir:
 | ~~Seção de resultados esperados~~ | Autor | fechado — R1 a R8; falta o instrumento de usabilidade |
 | Trabalhos relacionados: escrever o quadro com quatro referências citadas | Autor | em andamento |
 | ~~Figuras dos diagramas~~ | Autor | fechado — exportadas e guardadas por teste de frescor |
-| Reduzir a subseção da pilha tecnológica a uma declaração: a orientação dispensou justificar a linguagem (24/10). Recupera folga no alvo da SBC, hoje em 25 de 25 | Autor | aberto |
-| Diagrama geral de casos de uso no texto; os demais por link ao repositório (orientação, 24/10) | Autor | aberto — depende de D1 |
+| ~~Reduzir a subseção da pilha tecnológica a uma declaração~~: a orientação dispensou justificar a linguagem (24/10) | Autor | fechado em 06/11 — fica só a razão do banco relacional. O teto de 25 páginas deixou de barrar, a confirmar com a orientação em 07/11: `TCC/decisões/2026-11-06-sem-teto-de-paginas.md` |
+| ~~Diagrama geral de casos de uso no texto; os demais por link ao repositório (orientação, 24/10)~~ | Autor | fechado em 06/11 — o diagrama está na seção de desenvolvimento, e a relação completa em `docs/casos-de-uso/README.md` |
 | Resultados no TCC II com teste de aceitação com usuário e estatística descritiva (orientação, 24/10) | Autor | TCC II |
 | Fonte publicada para a afirmação sobre municípios de pequeno porte | Autor | bloqueado em pesquisa |
 | Reescrever "domínio pouco explorado" como observação até o quadro fechar | Autor | aberto |
@@ -228,10 +228,10 @@ não deste arquivo.
 
 | # | O que | Dono | Estado |
 |---|---|---|---|
-| D1 | Diagrama geral de casos de uso, com cada caso ligado aos requisitos que cobre | Autor | aberto |
+| D1 | ~~Diagrama geral de casos de uso, com cada caso ligado aos requisitos que cobre~~ | Autor | fechado — diagrama e cobertura dos requisitos em `docs/casos-de-uso/`, com teste; no texto desde 06/11 |
 | D2 | Documentar cada caso de uso no repositório **quando ele for implementado**, não antes nem depois | Autor | permanente |
 | D3 | Protótipo navegável das telas principais, com dados fictícios e layout pronto, antes do modelo de dados | Autor | aberto |
-| D4 | Ambiente local: banco relacional e banco vetorial em contêiner, com a aplicação apontando para eles | Autor | aberto |
+| D4 | ~~Ambiente local: banco relacional e banco vetorial em contêiner, com a aplicação apontando para eles~~ | Autor | fechado — `code/compose.yaml` e `make up`; a aplicação lê a conexão do `.env` |
 | D5 | Conferir que os modelos `.bpmn` abrem na ferramenta indicada pela orientação. Foi afirmado na reunião e não testado: ela não roda no sistema da máquina de trabalho, e raia vertical é o recurso menos uniforme entre editores | Autor | aberto — exige outra máquina |
 | D6 | Repositório acessível na entrega: a orientação conta com o link para código e casos de uso | Autor | fechado em 28/10 — repositório público por decisão do autor, depois da auditoria do histórico e da correção do `code/README.md`, conferida num clone novo |
 | D7 | Fuso de referência da data de uma pesquisa de preços. O sistema guarda o instante em UTC, mas "a data em que a pesquisa foi realizada", que a RN08 exige reproduzir, depende do fuso em que a data é lida. É **decisão relevante**, porque afeta a trilha de auditoria. Levantada na revisão do dia 03 | Autor | aberto — decidir ao implementar a trilha, pelo protocolo de decisões relevantes |
