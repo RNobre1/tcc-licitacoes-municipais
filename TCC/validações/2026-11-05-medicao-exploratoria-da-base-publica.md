@@ -72,6 +72,29 @@ Separando fato observado de inferência:
 - **Definição de campo ausente:** O resultado de 0% de campos faltando restringe-se **à definição operacional adotada**. A métrica verifica apenas chave inexistente, valor `None` ou string em branco. Valores numericamente zerados, como os casos de orçamento sigiloso previstos no PNCP para `valorUnitarioEstimado`, não contam como ausentes nessa definição.
 - **Diversidade de unidades:** A identificação de 94 unidades de medida distintas em 5.116 itens demonstra que a conversão e o tratamento de unidades de fornecimento (questão D11 do backlog) são indispensáveis para a comparação de itens e a proximidade de valor.
 
+- **Orçamento sigiloso: 840 dos 5.116 itens (16,4%).** Esses itens vêm com `orcamentoSigiloso` verdadeiro e `valorUnitarioEstimado` igual a zero, e todo zero vem com essa marca. Pela definição congelada, zero não é ausência, por isso o campo aparece com 0% faltando. Mas é justamente o campo do preço: em um de cada seis itens do recorte, a base pública não informa o valor estimado.
+- **Concentração dos itens em poucas compras.** As 105 compras têm 5.116 itens, mas a maior tem 1.167 sozinha (22,8%), e as 10 maiores somam 62,9%. Médias e medianas ponderadas por item, como a do tamanho da descrição e a ordem de grandeza de itens por dia, refletem sobretudo essas compras grandes.
+
+Os dois números acima saem de uma consulta somente leitura sobre os mesmos registros brutos, com a cópia mais recente de cada página de itens:
+
+```bash
+cd code && uv run --env-file .env python manage.py shell <<'EOF'
+from collections import Counter
+from ingestion.models import RawRecord
+latest = {}
+for r in RawRecord.objects.filter(endpoint__startswith="/api/pncp/").order_by("fetched_at"):
+    latest[(r.endpoint, str(sorted(r.params.items())))] = r
+per_purchase, sigiloso, total = Counter(), 0, 0
+for (endpoint, _), r in latest.items():
+    for item in r.payload:
+        total += 1
+        per_purchase[endpoint.rsplit("/itens", 1)[0]] += 1
+        sigiloso += item.get("orcamentoSigiloso") is True
+counts = sorted(per_purchase.values(), reverse=True)
+print(total, sigiloso, counts[0], sum(counts[:10]))
+EOF
+```
+
 ## Limitações
 - **Modalidade única:** Os dados cobrem exclusivamente pregões eletrônicos (código de modalidade 6).
 - **Recorte geográfico restrito:** Coleta limitada ao estado do Pará (UF = PA).
