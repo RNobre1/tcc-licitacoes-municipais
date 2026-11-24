@@ -45,7 +45,26 @@ class TestDatabaseEnvironmentVariables:
             "NAME": "other_database",
             "USER": "other_user",
             "PASSWORD": "local-dev-password",
+            "TEST_NAME": None,
         }
+
+    def test_load_environment_reads_the_test_database_name(self):
+        """DATABASE_TEST_NAME lets each worktree run integration tests on its own database."""
+        fake_env = {
+            "SECRET_KEY": "any-valid-key",
+            "DATABASE_TEST_NAME": "test_worktree_a",
+        }
+        _, _, _, db_config = load_environment(fake_env)
+        assert db_config["TEST_NAME"] == "test_worktree_a"
+
+    def test_load_environment_treats_a_blank_test_database_name_as_unset(self):
+        """A blank DATABASE_TEST_NAME falls back to Django's own test database name."""
+        fake_env = {
+            "SECRET_KEY": "any-valid-key",
+            "DATABASE_TEST_NAME": "   ",
+        }
+        _, _, _, db_config = load_environment(fake_env)
+        assert db_config["TEST_NAME"] is None
 
     def test_load_environment_database_defaults(self):
         """When database variables are unset, defaults match expected local-dev settings."""
@@ -59,6 +78,7 @@ class TestDatabaseEnvironmentVariables:
             "NAME": "preparatory_phase",
             "USER": "preparatory_phase",
             "PASSWORD": "",
+            "TEST_NAME": None,
         }
 
     def test_database_defaults_match_env_example(self):
@@ -109,3 +129,26 @@ class TestDatabaseSettingsDjango:
         assert default["NAME"] == "other_database"
         assert default["USER"] == "other_user"
         assert default["PASSWORD"] == "local-dev-password"
+        assert default["TEST"]["NAME"] is None
+
+    def test_settings_wire_the_test_database_name(self):
+        """DATABASE_TEST_NAME reaches settings.DATABASES['default']['TEST']['NAME']."""
+        env = {
+            "PATH": os.environ["PATH"],
+            "SECRET_KEY": "any-valid-key",
+            "DJANGO_SETTINGS_MODULE": "config.settings",
+            "DATABASE_TEST_NAME": "test_worktree_b",
+        }
+        code = (
+            "import json, django; django.setup(); from django.conf import settings; "
+            "print(json.dumps(settings.DATABASES['default']['TEST']))"
+        )
+        out = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=CODE_DIR,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert json.loads(out.stdout)["NAME"] == "test_worktree_b"
