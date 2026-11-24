@@ -1203,3 +1203,63 @@ def test_screening_view_handles_qdrant_down_gracefully_without_500(client, monke
     assert response.status_code == 200
     html = response.content.decode()
     assert "Nenhum preço candidato encontrado." in html
+
+def test_build_estimate_panel_normalizes_units_so_case_and_spacing_variations_count():
+    """B1: Three awarded candidates whose units differ only in case or spacing all count in panel."""
+    from ingestion.models import PublicItem
+    from pricing.candidates import candidate_from_public_item
+
+    item = views.get_item(1)  # item.unit is 'pacote'
+
+    pi1 = PublicItem(
+        id=7001,
+        cnpj="00000000000001",
+        year=2026,
+        purchase_sequence=1,
+        item_number=1,
+        description="Papel A4",
+        unit="Pacote",  # Title case
+        quantity=Decimal("100"),
+        agency_name="Órgão",
+        published_on=datetime.date.today(),
+        awarded_unit_price=Decimal("10.00"),
+    )
+    pi2 = PublicItem(
+        id=7002,
+        cnpj="00000000000001",
+        year=2026,
+        purchase_sequence=1,
+        item_number=2,
+        description="Papel A4",
+        unit=" PACOTE ",  # Upper with spacing
+        quantity=Decimal("100"),
+        agency_name="Órgão",
+        published_on=datetime.date.today(),
+        awarded_unit_price=Decimal("20.00"),
+    )
+    pi3 = PublicItem(
+        id=7003,
+        cnpj="00000000000001",
+        year=2026,
+        purchase_sequence=1,
+        item_number=3,
+        description="Papel A4",
+        unit="pacote",  # Lower
+        quantity=Decimal("100"),
+        agency_name="Órgão",
+        published_on=datetime.date.today(),
+        awarded_unit_price=Decimal("30.00"),
+    )
+
+    cands = [
+        candidate_from_public_item(pi1),
+        candidate_from_public_item(pi2),
+        candidate_from_public_item(pi3),
+    ]
+
+    decisions = {7001: "accept", 7002: "accept", 7003: "accept"}
+    panel = views.build_estimate_panel(item, decisions, candidates=cands)
+
+    assert panel["count"] == 3
+    assert panel["counted_candidate_ids"] == {7001, 7002, 7003}
+    assert panel["mean"] == Decimal("20.00")
