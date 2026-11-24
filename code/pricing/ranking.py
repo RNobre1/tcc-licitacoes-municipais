@@ -33,7 +33,7 @@ def compute_proximity(price, expected_price, candidate_unit, item_unit) -> float
 
 
 def format_proximity(price, expected_price, proximity, candidate_unit, item_unit) -> str:
-    if expected_price is None:
+    if expected_price is None or price is None:
         return "—"
 
     if price <= 0:

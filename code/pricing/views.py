@@ -1,3 +1,8 @@
+import datetime
+from collections.abc import Sequence  # noqa: F401
+from decimal import Decimal
+from typing import Any
+
 from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
@@ -5,8 +10,96 @@ from django.views.decorators.http import require_POST
 from procurement.demo_data import get_item, get_procurement_for_item
 
 from . import demo_data
-from .estimation import calculate_mean, calculate_median, calculate_min, requires_justification
+from .candidates import candidate_from_public_item, fetch_awarded_price_on_demand
+from .estimation import (
+    calculate_mean,
+    calculate_median,
+    calculate_min,
+    get_calculation_prices,
+    requires_justification,
+)
 from .ranking import compute_proximity, format_proximity, parse_expected_price, rank_candidates
+
+DEFAULT_MODEL = "intfloat/multilingual-e5-base"
+DEFAULT_REVISION = "d13f1b27baf31030b7fd040960d60d909913633f"
+
+_EMBEDDING_MODEL: Any = None
+
+
+def get_embedding_model():
+    """Load the embedding model once per process, lazily, never per request."""
+    global _EMBEDDING_MODEL
+    if _EMBEDDING_MODEL is None:
+        from semantic_index.embedding import SentenceTransformerEmbeddingModel
+
+        _EMBEDDING_MODEL = SentenceTransformerEmbeddingModel(
+            model_name=DEFAULT_MODEL,
+            revision=DEFAULT_REVISION,
+        )
+    return _EMBEDDING_MODEL
+
+
+def get_screening_date_window(
+    reference_date: datetime.date | None = None,
+) -> tuple[datetime.date, datetime.date]:
+    """Return the mandatory 12-month date window up to reference_date (RN07)."""
+    end_date = reference_date or datetime.date.today()
+    try:
+        start_date = end_date.replace(year=end_date.year - 1)
+    except ValueError:
+        start_date = end_date - datetime.timedelta(days=365)
+    return (start_date, end_date)
+
+
+def default_search_function(
+    query: str,
+    date_window: tuple[datetime.date, datetime.date],
+    limit: int = 20,
+):
+    """Execute semantic search against Qdrant and PostgreSQL under structured date window."""
+    from semantic_index.search import StructuredFilter, semantic_search
+
+    model = get_embedding_model()
+    structured_filter = StructuredFilter(date_window=date_window)
+    return semantic_search(
+        model=model,
+        query=query,
+        structured_filter=structured_filter,
+        limit=limit,
+    )
+
+
+search_function = default_search_function
+
+
+def get_screening_candidates(
+    item,
+    expected_price: Decimal | None = None,
+    search_fn: Any = None,
+    limit: int = 20,
+) -> list[Any]:
+    """Fetch and rank screening candidates for an item from semantic search."""
+    fn = search_fn or search_function
+    date_window = get_screening_date_window()
+    raw_results = fn(query=item.description, date_window=date_window, limit=limit)
+
+    candidates: list[Any] = []
+    for res in raw_results:
+        if hasattr(res, "item") and hasattr(res, "score"):
+            public_item = res.item
+            score = res.score
+            fetch_awarded_price_on_demand(public_item)
+            candidate = candidate_from_public_item(public_item, similarity=score, item_id=item.id)
+            candidates.append(candidate)
+        elif isinstance(res, tuple) and len(res) == 2:
+            public_item, score = res
+            fetch_awarded_price_on_demand(public_item)
+            candidate = candidate_from_public_item(public_item, similarity=score, item_id=item.id)
+            candidates.append(candidate)
+        else:
+            candidates.append(res)
+
+    return rank_candidates(candidates, expected_price, item.unit)
 
 
 class EstimatePanel(dict):
@@ -43,17 +136,31 @@ EMPTY_PANEL = {
 }
 
 
-def build_estimate_panel(item, decisions: dict) -> dict:
+def build_estimate_panel(
+    item,
+    decisions: dict,
+) -> dict:
     if item is None:
         return EstimatePanel(EMPTY_PANEL, counted_candidate_ids=set())
 
-    candidates = demo_data.candidates_for(item.id)
-    counted_candidate_ids = {
-        candidate.id
-        for candidate in candidates
-        if decisions.get(candidate.id) == "accept" and candidate.unit == item.unit
-    }
-    prices = [candidate.price for candidate in candidates if candidate.id in counted_candidate_ids]
+    candidates = get_screening_candidates(item)
+
+    counted_candidate_ids: set[int] = set()
+    for c in candidates:
+        if decisions.get(c.id) == "accept" and c.unit == item.unit:
+            if hasattr(c, "usable_calculation_price"):
+                if c.usable_calculation_price is not None:
+                    counted_candidate_ids.add(c.id)
+            elif (
+                not getattr(c, "is_estimated", False)
+                and not getattr(c, "secret_budget", False)
+                and getattr(c, "price", None) is not None
+                and c.price > Decimal("0.00")
+            ):
+                counted_candidate_ids.add(c.id)
+
+    counted_candidates = [c for c in candidates if c.id in counted_candidate_ids]
+    prices = get_calculation_prices(counted_candidates)
 
     count = len(prices)
     if count == 0:
@@ -73,7 +180,15 @@ def build_estimate_panel(item, decisions: dict) -> dict:
 
 @require_POST
 def decide(request, candidate_id):
-    candidate = demo_data.get_candidate(candidate_id)
+    from ingestion.models import PublicItem
+
+    pi = PublicItem.objects.filter(pk=candidate_id).prefetch_related("raw_records").first()
+    if pi is not None:
+        fetch_awarded_price_on_demand(pi)
+        candidate = candidate_from_public_item(pi)
+    else:
+        candidate = demo_data.get_candidate(candidate_id)
+
     if candidate is None:
         raise Http404("Candidate not found")
 
@@ -85,11 +200,19 @@ def decide(request, candidate_id):
     decisions[str(candidate_id)] = decision
     request.session["screening_decisions"] = decisions
 
-    expected_price = parse_expected_price(request.POST.get("expected_price"))
-    item = get_item(candidate.item_id)
+    item_id_raw = request.POST.get("item_id")
+    item_id = int(item_id_raw) if item_id_raw else getattr(candidate, "item_id", None)
+    item = get_item(item_id) if item_id else None
     item_unit = item.unit if item else None
-    prox = compute_proximity(candidate.price, expected_price, candidate.unit, item_unit)
-    proximity = format_proximity(candidate.price, expected_price, prox, candidate.unit, item_unit)
+
+    expected_price = parse_expected_price(request.POST.get("expected_price"))
+    cand_price = getattr(candidate, "price", None)
+    prox = (
+        compute_proximity(cand_price, expected_price, candidate.unit, item_unit)
+        if cand_price is not None
+        else None
+    )
+    proximity = format_proximity(cand_price, expected_price, prox, candidate.unit, item_unit)
 
     adapted_decisions = {int(k): v for k, v in decisions.items()}
     estimate = build_estimate_panel(item, adapted_decisions)
@@ -103,6 +226,7 @@ def decide(request, candidate_id):
             "proximity": proximity,
             "expected_price": expected_price,
             "item_unit": item_unit,
+            "item_id": item.id if item else None,
             "estimate": estimate,
             "oob_estimate": estimate,
         },
@@ -122,7 +246,12 @@ def screening(request, item_id):
         raw_expected_price and raw_expected_price.strip() and expected_price is None
     )
 
-    candidates = rank_candidates(demo_data.candidates_for(item_id), expected_price, item.unit)
+    candidates = get_screening_candidates(
+        item,
+        expected_price=expected_price,
+        search_fn=search_function,
+        limit=20,
+    )
 
     decisions = {int(k): v for k, v in request.session.get("screening_decisions", {}).items()}
     estimate = build_estimate_panel(item, decisions)
@@ -152,18 +281,3 @@ def screening(request, item_id):
             "estimate": estimate,
         },
     )
-
-
-def get_embedding_model():
-    """Load the embedding model once per process, lazily, never per request."""
-    raise NotImplementedError
-
-
-def get_screening_date_window(reference_date=None):
-    """Return the mandatory 12-month date window up to reference_date (RN07)."""
-    raise NotImplementedError
-
-
-def get_screening_candidates(item, expected_price=None, search_fn=None, limit=20):
-    """Fetch and rank screening candidates for an item from semantic search."""
-    raise NotImplementedError

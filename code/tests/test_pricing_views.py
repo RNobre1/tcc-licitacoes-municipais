@@ -1,3 +1,4 @@
+import datetime
 import re
 from decimal import Decimal
 from html import escape
@@ -11,6 +12,8 @@ from pricing import demo_data, views
 from pricing.ranking import rank_candidates
 from pricing.views import build_estimate_panel
 from procurement.demo_data import get_item, get_procurement_for_item, list_procurements
+
+pytestmark = pytest.mark.django_db
 
 NO_PRICES = {
     "mean": None,
@@ -32,6 +35,18 @@ def _row(html: str, candidate_id: int) -> str:
 
 def _estimate(client, item_id):
     return client.get(reverse("pricing:screening", args=[item_id])).context["estimate"]
+
+
+@pytest.fixture(autouse=True)
+def _inject_fake_search_for_views(monkeypatch):
+    def _fake_search(query, date_window, limit=20):
+        for proc in list_procurements():
+            for it in proc.items:
+                if it.description == query:
+                    return demo_data.candidates_for(it.id)
+        return []
+
+    monkeypatch.setattr(views, "search_function", _fake_search)
 
 
 def test_pricing_decide_route_matches_contract():
@@ -766,3 +781,130 @@ def test_get_screening_candidates_calls_search_and_ranks():
     assert mock_search.called
     assert mock_search.call_args.kwargs["query"] == "Papel sulfite A4"
     assert mock_search.call_args.kwargs["limit"] == 20
+
+
+def test_screening_renders_real_candidates_from_semantic_search(client, monkeypatch):
+    from ingestion.models import PublicItem
+    from semantic_index.search import ScoredPublicItem
+
+    pi_awarded = PublicItem(
+        id=1001,
+        cnpj="01611858000155",
+        year=2026,
+        purchase_sequence=42,
+        item_number=1,
+        description="Papel A4 homologado",
+        unit="pacote",
+        quantity=Decimal("100"),
+        agency_name="Prefeitura Alpha",
+        published_on=datetime.date(2026, 11, 1),
+        awarded_unit_price=Decimal("25.50"),
+        estimated_unit_price=Decimal("30.00"),
+        secret_budget=False,
+    )
+    pi_estimated = PublicItem(
+        id=1002,
+        cnpj="01611858000155",
+        year=2026,
+        purchase_sequence=42,
+        item_number=2,
+        description="Papel A4 sem resultado",
+        unit="pacote",
+        quantity=Decimal("100"),
+        agency_name="Prefeitura Alpha",
+        published_on=datetime.date(2026, 11, 2),
+        awarded_unit_price=None,
+        estimated_unit_price=Decimal("28.00"),
+        secret_budget=False,
+    )
+    pi_secret = PublicItem(
+        id=1003,
+        cnpj="01611858000155",
+        year=2026,
+        purchase_sequence=42,
+        item_number=3,
+        description="Papel A4 sigiloso",
+        unit="pacote",
+        quantity=Decimal("100"),
+        agency_name="Prefeitura Alpha",
+        published_on=datetime.date(2026, 11, 3),
+        awarded_unit_price=None,
+        estimated_unit_price=Decimal("0.00"),
+        secret_budget=True,
+    )
+
+    def _fake_real_search(query, date_window, limit=20):
+        return [
+            ScoredPublicItem(item=pi_awarded, score=0.95),
+            ScoredPublicItem(item=pi_estimated, score=0.85),
+            ScoredPublicItem(item=pi_secret, score=0.75),
+        ]
+
+    monkeypatch.setattr(views, "search_function", _fake_real_search)
+
+    url = reverse("pricing:screening", args=[1])
+    response = client.get(url)
+    assert response.status_code == 200
+    html = response.content.decode()
+
+    assert "https://pncp.gov.br/app/editais/01611858000155/2026/42" in html
+    assert "25,50" in html
+    assert "28,00 (estimado)" in html
+
+    row_secret = _row(html, 1003)
+    assert "<td>—</td>" in row_secret
+
+
+def test_screening_estimate_panel_ignores_estimated_prices(client, monkeypatch):
+    from ingestion.models import PublicItem
+    from semantic_index.search import ScoredPublicItem
+
+    pi_awarded = PublicItem(
+        id=2001,
+        cnpj="01611858000155",
+        year=2026,
+        purchase_sequence=1,
+        item_number=1,
+        description="Papel A4",
+        unit="pacote",
+        quantity=Decimal("100"),
+        agency_name="Prefeitura Alpha",
+        published_on=datetime.date(2026, 11, 1),
+        awarded_unit_price=Decimal("20.00"),
+        estimated_unit_price=Decimal("30.00"),
+        secret_budget=False,
+    )
+    pi_estimated = PublicItem(
+        id=2002,
+        cnpj="01611858000155",
+        year=2026,
+        purchase_sequence=1,
+        item_number=2,
+        description="Papel A4",
+        unit="pacote",
+        quantity=Decimal("100"),
+        agency_name="Prefeitura Alpha",
+        published_on=datetime.date(2026, 11, 2),
+        awarded_unit_price=None,
+        estimated_unit_price=Decimal("40.00"),
+        secret_budget=False,
+    )
+
+    def _fake_search(query, date_window, limit=20):
+        return [
+            ScoredPublicItem(item=pi_awarded, score=0.90),
+            ScoredPublicItem(item=pi_estimated, score=0.88),
+        ]
+
+    monkeypatch.setattr(views, "search_function", _fake_search)
+
+    session = client.session
+    session["screening_decisions"] = {"2001": "accept", "2002": "accept"}
+    session.save()
+
+    response = client.get(reverse("pricing:screening", args=[1]))
+    estimate = response.context["estimate"]
+
+    assert estimate["count"] == 1
+    assert estimate["mean"] == Decimal("20.00")
+    assert estimate["counted_candidate_ids"] == {2001}
