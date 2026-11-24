@@ -740,3 +740,25 @@ def test_fetch_pncp_walk_recovers_from_429_on_publications_and_completes():
     assert "Items: 1" in output
     assert "Failures: 0" in output
     assert sleep_calls == [15.0, 30.0]
+
+
+def test_retrying_transport_does_not_retry_envelope_or_completeness_violations():
+    calls = []
+
+    def envelope_violation_transport(url: str, params: dict | None = None):
+        calls.append(url)
+        raise PncpResponseError("Missing paginasRestantes in payload", status=None)
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=envelope_violation_transport,
+        max_attempts=5,
+        sleep_func=sleep_calls.append,
+    )
+
+    with pytest.raises(PncpResponseError) as exc_info:
+        transport("https://example.test", None)
+
+    assert "Missing paginasRestantes" in str(exc_info.value)
+    assert len(calls) == 1
+    assert sleep_calls == []
