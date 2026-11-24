@@ -437,6 +437,17 @@ o detalhamento de cada caso será escrito quando ele for implementado.
   \fonte{Elaborado pelo autor.}
 \end{figure}
 
+As rotinas modeladas são independentes, cada uma com objetivo próprio: cada uma
+começa e termina sozinha, de modo que o operador pode executá-la sem acionar as
+demais. Há apenas uma relação entre casos de uso: o UC03 estende o UC02
+(\textit{extend}) somente na condição em que o mesmo item é pedido por mais de
+uma secretaria, caso em que o operador consolida as demandas. Não há relações de
+inclusão (\textit{include}), porque nenhum caso exige sempre a execução de outro,
+como exigiria uma chamada de função. Da mesma forma, a dispensa da pesquisa de
+preços quando o preço vem de ata de registro ou de contrato vigente não vira
+relação no diagrama, pois apenas dispensa que o UC04 e o UC05 aconteçam, sem
+acrescentar comportamento aos casos existentes.
+
 \subsubsection{Alcance do que foi modelado}
 \label{subsec:alcance}
 
