@@ -1089,3 +1089,16 @@ def test_decide_and_screening_keys_decisions_by_requested_item_and_candidate(cli
     assert 1 not in resp2.context["decisions"]
     # Panel on item 2 must not count candidate 1
     assert 1 not in resp2.context["estimate"]["counted_candidate_ids"]
+
+def test_screening_view_limit_is_strictly_20(monkeypatch):
+    """Mutant killer 2: Screening view requests limit=20 candidates, not 10."""
+    recorded_limit = None
+
+    def fake_search(**kwargs):
+        nonlocal recorded_limit
+        recorded_limit = kwargs.get("limit")
+        return []
+
+    monkeypatch.setattr(views, "search_function", fake_search)
+    views.get_screening_candidates(views.get_item(1))
+    assert recorded_limit == 20

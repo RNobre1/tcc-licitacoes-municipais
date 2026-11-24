@@ -222,3 +222,83 @@ def test_fetch_awarded_price_on_demand_skips_when_already_has_awarded_price():
     mock_fetch = MagicMock()
     fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
     assert not mock_fetch.called
+
+def test_candidate_price_respects_secret_budget_even_when_prices_present():
+    """Mutant killer 1: Candidate.price must return None when secret_budget=True even if awarded/estimated prices exist."""
+    cand = Candidate(
+        id=99,
+        description="Item sigiloso com preço",
+        unit="unidade",
+        quantity=Decimal("1"),
+        agency="Órgão",
+        date=date.today(),
+        awarded_unit_price=Decimal("50.00"),
+        estimated_unit_price=Decimal("60.00"),
+        secret_budget=True,
+    )
+    assert cand.price is None
+    assert cand.price_kind == "secret_budget"
+    assert cand.usable_calculation_price is None
+
+
+def test_candidate_without_price_and_not_secret_budget_is_no_price():
+    """N5: Any item without price that is not secret budget gets 'no_price' kind."""
+    cand = Candidate(
+        id=100,
+        description="Item sem preço nenhum",
+        unit="unidade",
+        quantity=Decimal("1"),
+        agency="Órgão",
+        date=date.today(),
+        awarded_unit_price=None,
+        estimated_unit_price=None,
+        secret_budget=False,
+    )
+    assert cand.price is None
+    assert cand.price_kind == "no_price"
+    assert cand.usable_calculation_price is None
+
+
+def test_fetch_awarded_price_on_demand_uses_short_timeout(monkeypatch):
+    """Mutant killer 4: fetch_awarded_price_on_demand passes timeout=2.0 (not 20.0)."""
+    from ingestion.models import PublicItem
+    from pricing.candidates import fetch_awarded_price_on_demand
+
+    recorded_timeout = None
+
+    def fake_fetch_item_results(**kwargs):
+        nonlocal recorded_timeout
+        transport = kwargs.get("transport")
+        if transport and hasattr(transport, "keywords"):
+            recorded_timeout = transport.keywords.get("timeout")
+        return None
+
+    import ingestion.client
+    monkeypatch.setattr(ingestion.client, "fetch_item_results", fake_fetch_item_results)
+
+    mock_pi = PublicItem(
+        cnpj="00000000000001",
+        year=2026,
+        purchase_sequence=1,
+        item_number=1,
+        description="Test",
+        unit="unidade",
+        quantity=Decimal("1"),
+        agency_name="Test",
+        published_on=datetime.date.today(),
+        awarded_unit_price=None,
+        estimated_unit_price=Decimal("10.00"),
+    )
+    # Give mock_pi a raw_record with temResultado=True
+    class MockRecord:
+        endpoint = "/compras/2026/1/itens"
+        payload = [{"numeroItem": 1, "temResultado": True}]
+
+    class MockRawRecords:
+        def all(self):
+            return [MockRecord()]
+
+    mock_pi.raw_records = MockRawRecords()
+
+    fetch_awarded_price_on_demand(mock_pi)
+    assert recorded_timeout == 2.0

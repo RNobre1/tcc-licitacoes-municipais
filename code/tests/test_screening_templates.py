@@ -628,3 +628,18 @@ def test_screening_omits_partial_corpus_notice_when_not_partial():
     )
     rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
     assert "Busca realizada em corpus parcial" not in rendered
+
+def test_candidate_fragment_renders_fora_do_calculo_sem_preco_when_not_secret():
+    """N5: Item without price and not secret budget is labeled 'fora do cálculo: sem preço'."""
+    candidate = _make_candidate(price=None, secret_budget=False)
+    rendered = _render_candidate_fragment(candidate, decision="accept")
+    assert "fora do cálculo: sem preço" in rendered
+    assert "orçamento sigiloso" not in rendered
+
+
+def test_candidate_fragment_renders_fora_do_calculo_orcamento_sigiloso_only_when_secret():
+    """N5: Only actual secret budget items are labeled 'fora do cálculo: orçamento sigiloso'."""
+    candidate = _make_candidate(price=None, secret_budget=True)
+    rendered = _render_candidate_fragment(candidate, decision="accept")
+    assert "fora do cálculo: orçamento sigiloso" in rendered
+    assert "fora do cálculo: sem preço" not in rendered
