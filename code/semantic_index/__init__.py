@@ -1,5 +1,6 @@
 """Semantic index client, collection management, and embedding models for Qdrant."""
 
+import contextlib
 import os
 from typing import Any
 
@@ -26,6 +27,13 @@ __all__ = [
     "get_qdrant_client",
     "index_public_items",
     "semantic_search",
+]
+
+PAYLOAD_INDEX_FIELDS = [
+    ("published_on", models.PayloadSchemaType.DATETIME),
+    ("state", models.PayloadSchemaType.KEYWORD),
+    ("unit", models.PayloadSchemaType.KEYWORD),
+    ("item_kind", models.PayloadSchemaType.KEYWORD),
 ]
 
 
@@ -64,15 +72,29 @@ def _assert_matching_configuration(
         )
 
 
+def _ensure_payload_indexes(client: Any, collection_name: str) -> None:
+    """Ensure payload indexes exist on filtered fields."""
+    if not hasattr(client, "create_payload_index"):
+        return
+    for field_name, field_schema in PAYLOAD_INDEX_FIELDS:
+        with contextlib.suppress(Exception):
+            client.create_payload_index(
+                collection_name=collection_name,
+                field_name=field_name,
+                field_schema=field_schema,
+            )
+
+
 def create_collection(
     client: Any,
     collection_name: str,
     vector_size: int,
     distance: models.Distance,
 ) -> bool:
-    """Create a collection idempotently. Calling twice produces the same effect as once."""
+    """Create a collection idempotently with payload indexes on filtered fields."""
     if client.collection_exists(collection_name):
         _assert_matching_configuration(client, collection_name, vector_size, distance)
+        _ensure_payload_indexes(client, collection_name)
         return True
 
     vectors_config = models.VectorParams(size=vector_size, distance=distance)
@@ -81,9 +103,11 @@ def create_collection(
             collection_name=collection_name,
             vectors_config=vectors_config,
         )
+        _ensure_payload_indexes(client, collection_name)
         return True
     except UnexpectedResponse as exc:
         if exc.status_code == 409:
             _assert_matching_configuration(client, collection_name, vector_size, distance)
+            _ensure_payload_indexes(client, collection_name)
             return True
         raise
