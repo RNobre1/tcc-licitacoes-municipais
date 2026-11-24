@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import pytest
 from django.core.management import call_command
 
 from ingestion.models import RawRecord
@@ -32,6 +33,7 @@ SYNTHETIC_EVAL_JSON = {
 }
 
 
+@pytest.mark.django_db
 def test_resolve_ground_truth_command():
     with TemporaryDirectory() as tmp_dir:
         eval_dir = Path(tmp_dir) / "avaliacao"
