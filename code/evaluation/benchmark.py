@@ -191,18 +191,67 @@ class PriceCandidateSim:
     unit: str = "UNIDADE"
 
 
-def generate_anchor_prices(chosen_prices, sigmas, n_draws: int = 200, seed: int = 42):
-    raise NotImplementedError
+def generate_anchor_prices(
+    chosen_prices: Sequence[Decimal | float],
+    sigmas: Sequence[float],
+    n_draws: int = 200,
+    seed: int = 42,
+) -> dict[float, list[float]]:
+    """Generate anchor prices using log-normal noise.
+
+    Anchor = exp(mean(ln(p)) + sigma * Z), with Z ~ N(0, 1).
+    Reuses the same Z across levels for each draw.
+    sigma = 0 is labeled 'upper bound (oracle)'.
+    """
+    valid_prices = [float(p) for p in chosen_prices if float(p) > 0]
+    if not valid_prices:
+        raise ValueError("At least one positive price required")
+
+    import math
+
+    mean_ln = sum(math.log(p) for p in valid_prices) / len(valid_prices)
+
+    rng = random.Random(seed)
+    z_draws = [rng.gauss(0.0, 1.0) for _ in range(n_draws)]
+
+    anchors_by_sigma: dict[float, list[float]] = {}
+    for sigma in sigmas:
+        sigma_val = float(sigma)
+        anchors_by_sigma[sigma_val] = [math.exp(mean_ln + sigma_val * z) for z in z_draws]
+
+    return anchors_by_sigma
 
 
-def rank_by_price_only(candidates, anchor: Decimal):
-    raise NotImplementedError
+def rank_by_price_only(
+    candidates: Sequence[Any],
+    anchor: Decimal | float,
+) -> list[Any]:
+    """Rank candidates by |ln(price / anchor)| asc, breaking ties by candidate id."""
+    import math
+
+    anchor_f = float(anchor)
+    if anchor_f <= 0:
+        raise ValueError("Anchor price must be positive")
+
+    def sort_key(candidate):
+        p = float(candidate.price) if candidate.price is not None else 0.0
+        if p <= 0:
+            return (float("inf"), candidate.id)
+        dist = abs(math.log(p / anchor_f))
+        return (round(dist, 9), candidate.id)
+
+    return sorted(candidates, key=sort_key)
 
 
 def classify_easy_hard_items(
-    candidates,
-    anchor: Decimal,
-    ground_truth_ids: set,
+    candidates: Sequence[Any],
+    anchor: Decimal | float,
+    ground_truth_ids: set[Any],
     k: int = 10,
 ) -> bool:
-    raise NotImplementedError
+    """Classify an item as easy if price-only baseline puts a relevant item in top k."""
+    if not ground_truth_ids or not candidates:
+        return False
+    ranked = rank_by_price_only(candidates, anchor=anchor)
+    top_k_ids = set(c.id for c in ranked[:k])
+    return bool(top_k_ids.intersection(ground_truth_ids))
