@@ -6,13 +6,13 @@ from pathlib import Path
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.utils import timezone
 
 from ingestion.client import PncpResponseError
 from ingestion.management.commands.fetch_pncp import (
     RetryingTransport,
     create_retrying_transport,
 )
-from django.utils import timezone
 from ingestion.models import RawRecord
 
 PNCP_RESPONSES_DIR = Path(__file__).resolve().parent / "api_responses" / "pncp"
@@ -418,7 +418,7 @@ def test_the_command_sends_the_window_the_uf_and_the_modality():
     assert seen[1][1]["dataFinal"] == "20261102"
 
     assert seen[2][1]["dataInicial"] == "20261103"
-    assert seen[2][1]["dataFinal"] == "20261103" 
+    assert seen[2][1]["dataFinal"] == "20261103"
 
 
 @pytest.mark.integration
