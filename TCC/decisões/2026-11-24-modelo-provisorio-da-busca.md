@@ -18,9 +18,9 @@ triagem buscar candidatos reais antes disso, a busca precisa de um modelo agora.
 
 | Opção | Prós | Contras |
 |---|---|---|
-| A. multilingual-E5, pesos abertos, local | Está na bateria proposta, na classe 5; versão fixada, como a trilha de auditoria exige; roda na máquina de trabalho, sem custo, e o dado não sai dela | Não é a escolha medida; pode perder na bateria |
+| A. multilingual-E5 base, pesos abertos, local | Está na bateria proposta, na classe 5; versão fixada, como a trilha de auditoria exige; roda na máquina de trabalho, sem custo, e o dado não sai dela | Não é a escolha medida; pode perder na bateria |
 | B. Manter os dados fictícios até a bateria | Nenhuma escolha provisória | A integração só se prova com modelo falso; não há busca real para mostrar |
-| C. Serviço comercial de vetores | É o que o setor de tecnologia da universidade usa | O vetor pode mudar sem aviso, o que quebra a reconstituição de uma pesquisa; exige chave e tem custo |
+| C. Serviço comercial de vetores | Nada a instalar | O vetor pode mudar sem aviso, o que quebra a reconstituição de uma pesquisa; exige chave e tem custo |
 
 ## Decisão
 

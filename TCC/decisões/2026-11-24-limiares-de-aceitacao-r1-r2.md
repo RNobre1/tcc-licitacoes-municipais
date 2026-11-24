@@ -13,8 +13,8 @@ A classificação da pesquisa, *Design Science Research*, exige que o limiar de
 aceitação de cada resultado esperado seja fixado **antes** da medição (C11). Os
 limites das faixas de comparabilidade do RF23 também precisam sair de um
 subconjunto separado daquele em que se mede (C15). Nesta semana o conjunto de
-avaliação e o arnês da bateria ficam prontos, e a medição pode acontecer ainda
-em dezembro.
+avaliação e o arnês da bateria ficam prontos. Com o espaço de busca nacional,
+decidido no mesmo dia, a medição sai na virada do ano.
 
 Duas condições pesaram:
 
@@ -34,7 +34,7 @@ A investigação está em `docs/pesquisas/limiares-de-aceitacao-r1-r2.md`.
 | Corte k | 10 agora; 20 agora; esperar a observação de 2027 | 10, fixado agora |
 | Partição | 40/60 por item; 25/75 por item; validação cruzada aninhada como principal | 40% ajuste e 60% medição, por item |
 | Estratos da partição | Relatório e material ou serviço; mais o número de relevantes; só o relatório | Relatório e material ou serviço |
-| Escolha do finalista | Maior Recall\@10 no ajuste; dois finalistas com correção; o multilingual-E5 fixado agora | Maior Recall\@10 no ajuste |
+| Escolha do finalista | Maior Recall\@10 no ajuste, com desempate pelo MRR\@20; dois finalistas com correção; o multilingual-E5 fixado agora | Maior Recall\@10 no ajuste, com desempate pelo MRR\@20 |
 | Definição de Recall\@10 | Fração dos escolhidos entre os dez primeiros; ao menos um entre os dez primeiros | Fração dos escolhidos |
 | Aceite de R2 | Nível de referência de 25% de erro; R2 só descritivo até 2027; nível de 50% | Nível de referência de 25% |
 | Leitura de R2 | Grade fixa com linha de base só-preço e partição fácil/difícil; só a curva; esperar o erro real da servidora | Grade fixa, só-preço e fácil/difícil |
@@ -104,7 +104,9 @@ fixas, gravadas na saída de cada execução.
   80% de chance de aceitar o R1, o sistema precisa superar o BM25 por algo entre
   12 e 18 pontos, conforme os métodos discordem mais ou menos. Com ganho
   moderado, "inconclusivo" é o desfecho provável, e isso é dito antes de medir.
-- **O k fixado agora** permite medir em dezembro. Se a observação de 2027
+  A conta supõe acerto binário por item; com Recall\@10 como fração, a variância
+  por item não é maior, então a conta vale como limite conservador.
+- **O k fixado agora** permite medir na virada do ano, sem esperar 2027. Se a observação de 2027
   mostrar que a servidora examina outro número de candidatos, isso vira
   limitação declarada, e não mudança do k depois de medir.
 - **A grade de ruído é escolha de projeto**, porque nenhuma fonte prescreve

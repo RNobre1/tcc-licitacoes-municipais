@@ -19,13 +19,19 @@ A extração dos três relatórios de cotação respondeu a primeira com dados. 
 - vêm de **24 unidades da federação**: o Pará responde por 10,6%, e a região
   Norte inteira por cerca de 16%;
 - vêm de três modalidades: pregão eletrônico (68,1%), dispensa (25,7%) e pregão
-  presencial (5,3%). As duas restantes somam 0,8%;
-- todos foram publicados nos doze meses anteriores à data da pesquisa;
+  presencial (5,3%). As duas restantes somam 0,9%;
+- 451 deles foram publicados nos doze meses que terminam no último dia do
+  levantamento de preços do relatório. A escolha dessa data muda o número:
+  contando a partir do início do levantamento, 28 ficariam fora;
 - em 95,1% deles, a unidade escrita difere da unidade pedida.
 
-Em junho de 2026, o PNCP recebeu, no país todo, cerca de 31 mil pregões
-eletrônicos, 59 mil dispensas e 750 pregões presenciais. Doze meses dessas três
-modalidades somam a ordem de doze milhões de itens.
+Em junho de 2026, o PNCP recebeu, no país todo, 31.057 pregões eletrônicos,
+59.085 dispensas e 746 pregões presenciais (consulta pública de contratações,
+de 01 a 30/06/2026, feita em 24/11/2026). Uma amostra de um dia útil
+nacional, de 15/10/2025, deu 5.109 compras nas três modalidades. Estendida à
+janela de 01/06/2025 a 15/07/2026, a estimativa é de cerca de 1,5 milhão de
+compras e, a cerca de oito itens por compra, da ordem de doze milhões de
+itens. É estimativa, não contagem.
 
 A investigação está em `docs/pesquisas/limiares-de-aceitacao-r1-r2.md`, seção
 6.4.
@@ -34,7 +40,7 @@ A investigação está em `docs/pesquisas/limiares-de-aceitacao-r1-r2.md`, seç�
 
 | Opção | Prós | Contras |
 |---|---|---|
-| A. Nacional, doze meses, as três modalidades do gabarito | É o espaço em que o sistema buscaria; alcança 99% dos relevantes; é o cenário da contribuição declarada, descrição curta sobre milhões de itens | Coleta de dias e indexação de horas a um dia por modelo; a medição passa para a virada do ano |
+| A. Nacional, doze meses, as três modalidades do gabarito | É o espaço em que o sistema buscaria; as três modalidades cobrem 448 dos 452 relevantes; é o cenário da contribuição declarada, descrição curta sobre milhões de itens | Coleta de dias e indexação de horas a um dia por modelo; a medição passa para a virada do ano |
 | B. Nacional, doze meses, só pregão eletrônico | Um terço das requisições | 32% dos relevantes ficam inalcançáveis: o teto de R1 cai para 68% |
 | C. Só a região Norte | Cabe numa semana | Só cerca de 16% dos relevantes estão lá; R1 mediria quase nada |
 | D. Um mês nacional, com os relevantes inseridos | Cabe numa semana | É o *pool* que a pesquisa desaconselha: os relevantes têm presença garantida, e os vizinhos de outros meses não |
@@ -45,8 +51,9 @@ estimado marcado no lugar; só o homologado; ou sempre o estimado.
 ## Decisão
 
 **Espaço de busca: opção A.** Para cada item pedido, o espaço C(q) é o conjunto
-dos itens publicados no PNCP nos doze meses anteriores à data da pesquisa
-daquele item (RN07), em todas as unidades da federação, nas modalidades pregão
+dos itens publicados no PNCP nos doze meses que terminam no **último dia do
+levantamento de preços** do relatório daquele item (RN07), sem nada publicado
+depois dele, em todas as unidades da federação, nas modalidades pregão
 eletrônico, dispensa e pregão presencial. É o mesmo para todos os métodos. A
 unidade não filtra, porque a grafia diverge em 95% dos relevantes. A conversão
 de unidade segue aberta, no D11.
@@ -67,7 +74,9 @@ nacional da bateria, com o custo medido.
 
 - O gabarito mostra que a servidora busca no país inteiro. Um espaço regional
   cortaria os relevantes antes de qualquer método rodar.
-- Doze meses vem da RN07, e todos os relevantes cabem nessa janela.
+- Doze meses vem da RN07. Com o fim do levantamento como data-base, 451 dos
+  452 relevantes cabem na janela. Os preços publicados durante o levantamento
+  estavam disponíveis para a servidora, e o que veio depois não estava.
 - A IN 65/2021 aceita como referência o preço de contratação, o homologado. O
   estimado é a previsão do órgão, costuma ser maior e vem zerado no orçamento
   sigiloso.

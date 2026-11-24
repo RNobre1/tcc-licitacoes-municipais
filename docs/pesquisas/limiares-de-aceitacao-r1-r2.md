@@ -1,7 +1,7 @@
 ---
 tipo: pesquisa
 titulo: "Fixar R1 e R2 antes de medir: limiar, curva, partição e espaço de busca (C11, C15)"
-status: decidida em 24/11/2026 — ver TCC/decisões/2026-11-24-limiares-de-aceitacao-r1-r2.md; o espaço de busca segue aberto
+status: decidida em 24/11/2026 — ver as três decisões do dia em TCC/decisões/ (limiares de aceitação, espaço de busca e preço do candidato, modelo provisório)
 criado: 2026-11-24
 autor: Rafael Nobre de Souza
 relacionado:
