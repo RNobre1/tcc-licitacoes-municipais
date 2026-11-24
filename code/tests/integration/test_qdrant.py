@@ -72,6 +72,30 @@ class TestQdrantIntegration:
             with contextlib.suppress(Exception):
                 live_qdrant_client.delete_collection(collection_name)
 
+    def test_create_collection_creates_payload_indexes(self, live_qdrant_client):
+        """Integration: verifies payload indexes are created on filtered fields."""
+        collection_name = f"test_payload_idx_{uuid.uuid4().hex[:8]}"
+        try:
+            create_collection(
+                live_qdrant_client,
+                collection_name=collection_name,
+                vector_size=16,
+                distance=models.Distance.COSINE,
+            )
+            info = live_qdrant_client.get_collection(collection_name)
+            schema = info.payload_schema
+            assert "published_on" in schema
+            assert schema["published_on"].data_type == models.PayloadSchemaType.DATETIME
+            assert "state" in schema
+            assert schema["state"].data_type == models.PayloadSchemaType.KEYWORD
+            assert "unit" in schema
+            assert schema["unit"].data_type == models.PayloadSchemaType.KEYWORD
+            assert "item_kind" in schema
+            assert schema["item_kind"].data_type == models.PayloadSchemaType.KEYWORD
+        finally:
+            with contextlib.suppress(Exception):
+                live_qdrant_client.delete_collection(collection_name)
+
     def test_create_collection_with_different_configuration_raises_error(self, live_qdrant_client):
         """Integration: creating collection with conflicting configuration raises error."""
         collection_name = f"test_semantic_index_{uuid.uuid4().hex[:8]}"
