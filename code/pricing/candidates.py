@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -124,4 +125,64 @@ def fetch_awarded_price_on_demand(
     Uses ingestion fetch_item_results with short timeout. If the fetch fails,
     the candidate stays estimado and the page still renders.
     """
-    raise NotImplementedError
+    if getattr(public_item, "awarded_unit_price", None) is not None:
+        return
+
+    raw_records = getattr(public_item, "raw_records", None)
+    if raw_records is None:
+        return
+
+    has_result = False
+    for r in raw_records.all():
+        endpoint = getattr(r, "endpoint", "")
+        if "itens" in endpoint and not endpoint.endswith("resultados"):
+            payload = getattr(r, "payload", None)
+            if isinstance(payload, list):
+                for it in payload:
+                    if (
+                        isinstance(it, dict)
+                        and it.get("numeroItem") == getattr(public_item, "item_number", None)
+                        and it.get("temResultado") is True
+                    ):
+                        has_result = True
+                        break
+        if has_result:
+            break
+
+    if not has_result:
+        return
+
+    try:
+        if fetch_fn is not None:
+            record = fetch_fn(
+                cnpj=public_item.cnpj,
+                ano=public_item.year,
+                sequencial=public_item.purchase_sequence,
+                numero_item=public_item.item_number,
+            )
+        else:
+            from ingestion.client import fetch_item_results, urllib_transport
+
+            transport = functools.partial(urllib_transport, timeout=timeout)
+            record = fetch_item_results(
+                cnpj=str(public_item.cnpj),
+                ano=int(public_item.year),
+                sequencial=int(public_item.purchase_sequence),
+                numero_item=int(public_item.item_number),
+                transport=transport,
+                save=True,
+            )
+
+        if record and isinstance(record.payload, list) and record.payload:
+            first_res = record.payload[0]
+            if isinstance(first_res, dict):
+                val = first_res.get("valorUnitarioHomologado")
+                if val is not None:
+                    public_item.awarded_unit_price = Decimal(str(val))
+                    if hasattr(public_item, "save"):
+                        public_item.save(update_fields=["awarded_unit_price"])
+                    if hasattr(public_item.raw_records, "add"):
+                        public_item.raw_records.add(record)
+    except Exception:
+        # If fetch fails, the candidate stays estimado and page still renders
+        pass
