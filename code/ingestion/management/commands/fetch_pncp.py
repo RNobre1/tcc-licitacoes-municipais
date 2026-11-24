@@ -1,5 +1,7 @@
 import concurrent.futures
+import http.client
 import re
+import threading
 import time
 import urllib.error
 from collections.abc import Callable
@@ -17,6 +19,7 @@ from ingestion.client import (
     fetch_item_results,
     fetch_items,
     fetch_publications,
+    parse_retry_after,
     urllib_transport,
 )
 from ingestion.models import RawRecord
@@ -26,8 +29,40 @@ ITEM_ENDPOINT_PATTERN = re.compile(
 )
 
 
+class RateLimiter:
+    """Thread-safe rate limiter enforcing a minimum interval between calls."""
+
+    def __init__(
+        self,
+        requests_per_second: float = 2.0,
+        time_func: Callable[[], float] | None = None,
+        sleep_func: Callable[[float], None] | None = None,
+    ) -> None:
+        self.interval = 1.0 / requests_per_second if requests_per_second > 0 else 0.0
+        self.time_func = time_func or time.monotonic
+        self.sleep_func = sleep_func or time.sleep
+        self._lock = threading.Lock()
+        self._last_call: float = 0.0
+
+    def wait(self) -> float:
+        """Wait if needed to respect the rate limit interval. Returns the waited duration."""
+        if self.interval <= 0:
+            return 0.0
+        with self._lock:
+            now = self.time_func()
+            scheduled_time = (
+                max(now, self._last_call + self.interval) if self._last_call > 0 else now
+            )
+            wait_time = scheduled_time - now
+            self._last_call = scheduled_time
+
+        if wait_time > 0:
+            self.sleep_func(wait_time)
+        return wait_time
+
+
 class RetryingTransport:
-    """Transport wrapper with exponential backoff on 5xx and timeouts."""
+    """Transport wrapper with exponential backoff on 429, 5xx, and network errors."""
 
     def __init__(
         self,
@@ -35,36 +70,109 @@ class RetryingTransport:
         max_attempts: int = 5,
         backoff_factor: float = 1.0,
         sleep_func: Callable[[float], None] | None = None,
+        rate_limiter: RateLimiter | None = None,
+        rate_limit_initial_wait: float = 30.0,
+        rate_limit_max_wait: float = 600.0,
+        rate_limit_max_attempts: int = 10,
     ) -> None:
         self.base_transport = base_transport or urllib_transport
         self.max_attempts = max_attempts
         self.backoff_factor = backoff_factor
         self.sleep_func = sleep_func or time.sleep
+        self.rate_limiter = rate_limiter
+        self.rate_limit_initial_wait = rate_limit_initial_wait
+        self.rate_limit_max_wait = rate_limit_max_wait
+        self.rate_limit_max_attempts = rate_limit_max_attempts
 
     def __call__(self, url: str, params: dict[str, Any] | None = None) -> tuple[int, Any]:
         attempt = 1
+        rate_limit_attempt = 1
+        rate_limit_backoff_step = 0
         while True:
+            if self.rate_limiter is not None:
+                self.rate_limiter.wait()
+
             try:
                 status, data = self.base_transport(url, params)
+                if status == 429:
+                    if rate_limit_attempt >= self.rate_limit_max_attempts:
+                        return status, data
+                    retry_after = None
+                    if isinstance(data, dict):
+                        retry_after = data.get("retry_after")
+                        if retry_after is None and "headers" in data:
+                            hdrs = data["headers"]
+                            if isinstance(hdrs, dict):
+                                retry_after = parse_retry_after(
+                                    hdrs.get("retry-after") or hdrs.get("Retry-After")
+                                )
+
+                    if retry_after is not None and retry_after > 0:
+                        sleep_duration = float(retry_after)
+                    else:
+                        sleep_duration = min(
+                            self.rate_limit_max_wait,
+                            self.rate_limit_initial_wait * (2**rate_limit_backoff_step),
+                        )
+                        rate_limit_backoff_step += 1
+                    if sleep_duration > 0:
+                        self.sleep_func(sleep_duration)
+                    rate_limit_attempt += 1
+                    continue
+
                 if status < 500 or attempt >= self.max_attempts:
                     return status, data
-            except (TimeoutError, urllib.error.URLError, PncpResponseError) as exc:
-                if attempt >= self.max_attempts:
-                    raise
-                if isinstance(exc, urllib.error.HTTPError) and exc.code < 500:
-                    raise
-                if (
-                    isinstance(exc, PncpResponseError)
-                    and exc.status is not None
-                    and exc.status < 500
-                ):
+
+                sleep_duration = self.backoff_factor * (2 ** (attempt - 1))
+                if sleep_duration > 0:
+                    self.sleep_func(sleep_duration)
+                attempt += 1
+                continue
+
+            except (
+                TimeoutError,
+                urllib.error.URLError,
+                PncpResponseError,
+                OSError,
+                http.client.HTTPException,
+            ) as exc:
+                code = None
+                if isinstance(exc, urllib.error.HTTPError):
+                    code = exc.code
+                elif isinstance(exc, PncpResponseError):
+                    code = exc.status
+
+                if code == 429:
+                    if rate_limit_attempt >= self.rate_limit_max_attempts:
+                        raise
+                    retry_after = getattr(exc, "retry_after", None)
+                    if retry_after is None and hasattr(exc, "headers") and exc.headers:
+                        retry_after = parse_retry_after(
+                            exc.headers.get("retry-after") or exc.headers.get("Retry-After")
+                        )
+                    if retry_after is not None and retry_after > 0:
+                        sleep_duration = float(retry_after)
+                    else:
+                        sleep_duration = min(
+                            self.rate_limit_max_wait,
+                            self.rate_limit_initial_wait * (2**rate_limit_backoff_step),
+                        )
+                        rate_limit_backoff_step += 1
+                    if sleep_duration > 0:
+                        self.sleep_func(sleep_duration)
+                    rate_limit_attempt += 1
+                    continue
+
+                if code is not None and code < 500:
                     raise
 
-            # Retry with exponential backoff
-            sleep_duration = self.backoff_factor * (2 ** (attempt - 1))
-            if sleep_duration > 0:
-                self.sleep_func(sleep_duration)
-            attempt += 1
+                if attempt >= self.max_attempts:
+                    raise
+
+                sleep_duration = self.backoff_factor * (2 ** (attempt - 1))
+                if sleep_duration > 0:
+                    self.sleep_func(sleep_duration)
+                attempt += 1
 
 
 def create_retrying_transport(
@@ -72,12 +180,23 @@ def create_retrying_transport(
     max_attempts: int = 5,
     backoff_factor: float = 1.0,
     sleep_func: Callable[[float], None] | None = None,
+    rate_limiter: RateLimiter | None = None,
+    rate_limit: float = 2.0,
+    rate_limit_initial_wait: float = 30.0,
+    rate_limit_max_wait: float = 600.0,
+    rate_limit_max_attempts: int = 10,
 ) -> RetryingTransport:
+    if rate_limiter is None and rate_limit > 0:
+        rate_limiter = RateLimiter(requests_per_second=rate_limit, sleep_func=sleep_func)
     return RetryingTransport(
         base_transport=base_transport,
         max_attempts=max_attempts,
         backoff_factor=backoff_factor,
         sleep_func=sleep_func,
+        rate_limiter=rate_limiter,
+        rate_limit_initial_wait=rate_limit_initial_wait,
+        rate_limit_max_wait=rate_limit_max_wait,
+        rate_limit_max_attempts=rate_limit_max_attempts,
     )
 
 
@@ -112,6 +231,12 @@ class Command(BaseCommand):
             type=int,
             default=3,
             help="Number of concurrent item-fetching threads (1 to 4, default: 3)",
+        )
+        parser.add_argument(
+            "--rate-limit",
+            type=float,
+            default=2.0,
+            help="Maximum requests per second across all threads (default: 2.0, <=0 to disable)",
         )
         parser.add_argument(
             "--base-url",
@@ -162,7 +287,11 @@ class Command(BaseCommand):
         concurrency = max(1, min(4, int(options.get("concurrency") or 3)))
         base_url = options.get("base_url", DEFAULT_PNCP_BASE_URL)
         with_results = bool(options.get("with_results"))
-        transport = options.get("transport") or create_retrying_transport()
+        rate_limit_opt = options.get("rate_limit")
+        rate_limit = float(rate_limit_opt) if rate_limit_opt is not None else 2.0
+        transport = options.get("transport") or create_retrying_transport(
+            rate_limit=rate_limit,
+        )
 
         start_time = time.monotonic()
 

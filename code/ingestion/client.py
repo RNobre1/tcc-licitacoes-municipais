@@ -1,3 +1,5 @@
+import datetime
+import email.utils
 import json
 import urllib.error
 import urllib.parse
@@ -16,6 +18,25 @@ MAX_PUBLICATIONS_PAGES = 10000
 TransportCallable = Callable[..., tuple[int, Any]]
 
 
+def parse_retry_after(value: str | None) -> float | None:
+    """Parse Retry-After header as seconds or HTTP date, returning seconds as float."""
+    if not value:
+        return None
+    val_str = str(value).strip()
+    try:
+        sec = float(val_str)
+        return max(0.0, sec)
+    except ValueError:
+        pass
+    try:
+        dt = email.utils.parsedate_to_datetime(val_str)
+        now = datetime.datetime.now(datetime.UTC)
+        diff = (dt - now).total_seconds()
+        return max(0.0, diff)
+    except Exception:
+        return None
+
+
 class PncpError(Exception):
     """Base exception for PNCP client errors."""
 
@@ -23,9 +44,17 @@ class PncpError(Exception):
 class PncpResponseError(PncpError):
     """Raised when PNCP API returns a non-200 status or invalid response."""
 
-    def __init__(self, message: str, status: int | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        status: int | None = None,
+        headers: dict[str, Any] | None = None,
+        retry_after: float | None = None,
+    ) -> None:
         super().__init__(message)
         self.status = status
+        self.headers = headers or {}
+        self.retry_after = retry_after
 
 
 class ItemCountMismatchError(PncpError):
@@ -46,16 +75,40 @@ def urllib_transport(
         full_url = url
 
     req = urllib.request.Request(full_url, headers={"Accept": "application/json"})
+    headers: dict[str, str] = {}
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             status = getattr(resp, "status", 200)
             body = resp.read()
+            if hasattr(resp, "headers") and resp.headers:
+                headers = {k.lower(): v for k, v in resp.headers.items()}
     except urllib.error.HTTPError as exc:
         status = exc.code
         body = exc.read()
+        if hasattr(exc, "headers") and exc.headers:
+            headers = {k.lower(): v for k, v in exc.headers.items()}
 
     if status == 204:
         return 204, None
+
+    if status == 429:
+        retry_after = parse_retry_after(headers.get("retry-after"))
+        return 429, {
+            "error": "Too Many Requests",
+            "retry_after": retry_after,
+            "headers": headers,
+        }
+
+    if status >= 400:
+        try:
+            decoded = body.decode("utf-8") if isinstance(body, bytes) else str(body)
+            data = json.loads(decoded)
+        except Exception:
+            decoded_text = (
+                body.decode("utf-8", errors="replace") if isinstance(body, bytes) else str(body)
+            )
+            data = {"error": f"HTTP {status}", "body": decoded_text[:1000]}
+        return status, data
 
     try:
         decoded = body.decode("utf-8") if isinstance(body, bytes) else str(body)
@@ -64,6 +117,7 @@ def urllib_transport(
         raise PncpResponseError(
             f"Failed to decode response as valid JSON from {url} (status {status}): {exc}",
             status=status,
+            headers=headers,
         ) from exc
 
     return status, data
