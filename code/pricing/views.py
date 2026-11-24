@@ -1,5 +1,6 @@
 import datetime
 from collections.abc import Sequence  # noqa: F401
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
@@ -70,6 +71,28 @@ def default_search_function(
 
 
 search_function = default_search_function
+
+
+@dataclass(frozen=True)
+class CorpusInfo:
+    """Metadata about the semantic index corpus and its date coverage."""
+
+    indexed_items_count: int
+    start_date: datetime.date | None
+    end_date: datetime.date | None
+    is_partial: bool
+
+
+def get_corpus_info(
+    client: Any = None,
+    model: Any = None,
+    reference_date: datetime.date | None = None,
+) -> CorpusInfo:
+    """Return corpus index metadata read from DB and Qdrant."""
+    raise NotImplementedError
+
+
+corpus_info_function = get_corpus_info
 
 
 def get_screening_candidates(
