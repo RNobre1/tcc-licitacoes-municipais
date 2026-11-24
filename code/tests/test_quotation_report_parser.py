@@ -1,11 +1,14 @@
 """Tests for parsing quotation reports (QuotationReport)."""
 
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
 from evaluation.parser import (
+    ParseError,
+    _parse_decimal_br,
     extract_pdf_layout_text,
     parse_quotation_report_text,
 )
@@ -122,6 +125,7 @@ def test_parse_synthetic_quotation_report():
     assert report.title == "COTAÇÃO DEMO DE MATERIAIS"
     assert report.survey_start == "01/06/2026 10:00:00"
     assert report.survey_end == "15/06/2026 18:00:00"
+    assert report.survey_date == date(2026, 6, 15)
     assert len(report.items) == 2
 
     # Item 1 checks
@@ -182,3 +186,123 @@ def test_parse_synthetic_quotation_report():
 def test_extract_pdf_layout_text_missing_file():
     with pytest.raises(FileNotFoundError):
         extract_pdf_layout_text(Path("/nonexistent/file.pdf"))
+
+
+def test_parse_decimal_br():
+    assert _parse_decimal_br("25.00") == Decimal("25.00")
+    assert _parse_decimal_br("25,00") == Decimal("25.00")
+    assert _parse_decimal_br("1.234,56") == Decimal("1234.56")
+    assert _parse_decimal_br(" 0,50 ") == Decimal("0.50")
+
+
+def test_parser_fails_on_missing_price_date():
+    text = SYNTHETIC_REPORT_TEXT.replace("Data: 10/05/2026 09:00", "")
+    with pytest.raises(ParseError, match="missing date"):
+        parse_quotation_report_text(text)
+
+
+def test_parser_fails_on_missing_price_agency():
+    text = SYNTHETIC_REPORT_TEXT.replace("Órgão: PREFEITURA FICTÍCIA ALFA", "")
+    with pytest.raises(ParseError, match="missing agency"):
+        parse_quotation_report_text(text)
+
+
+def test_parser_fails_on_missing_item_quantity_or_unit():
+    text = SYNTHETIC_REPORT_TEXT.replace("100 Pacotes", "")
+    with pytest.raises(ParseError, match="unit or quantity"):
+        parse_quotation_report_text(text)
+
+
+def test_parser_fails_on_missing_estimated_price():
+    text = SYNTHETIC_REPORT_TEXT.replace("Preço Estimado: R$ 25,50 (un)", "").replace(
+        "Preço Estimado Calculado: R$ 25,50", ""
+    )
+    with pytest.raises(ParseError, match="estimated price"):
+        parse_quotation_report_text(text)
+
+
+def test_parser_fails_on_price_header_count_mismatch():
+    # Insert an extra orphan price header that doesn't parse into a price
+    broken_text = SYNTHETIC_REPORT_TEXT + "\nPreço (Invalido) 99:\n"
+    with pytest.raises(ParseError, match="count mismatch"):
+        parse_quotation_report_text(broken_text)
+
+
+def test_parser_fails_on_item_header_count_mismatch_or_duplicates():
+    # Duplicate item 1 header
+    broken_text = SYNTHETIC_REPORT_TEXT.replace(
+        "Item 2: DEMO-CANETA",
+        "Item 1: DEMO-CANETA",
+    )
+    with pytest.raises(ParseError, match="Item count mismatch or duplicate"):
+        parse_quotation_report_text(broken_text)
+
+
+def test_parser_handles_method_with_r():
+    # Header where method has 'R' like "Menor Preço"
+    sample = """
+  Item 1: DEMO-ITEM
+
+      Preço Estimado: R$ 10,00 (un)
+      Média dos Preços Obtidos: R$ 10,00
+
+ Quantidade        Descrição
+ 1 Unidade         DEMO-Item
+
+Preço (Compras Governamentais) 1: Menor Preço       R$ 10,00
+CNPJ: 11.111.111/0001-11  Data: 10/05/2026 09:00
+Órgão: PREFEITURA FICTÍCIA  Modalidade: Pregão
+Descrição: DEMO-Preço  Lote/Item: 1/1
+Fonte: https://pncp.gov.br/app/editais/11111111000111/2026/100
+"""
+    report = parse_quotation_report_text(sample)
+    item = report.items[0]
+    price = item.chosen_prices[0]
+    assert price.calculation_method == "Menor Preço"
+    assert price.unit_price == Decimal("10.00")
+
+
+def test_parser_handles_columns_with_single_space():
+    sample = """
+  Item 1: DEMO-ITEM
+
+      Preço Estimado: R$ 10,00 (un)
+      Média dos Preços Obtidos: R$ 10,00
+
+ Quantidade        Descrição
+ 1 Unidade         DEMO-Item
+
+Preço (Compras Governamentais) 1: Menor Preço       R$ 10,00
+CNPJ: 11.111.111/0001-11 Data: 10/05/2026 09:00
+Órgão: PREFEITURA FICTÍCIA Modalidade: Pregão
+Descrição: DEMO-Preço Lote/Item: 1/1
+Fonte: https://pncp.gov.br/app/editais/11111111000111/2026/100
+"""
+    report = parse_quotation_report_text(sample)
+    price = report.items[0].chosen_prices[0]
+    assert price.date == "10/05/2026 09:00"
+    assert price.agency == "PREFEITURA FICTÍCIA"
+
+
+def test_parser_unit_multi_word_regression_n4():
+    # Unit with multiple words and stuck description
+    sample = """
+  Item 1: DEMO-ITEM
+
+      Preço Estimado: R$ 10,00 (un)
+      Média dos Preços Obtidos: R$ 10,00
+
+ Quantidade        Descrição
+ 10 CAIXA COM 100 UNIDADES  DEMO-Descrição detalhada do material colada na unidade
+
+Preço (Compras Governamentais) 1: Menor Preço       R$ 10,00
+CNPJ: 11.111.111/0001-11  Data: 10/05/2026 09:00
+Órgão: PREFEITURA FICTÍCIA  Modalidade: Pregão
+Descrição: DEMO-Preço  Lote/Item: 1/1
+Fonte: https://pncp.gov.br/app/editais/11111111000111/2026/100
+"""
+    report = parse_quotation_report_text(sample)
+    item = report.items[0]
+    assert item.quantity == Decimal("10")
+    assert item.unit == "CAIXA COM 100 UNIDADES"
+    assert "DEMO-Descrição detalhada do material colada na unidade" in item.description

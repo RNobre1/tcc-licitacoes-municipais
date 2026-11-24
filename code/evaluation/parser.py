@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any
 
 
+class ParseError(Exception):
+    """Raised when quotation report parsing encounters an invalid or unparseable layout."""
+
+
 @dataclass(frozen=True)
 class ChosenPriceReport:
     price_number: int
