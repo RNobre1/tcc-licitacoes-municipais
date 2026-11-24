@@ -95,18 +95,23 @@ def test_bootstrap_seed_determinism_and_alpha_percentiles_mutants():
 
 def test_permutation_test_paired_seed_and_identical_n8():
     # Kill mutants: permutation without seed, and permutation returning 0 for identical
-    scores_a = [0.8, 0.9, 0.7, 0.85, 0.9] * 10
-    scores_b = [0.7, 0.8, 0.6, 0.75, 0.8] * 10
+    scores_a = [0.6, 0.4, 0.7, 0.5, 0.6, 0.3, 0.5, 0.6]
+    scores_b = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
 
-    p1 = permutation_test_paired(scores_a, scores_b, n_resamples=500, seed=42)
-    p2 = permutation_test_paired(scores_a, scores_b, n_resamples=500, seed=42)
-    p3 = permutation_test_paired(scores_a, scores_b, n_resamples=500, seed=99)
+    p1 = permutation_test_paired(scores_a, scores_b, n_resamples=200, seed=42)
+    p2 = permutation_test_paired(scores_a, scores_b, n_resamples=200, seed=42)
+    p3 = permutation_test_paired(scores_a, scores_b, n_resamples=200, seed=99)
 
     assert p1 == p2
     assert p1 != p3
     # N8: Monte Carlo p-value is strictly > 0 (at minimum 1 / (n + 1))
     assert p1 > 0.0
-    assert p1 == pytest.approx(1.0 / 501.0, abs=0.01)
+
+    # Strong effect scores: extreme_count is 0 -> p = (0 + 1) / (500 + 1) = 1 / 501 > 0
+    strong_a = [0.8, 0.9, 0.7, 0.85, 0.9] * 10
+    strong_b = [0.7, 0.8, 0.6, 0.75, 0.8] * 10
+    p_strong = permutation_test_paired(strong_a, strong_b, n_resamples=500, seed=42)
+    assert p_strong == pytest.approx(1.0 / 501.0, abs=1e-5)
 
     # Identical scores should yield p = 1.0 (extreme_count = n_resamples -> (n+1)/(n+1) = 1.0)
     p_identical = permutation_test_paired(scores_a, scores_a, n_resamples=500, seed=42)

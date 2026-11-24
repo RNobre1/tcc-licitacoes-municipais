@@ -69,9 +69,9 @@ def test_evaluate_r1_acceptance():
     res_tie_90 = evaluate_r1_acceptance(
         diff_mean=0.00,
         ci_95_lower=-0.09,  # outside (-0.08, 0.08)
-        ci_95_upper=0.09,   # outside (-0.08, 0.08)
+        ci_95_upper=0.09,  # outside (-0.08, 0.08)
         ci_90_lower=-0.05,  # inside (-0.08, 0.08)
-        ci_90_upper=0.05,   # inside (-0.08, 0.08)
+        ci_90_upper=0.05,  # inside (-0.08, 0.08)
     )
     assert res_tie_90["outcome"] == "tie"
 
@@ -81,7 +81,7 @@ def test_evaluate_r1_acceptance():
         ci_95_lower=-0.12,
         ci_95_upper=0.06,
         ci_90_lower=-0.09,  # outside (-0.08)
-        ci_90_upper=0.04,   # inside (+0.08)
+        ci_90_upper=0.04,  # inside (+0.08)
     )
     assert res_tie_one_sided["outcome"] == "inconclusive"
 

@@ -114,7 +114,7 @@ def permutation_test_paired(
         if abs(perm_diff) >= obs_diff:
             extreme_count += 1
 
-    return extreme_count / n_resamples
+    return (extreme_count + 1) / (n_resamples + 1)
 
 
 @dataclass(frozen=True)
@@ -240,11 +240,18 @@ class PriceCandidateSim:
     unit: str = "UNIDADE"
 
 
+def derive_item_seed(base_seed: int, item_id: str | int) -> int:
+    """Derive deterministic item seed from base seed and item id."""
+    h = hashlib.sha256(f"{base_seed}:{item_id}".encode()).hexdigest()
+    return int(h[:8], 16)
+
+
 def generate_anchor_prices(
     chosen_prices: Sequence[Decimal | float],
     sigmas: Sequence[float],
     n_draws: int = 200,
     seed: int = 42,
+    item_id: str | int | None = None,
 ) -> dict[float, list[float]]:
     """Generate anchor prices using log-normal noise.
 
@@ -258,7 +265,8 @@ def generate_anchor_prices(
 
     mean_ln = sum(math.log(p) for p in valid_prices) / len(valid_prices)
 
-    rng = random.Random(seed)
+    effective_seed = derive_item_seed(seed, item_id) if item_id is not None else seed
+    rng = random.Random(effective_seed)
     z_draws = [rng.gauss(0.0, 1.0) for _ in range(n_draws)]
 
     anchors_by_sigma: dict[float, list[float]] = {}

@@ -78,10 +78,7 @@ def test_generate_anchor_prices_shared_z_mutant():
 
     # For each draw index, (ln(anchor) - mean_ln) / sigma must be identical across sigmas
     for idx in range(20):
-        z_values = [
-            (math.log(anchors[s][idx]) - mean_ln) / s
-            for s in sigmas
-        ]
+        z_values = [(math.log(anchors[s][idx]) - mean_ln) / s for s in sigmas]
         first_z = z_values[0]
         for z in z_values[1:]:
             assert pytest.approx(z, rel=1e-5) == first_z
