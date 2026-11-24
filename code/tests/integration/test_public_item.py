@@ -511,7 +511,8 @@ def test_build_public_items_newest_copy_wins_when_older_copy_has_more_items():
     )
 
     build_public_items()
-    # Newest copy wins: item 2 should not exist or be removed from active public items for this purchase
+    # Newest copy wins: item 2 should not exist or be removed from active public items
+    # for this purchase
     assert PublicItem.objects.filter(item_number=1).count() == 1
     assert PublicItem.objects.get(item_number=1).description == "Item 1 updated"
     assert not PublicItem.objects.filter(item_number=2).exists()

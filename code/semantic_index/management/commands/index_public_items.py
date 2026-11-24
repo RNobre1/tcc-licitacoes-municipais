@@ -23,8 +23,7 @@ class Command(BaseCommand):
             "--revision",
             default=DEFAULT_REVISION,
             help=(
-                "Pinned model commit revision from Hugging Face hub "
-                f"(default: {DEFAULT_REVISION})"
+                f"Pinned model commit revision from Hugging Face hub (default: {DEFAULT_REVISION})"
             ),
         )
         parser.add_argument(

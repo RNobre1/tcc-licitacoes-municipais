@@ -41,9 +41,7 @@ def test_semantic_search_validates_date_window():
         semantic_search(
             model=model,
             query="cadeira",
-            structured_filter=StructuredFilter(
-                date_window=(date(2026, 12, 31), date(2026, 1, 1))
-            ),
+            structured_filter=StructuredFilter(date_window=(date(2026, 12, 31), date(2026, 1, 1))),
         )
 
     # Date window exceeding 12 months (RN07)
@@ -51,9 +49,7 @@ def test_semantic_search_validates_date_window():
         semantic_search(
             model=model,
             query="cadeira",
-            structured_filter=StructuredFilter(
-                date_window=(date(2024, 1, 1), date(2026, 1, 1))
-            ),
+            structured_filter=StructuredFilter(date_window=(date(2024, 1, 1), date(2026, 1, 1))),
         )
 
 
@@ -66,9 +62,7 @@ def test_semantic_search_raises_on_missing_collection():
         semantic_search(
             model=model,
             query="cadeira",
-            structured_filter=StructuredFilter(
-                date_window=(date(2026, 1, 1), date(2026, 6, 1))
-            ),
+            structured_filter=StructuredFilter(date_window=(date(2026, 1, 1), date(2026, 6, 1))),
             client=client,
         )
 
@@ -144,7 +138,8 @@ def test_semantic_search_overfetches_so_dropped_ghosts_do_not_shrink_results():
         ghost_pk = item1.pk
         item1.delete()
 
-        # Search with limit=2. Even though item1 is a ghost, search should return 2 items (item2 and item3)
+        # Search with limit=2. Even though item1 is a ghost, search should return 2 items
+        # (item2 and item3)
         results = semantic_search(
             model=model,
             query="Item ghost",
@@ -390,7 +385,8 @@ def test_semantic_search_end_to_end_integration():
         item_ghost.delete()
         assert not PublicItem.objects.filter(pk=ghost_pk).exists()
 
-        # 4. Perform search under mandatory date window (2026-03-01 to 2026-08-31) and unnormalized query unit "  UNIDADE  "
+        # 4. Perform search under mandatory date window (2026-03-01 to 2026-08-31) and unnormalized
+        # query unit "  UNIDADE  "
         date_filter = StructuredFilter(
             date_window=(date(2026, 3, 1), date(2026, 8, 31)),
             state="PA",
