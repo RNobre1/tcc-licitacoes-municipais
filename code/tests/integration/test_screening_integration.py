@@ -94,6 +94,10 @@ def test_screening_page_renders_with_real_semantic_search_pipeline(monkeypatch):
         # Expired item outside date window must not appear in screening results
         assert "Prefeitura Beta" not in html
         assert "18,00" not in html
+
+        # Partial corpus note is rendered end-to-end
+        assert "Busca realizada em corpus parcial" in html
+        assert "2 itens indexados" in html
     finally:
         if client.collection_exists(coll_name):
             client.delete_collection(coll_name)

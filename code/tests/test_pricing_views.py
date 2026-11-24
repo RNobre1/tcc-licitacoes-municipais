@@ -952,6 +952,8 @@ def test_get_corpus_info_returns_qdrant_count_and_db_date_range():
     mock_client.count.return_value = mock_count_res
 
     mock_model = MagicMock()
+    mock_model.name = "test_model"
+    mock_model.revision = "rev1"
 
     ref_date = datetime.date(2026, 11, 24)
     info = get_corpus_info(client=mock_client, model=mock_model, reference_date=ref_date)
@@ -1005,6 +1007,8 @@ def test_get_corpus_info_is_not_partial_when_full_window_covered():
     mock_client.count.return_value = mock_count_res
 
     mock_model = MagicMock()
+    mock_model.name = "test_model"
+    mock_model.revision = "rev1"
 
     info = get_corpus_info(client=mock_client, model=mock_model, reference_date=ref_date)
 

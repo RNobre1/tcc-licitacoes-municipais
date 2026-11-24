@@ -89,7 +89,49 @@ def get_corpus_info(
     reference_date: datetime.date | None = None,
 ) -> CorpusInfo:
     """Return corpus index metadata read from DB and Qdrant."""
-    raise NotImplementedError
+    from django.db.models import Max, Min
+
+    from ingestion.models import PublicItem
+
+    window_start, window_end = get_screening_date_window(reference_date)
+
+    bounds = PublicItem.objects.aggregate(
+        min_date=Min("published_on"), max_date=Max("published_on")
+    )
+    start_date = bounds.get("min_date")
+    end_date = bounds.get("max_date")
+    db_count = PublicItem.objects.count()
+
+    indexed_count = 0
+    try:
+        if client is None:
+            from semantic_index import get_qdrant_client
+
+            client = get_qdrant_client()
+        if model is None:
+            model = get_embedding_model()
+        from semantic_index.embedding import collection_name_for_model
+
+        coll_name = collection_name_for_model(model)
+        if client.collection_exists(coll_name):
+            count_res = client.count(collection_name=coll_name)
+            indexed_count = getattr(count_res, "count", 0)
+    except Exception:
+        indexed_count = 0
+
+    if indexed_count == 0 or start_date is None or end_date is None:
+        is_partial = False
+    elif start_date > window_start or end_date < window_end or indexed_count < db_count:
+        is_partial = True
+    else:
+        is_partial = False
+
+    return CorpusInfo(
+        indexed_items_count=indexed_count,
+        start_date=start_date,
+        end_date=end_date,
+        is_partial=is_partial,
+    )
 
 
 corpus_info_function = get_corpus_info
@@ -290,6 +332,8 @@ def screening(request, item_id):
         for candidate in candidates
     }
 
+    corpus_info = corpus_info_function()
+
     return render(
         request,
         "pricing/screening.html",
@@ -302,5 +346,6 @@ def screening(request, item_id):
             "expected_price": expected_price,
             "expected_price_ignored": expected_price_ignored,
             "estimate": estimate,
+            "corpus_info": corpus_info,
         },
     )
