@@ -86,10 +86,14 @@ the code, not about interface text.
 | dados de demonstração | `demo_data` | Invented data for the prototype. **Not** "sample": see below |
 | índice semântico | `semantic_index` | Where descriptions are stored as vectors, for search by meaning |
 | item publicado | `PublicItem` | One item of a public purchase published in the PNCP, normalized from its raw records: description, unit, quantity, prices, date, agency, state and the PNCP key that is its provenance |
+| chave do PNCP | `pncp_key` | What identifies an item in the PNCP: the agency's CNPJ, the year, the purchase sequence number and the item number |
+| data de publicação | `published_on` | The date the purchase was published in the PNCP (`dataPublicacaoPncp`) |
+| modalidade | `modality` | The procurement modality, such as electronic reverse auction (code 6) |
+| material ou serviço | `item_kind` | Whether the item is a product or a service (`materialOuServico`), with the values `product` and `service` |
 | preço unitário estimado | `estimated_unit_price` | The unit price the buying agency estimated before the purchase. Zero when the budget is secret |
-| preço unitário homologado | `awarded_unit_price` | The unit price actually awarded. The one IN 65/2021 accepts as a reference price |
+| preço unitário homologado | `awarded_unit_price` | The unit price confirmed at homologation (*homologação*), the last act of the purchase. Not the earlier *adjudicação*. The price IN 65/2021 accepts as a reference |
 | resultado do item | `item_result` | The PNCP record of an item's award (`/itens/{n}/resultados`), which carries the awarded price |
-| orçamento sigiloso | `secret_budget` | A purchase whose estimated value is withheld; its items come with an estimated price of zero |
+| orçamento sigiloso | `secret_budget` | An item whose estimated value is withheld. It is flagged per item, and its estimated price comes as zero, which is not a price and never enters a calculation |
 | unidade da federação (UF) | `state` | The Brazilian state where the buying agency is |
 
 ### Semantic search and its evaluation
@@ -100,16 +104,20 @@ the code, not about interface text.
 | busca por palavra | `keyword_search` | Finding candidates by shared words. The mandatory baseline of the evaluation |
 | modelo de representação | `embedding_model` | The model that turns a description into a vector |
 | vetor | `embedding` | The vector a model produces for one description |
-| filtro estruturado | `structured_filter` | Conditions applied outside the vector: unit, state, period. Never learned, always enforced |
+| filtro estruturado | `structured_filter` | Conditions applied outside the vector: the date window, which is mandatory, and optionally state, unit and item kind. Never learned, always enforced |
+| janela de datas | `date_window` | The publication period a search is restricted to. IN 65/2021 bounds it |
 | faixa de comparabilidade | `comparability_band` | The band a candidate falls in by similarity, the first key of the RF23 ranking |
 | relatório de cotação | `QuotationReport` | The report of a past price survey from the commercial price bank, with the prices the operator chose |
 | conjunto de avaliação | `evaluation_set` | The requested items of past price surveys, each with the public records the operator chose |
 | gabarito | `ground_truth` | The public records the operator chose for an item, taken as relevant |
+| preço escolhido | `chosen_price` | A price the operator chose in a past quotation report, with its source and the identifier that locates it |
 | espaço de busca | `corpus` | The public items a search runs over |
 | bateria | `benchmark` | Running every candidate search method against the evaluation set |
 | subconjunto de ajuste | `tuning_split` | The part of the evaluation set where thresholds and parameters may be chosen |
 | subconjunto de medição | `measurement_split` | The part of the evaluation set that is only measured, after every threshold is fixed |
-| linha de base | `baseline` | The method every other method is compared with |
+| linha de base (da busca) | `baseline` | The search method every other method is compared with: keyword search |
+| linha de base de esforço | `effort_baseline` | The time and effort of the current process, measured before the operator uses the system (R3). Not the same as `baseline` |
+| limiar de aceitação | `acceptance_threshold` | The value a result must reach to count as achieved, fixed before measuring (C11) |
 
 ## Names to avoid
 
