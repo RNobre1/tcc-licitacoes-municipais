@@ -183,18 +183,53 @@ def verify_split_hash(
     return computed == expected_hash
 
 
-def check_thresholds_note_guard(note_path: Path) -> bool:
-    """Check that thresholds note exists and resides under TCC/decisões/."""
+def check_thresholds_note_guard(
+    note_path: Path | str,
+    split_hash: str | None = None,
+    repo_root: Path | None = None,
+) -> str:
+    """Check that thresholds decision note exists, is valid, and matches split hash.
+
+    Requirements:
+    1. Regular file, not a directory.
+    2. Resides strictly under repo's TCC/decisões/ (no symlink escape).
+    3. Not empty.
+    4. Has status: aceita.
+    5. If split_hash provided, hash is present in the note.
+    """
     path = Path(note_path).resolve()
     if not path.exists():
         raise ValueError(f"Thresholds note file does not exist: {note_path}")
+    if not path.is_file():
+        raise ValueError(f"Thresholds note must be a regular file, not a directory: {note_path}")
 
-    # Check path contains 'TCC/decisões' or resolved path is under repo's TCC/decisões
-    parts = path.parts
-    if "TCC" not in parts or "decisões" not in parts:
-        raise ValueError(f"Thresholds note must point to a file in TCC/decisões/: {note_path}")
+    import re
 
-    return True
+    from django.conf import settings
+
+    root = (repo_root or Path(settings.BASE_DIR).parent).resolve()
+    decisoes_dir = (root / "TCC" / "decisões").resolve()
+
+    try:
+        path.relative_to(decisoes_dir)
+    except ValueError:
+        raise ValueError(
+            f"Thresholds note must reside under repository's TCC/decisões/: {note_path}"
+        ) from None
+
+    content = path.read_text(encoding="utf-8")
+    if not content.strip():
+        raise ValueError(f"Thresholds note is empty: {note_path}")
+
+    if not re.search(r"^status:\s*aceita\s*$", content, re.MULTILINE | re.IGNORECASE):
+        raise ValueError(f"Thresholds note must have 'status: aceita': {note_path}")
+
+    if split_hash is not None and split_hash.lower() not in content.lower():
+        raise ValueError(
+            f"Split SHA-256 hash {split_hash} was not found in decision note: {note_path}"
+        )
+
+    return content
 
 
 @dataclass(frozen=True)
