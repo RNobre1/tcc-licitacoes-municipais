@@ -67,7 +67,14 @@ def test_run_benchmark_synthetic_full_orchestration():
 
         # Method metrics include all descriptive metrics
         bm25_metrics = data["methods"]["bm25"]["metrics"]
-        for metric in ["recall_at_1", "recall_at_5", "recall_at_10", "recall_at_20", "mrr_at_20", "success_at_10"]:
+        for metric in [
+            "recall_at_1",
+            "recall_at_5",
+            "recall_at_10",
+            "recall_at_20",
+            "mrr_at_20",
+            "success_at_10",
+        ]:
             assert metric in bm25_metrics
 
         # Constants recorded

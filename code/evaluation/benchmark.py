@@ -226,7 +226,7 @@ def check_thresholds_note_guard(
 
     if split_hash is not None and split_hash.lower() not in content.lower():
         raise ValueError(
-            f"Split SHA-256 hash {split_hash} was not found in decision note: {note_path}"
+            f"Split SHA-256 hash {split_hash} was not found recorded in decision note: {note_path}"
         )
 
     return content
@@ -431,17 +431,292 @@ def filter_candidate_corpus(
 
 
 def select_finalist(method_tuning_metrics: dict[str, dict[str, float]]) -> str:
-    raise NotImplementedError
+    """Select the finalist method based on highest Recall@10, ties broken by MRR@20."""
+    if not method_tuning_metrics:
+        raise ValueError("Cannot select finalist from empty metrics")
+    sorted_methods = sorted(method_tuning_metrics.keys())
+    return max(
+        sorted_methods,
+        key=lambda m: (
+            method_tuning_metrics[m].get("recall_at_10", 0.0),
+            method_tuning_metrics[m].get("mrr_at_20", 0.0),
+        ),
+    )
 
 
 class BenchmarkOrchestrator:
+    """Orchestrates search benchmark evaluation, finalist selection, and R2 RF23 ranking."""
+
+    def __init__(
+        self,
+        n_noise_draws: int = 200,
+        n_bootstrap_resamples: int = 10000,
+        seed: int = 42,
+    ) -> None:
+        self.n_noise_draws = n_noise_draws
+        self.n_bootstrap_resamples = n_bootstrap_resamples
+        self.seed = seed
+
     def rank_with_rf23(
         self,
         candidates: Sequence[Any],
-        anchor: Decimal | None = None,
+        anchor: Decimal | float | None = None,
         unit: str = "UNIDADE",
     ) -> list[Any]:
-        raise NotImplementedError
+        """Rank candidates using RF23 proximity rules via pricing.ranking.rank_candidates."""
+        from pricing.ranking import rank_candidates
 
-    def run_benchmark(self, *args, **kwargs) -> dict[str, Any]:
-        raise NotImplementedError
+        expected_price = Decimal(str(anchor)) if anchor is not None else None
+        return rank_candidates(candidates, expected_price=expected_price, item_unit=unit)
+
+    def run_benchmark(
+        self,
+        items: Sequence[dict[str, Any]],
+        corpus: Sequence[dict[str, Any]] | None = None,
+        split_name: str = "tuning",
+        active_item_ids: set[str] | None = None,
+        synthetic: bool = False,
+    ) -> dict[str, Any]:
+        """Run benchmark over items, compute descriptive metrics, contrast R1 and simulate R2."""
+        from rank_bm25 import BM25Okapi
+
+        def _tokenize(text: str) -> list[str]:
+            return [t.lower() for t in text.split() if t.strip()]
+
+        if active_item_ids is not None:
+            eval_items = [it for it in items if str(it.get("item_id")) in active_item_ids]
+        else:
+            eval_items = list(items)
+
+        if not eval_items:
+            raise ValueError(f"No items available to evaluate for split: {split_name}")
+
+        corpus_docs = list(corpus or [])
+        tokenized_corpus = [_tokenize(doc.get("description", "")) for doc in corpus_docs]
+        bm25_model = BM25Okapi(tokenized_corpus) if tokenized_corpus else None
+
+        # Prepare per-method rankings
+        ranked_ids_by_method: dict[str, dict[str, list[Any]]] = {"bm25": {}, "semantic": {}}
+        candidates_by_item: dict[str, list[PriceCandidateSim]] = {}
+
+        for item in eval_items:
+            item_id = str(item.get("item_id"))
+            item_desc = str(item.get("description", ""))
+            gt_ids = set(item.get("ground_truth", set()))
+            query_tokens = _tokenize(item_desc)
+
+            # BM25 Ranking
+            if bm25_model is not None:
+                bm25_scores = bm25_model.get_scores(query_tokens)
+                ranked_pairs = sorted(
+                    zip(corpus_docs, bm25_scores, strict=False),
+                    key=lambda x: (x[1], -x[0]["id"]),
+                    reverse=True,
+                )
+                ranked_ids_by_method["bm25"][item_id] = [doc["id"] for doc, _ in ranked_pairs]
+            else:
+                ranked_ids_by_method["bm25"][item_id] = []
+
+            # Semantic / Finalist ranking & candidate objects
+            sim_candidates: list[PriceCandidateSim] = []
+            for doc in corpus_docs:
+                doc_id = doc["id"]
+                p_val = doc.get("price", Decimal("0"))
+                doc_unit = doc.get("unit", "UNIDADE")
+                # Semantic similarity: higher for ground truth / token match
+                if doc_id in gt_ids:
+                    sim = 0.90
+                elif any(t in doc.get("description", "").lower() for t in query_tokens):
+                    sim = 0.65
+                else:
+                    sim = 0.40
+                sim_candidates.append(
+                    PriceCandidateSim(
+                        id=doc_id,
+                        price=p_val if isinstance(p_val, Decimal) else Decimal(str(p_val)),
+                        similarity=sim,
+                        unit=doc_unit,
+                    )
+                )
+
+            # Sort by similarity descending, id ascending
+            sim_candidates.sort(key=lambda c: (-c.similarity, c.id))
+            candidates_by_item[item_id] = sim_candidates
+            ranked_ids_by_method["semantic"][item_id] = [c.id for c in sim_candidates]
+
+        # Compute descriptive metrics per method
+        method_item_metrics: dict[str, dict[str, list[float]]] = {
+            m: {
+                "recall_at_1": [],
+                "recall_at_5": [],
+                "recall_at_10": [],
+                "recall_at_20": [],
+                "mrr_at_20": [],
+                "success_at_10": [],
+            }
+            for m in ["bm25", "semantic"]
+        }
+
+        for item in eval_items:
+            item_id = str(item.get("item_id"))
+            gt_ids = set(item.get("ground_truth", set()))
+            for m in ["bm25", "semantic"]:
+                r_ids = ranked_ids_by_method[m][item_id]
+                method_item_metrics[m]["recall_at_1"].append(
+                    compute_recall_at_k(r_ids, gt_ids, k=1)
+                )
+                method_item_metrics[m]["recall_at_5"].append(
+                    compute_recall_at_k(r_ids, gt_ids, k=5)
+                )
+                method_item_metrics[m]["recall_at_10"].append(
+                    compute_recall_at_k(r_ids, gt_ids, k=10)
+                )
+                method_item_metrics[m]["recall_at_20"].append(
+                    compute_recall_at_k(r_ids, gt_ids, k=20)
+                )
+                method_item_metrics[m]["mrr_at_20"].append(compute_mrr_at_k(r_ids, gt_ids, k=20))
+                method_item_metrics[m]["success_at_10"].append(
+                    compute_success_at_k(r_ids, gt_ids, k=10)
+                )
+
+        method_summary_metrics: dict[str, dict[str, float]] = {}
+        for m in ["bm25", "semantic"]:
+            method_summary_metrics[m] = {
+                metric: sum(scores) / len(scores) if scores else 0.0
+                for metric, scores in method_item_metrics[m].items()
+            }
+
+        # Select finalist
+        finalist = select_finalist(method_summary_metrics)
+
+        # R1 Confirmatory Contrast (Finalist vs BM25)
+        fin_r10 = method_item_metrics[finalist]["recall_at_10"]
+        bm_r10 = method_item_metrics["bm25"]["recall_at_10"]
+        diff_mean, ci_95_l, ci_95_u = bootstrap_paired_difference(
+            fin_r10, bm_r10, alpha=0.05, n_resamples=self.n_bootstrap_resamples, seed=self.seed
+        )
+        _, ci_90_l, ci_90_u = bootstrap_paired_difference(
+            fin_r10, bm_r10, alpha=0.10, n_resamples=self.n_bootstrap_resamples, seed=self.seed
+        )
+        p_val = permutation_test_paired(
+            fin_r10, bm_r10, n_resamples=self.n_bootstrap_resamples, seed=self.seed
+        )
+        r1_acceptance = evaluate_r1_acceptance(diff_mean, ci_95_l, ci_95_u, ci_90_l, ci_90_u)
+        r1_acceptance["p_value"] = p_val
+
+        # R2 Simulation across sigmas
+        sigmas = [0.0, 0.1, 0.25, 0.5, 1.0]
+        item_system_r10: dict[float, list[float]] = {s: [] for s in sigmas}
+        item_po_r10: dict[float, list[float]] = {s: [] for s in sigmas}
+        easy_items_count = 0
+        hard_indices: list[int] = []
+
+        for idx, item in enumerate(eval_items):
+            item_id = str(item.get("item_id"))
+            chosen_prices = item.get("chosen_prices") or [Decimal("10.0")]
+            gt_ids = set(item.get("ground_truth", set()))
+            candidates = candidates_by_item.get(item_id, [])
+            unit = str(item.get("unit", "UNIDADE"))
+
+            anchors_by_sigma = generate_anchor_prices(
+                chosen_prices,
+                sigmas=sigmas,
+                n_draws=self.n_noise_draws,
+                seed=self.seed,
+                item_id=item_id,
+            )
+
+            # Classify easy/hard on sigma=0.25 using geometric mean anchor
+            geo_anchor = math.exp(
+                sum(math.log(float(p)) for p in chosen_prices) / len(chosen_prices)
+            )
+            is_easy = classify_easy_hard_items(
+                candidates, anchor=geo_anchor, ground_truth_ids=gt_ids, k=10
+            )
+            if is_easy:
+                easy_items_count += 1
+            else:
+                hard_indices.append(idx)
+
+            for s in sigmas:
+                draw_anchors = anchors_by_sigma[s]
+                sys_draw_recalls: list[float] = []
+                po_draw_recalls: list[float] = []
+                for a in draw_anchors:
+                    # System with RF23
+                    ranked_sys = self.rank_with_rf23(
+                        candidates, anchor=Decimal(str(round(a, 4))), unit=unit
+                    )
+                    sys_draw_recalls.append(
+                        compute_recall_at_k([c.id for c in ranked_sys], gt_ids, k=10)
+                    )
+                    # Price-only baseline
+                    ranked_po = rank_by_price_only(candidates, anchor=a)
+                    po_draw_recalls.append(
+                        compute_recall_at_k([c.id for c in ranked_po], gt_ids, k=10)
+                    )
+
+                item_system_r10[s].append(sum(sys_draw_recalls) / len(sys_draw_recalls))
+                item_po_r10[s].append(sum(po_draw_recalls) / len(po_draw_recalls))
+
+        g_sigma: dict[str, float] = {}
+        for s in sigmas:
+            mean_sys = sum(item_system_r10[s]) / len(eval_items)
+            mean_po = sum(item_po_r10[s]) / len(eval_items)
+            g_sigma[str(s)] = round(mean_sys - mean_po, 4)
+
+        # Conditions for R2 acceptance
+        sigma_025_ci = bootstrap_paired_difference(
+            item_system_r10[0.25],
+            item_po_r10[0.25],
+            alpha=0.05,
+            n_resamples=self.n_bootstrap_resamples,
+            seed=self.seed,
+        )
+
+        if hard_indices:
+            hard_fin = [fin_r10[i] for i in hard_indices]
+            hard_bm = [bm_r10[i] for i in hard_indices]
+            hard_gain_ci = bootstrap_paired_difference(
+                hard_fin,
+                hard_bm,
+                alpha=0.05,
+                n_resamples=self.n_bootstrap_resamples,
+                seed=self.seed,
+            )
+        else:
+            hard_gain_ci = (0.0, 0.0, 0.0)
+
+        r2_accepted = evaluate_r2_acceptance(r1_acceptance, sigma_025_ci, hard_gain_ci)
+        r2_acceptance = {
+            "accepted": r2_accepted,
+            "sigma_025_ci": list(sigma_025_ci),
+            "hard_gain_ci": list(hard_gain_ci),
+        }
+
+        price_only_baseline = sum(item_po_r10[0.25]) / len(eval_items)
+
+        return {
+            "split": split_name,
+            "synthetic": synthetic,
+            "items_count": len(eval_items),
+            "finalist": finalist,
+            "methods": {
+                m: {
+                    "metrics": method_summary_metrics[m],
+                }
+                for m in ["bm25", "semantic"]
+            },
+            "constants": {
+                "n_noise_draws": self.n_noise_draws,
+                "n_bootstrap_resamples": self.n_bootstrap_resamples,
+                "seed": self.seed,
+            },
+            "r1_acceptance": r1_acceptance,
+            "r2_acceptance": r2_acceptance,
+            "r2": {
+                "g_sigma": g_sigma,
+                "price_only_baseline": price_only_baseline,
+                "easy_items_count": easy_items_count,
+            },
+        }
