@@ -12,6 +12,7 @@ from ingestion.client import (
     ItemCountMismatchError,
     PncpClient,
     PncpResponseError,
+    fetch_item_results,
     fetch_items,
     fetch_publications,
     urllib_transport,
@@ -494,3 +495,109 @@ def test_urllib_transport_times_out():
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_fetch_item_results_success():
+    results = _read_json("item_results.json")
+    calls = []
+
+    def mock_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        if "/itens/1/resultados" in url:
+            return 200, results
+        return 404, {"message": "Not found"}
+
+    record = fetch_item_results(
+        cnpj=CNPJ,
+        ano=2026,
+        sequencial=1,
+        numero_item=1,
+        transport=mock_transport,
+        save=False,
+    )
+
+    assert len(calls) == 1
+    assert (
+        calls[0][0]
+        == f"https://pncp.gov.br/api/pncp/v1/orgaos/{CNPJ}/compras/2026/1/itens/1/resultados"
+    )
+    assert calls[0][1] is None
+    assert record.endpoint == f"/api/pncp/v1/orgaos/{CNPJ}/compras/2026/1/itens/1/resultados"
+    assert record.params == {}
+    assert record.payload == results
+    assert record.status_code == 200
+
+
+def test_fetch_item_results_raises_on_non_200_status():
+    def error_transport(url: str, params: dict | None = None):
+        return 500, {"message": "Internal Server Error"}
+
+    with pytest.raises(PncpResponseError) as exc_info:
+        fetch_item_results(
+            cnpj=CNPJ,
+            ano=2026,
+            sequencial=1,
+            numero_item=1,
+            transport=error_transport,
+            save=False,
+        )
+
+    assert "500" in str(exc_info.value)
+    assert exc_info.value.status == 500
+
+
+def test_fetch_item_results_raises_on_invalid_payload():
+    def invalid_transport(url: str, params: dict | None = None):
+        return 200, {"error": "expected a list"}
+
+    with pytest.raises(PncpResponseError) as exc_info:
+        fetch_item_results(
+            cnpj=CNPJ,
+            ano=2026,
+            sequencial=1,
+            numero_item=1,
+            transport=invalid_transport,
+            save=False,
+        )
+
+    assert "invalid payload" in str(exc_info.value).lower()
+
+
+def test_fetch_item_results_handles_204_no_content():
+    def no_content_transport(url: str, params: dict | None = None):
+        return 204, None
+
+    record = fetch_item_results(
+        cnpj=CNPJ,
+        ano=2026,
+        sequencial=1,
+        numero_item=1,
+        transport=no_content_transport,
+        save=False,
+    )
+    assert record.status_code == 204
+    assert record.payload == []
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_item_results_saves_record_when_save_is_true():
+    from ingestion.models import RawRecord
+
+    results = _read_json("item_results.json")
+
+    def mock_transport(url, params):
+        return 200, results
+
+    record = fetch_item_results(
+        cnpj=CNPJ,
+        ano=2026,
+        sequencial=1,
+        numero_item=1,
+        transport=mock_transport,
+        save=True,
+    )
+    assert record.pk is not None
+    saved = RawRecord.objects.get(pk=record.pk)
+    assert saved.endpoint == f"/api/pncp/v1/orgaos/{CNPJ}/compras/2026/1/itens/1/resultados"
+    assert saved.payload == results

@@ -477,3 +477,65 @@ def test_a_failure_to_fetch_the_publications_is_fatal_and_saves_nothing():
             stdout=io.StringIO(),
         )
     assert RawRecord.objects.count() == 0
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_with_results_flag_fetches_item_results_for_items_with_tem_resultado():
+    page_1 = _read_json("publications_page_1.json")
+    single_pub = dict(page_1)
+    single_pub["data"] = [page_1["data"][0]]  # 1 publication
+    single_pub["totalRegistros"] = 1
+    single_pub["totalPaginas"] = 1
+    single_pub["numeroPagina"] = 1
+    single_pub["paginasRestantes"] = 0
+
+    # items 1 and 3 have temResultado=True, item 2 has False
+    items_p1 = _read_json("items_page_1.json")
+    results = _read_json("item_results.json")
+    quantity = len(items_p1)
+
+    calls = []
+
+    def mock_transport(url: str, params: dict | None = None):
+        calls.append(url)
+        if "/api/consulta/v1/contratacoes/publicacao" in url:
+            return 200, single_pub
+        if url.endswith("/quantidade"):
+            return 200, quantity
+        if url.endswith("/itens"):
+            return 200, items_p1
+        if "/resultados" in url:
+            return 200, results
+        return 404, {}
+
+    out = io.StringIO()
+    initial_records = RawRecord.objects.count()
+
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        uf="PA",
+        modality=6,
+        with_results=True,
+        transport=mock_transport,
+        stdout=out,
+    )
+
+    output = out.getvalue()
+    assert "Publications: 1" in output
+    assert "Item pages: 1" in output
+    assert "Items: 3" in output
+    assert "Item results: 2" in output
+    assert "Failures: 0" in output
+
+    # Calls should include /resultados for item 1 and item 3, but not item 2
+    resultado_calls = [c for c in calls if "/resultados" in c]
+    assert len(resultado_calls) == 2
+    assert any("/itens/1/resultados" in c for c in resultado_calls)
+    assert any("/itens/3/resultados" in c for c in resultado_calls)
+    assert not any("/itens/2/resultados" in c for c in resultado_calls)
+
+    # 1 pub page + 1 item page + 2 results = 4 RawRecords
+    assert RawRecord.objects.count() == initial_records + 4
