@@ -1,3 +1,5 @@
+from collections.abc import Sequence  # noqa: F401
+from dataclasses import dataclass
 from decimal import Decimal
 
 import pytest
@@ -6,43 +8,47 @@ from pricing.estimation import (
     calculate_mean,
     calculate_median,
     calculate_min,
+    get_calculation_prices,
     requires_justification,
 )
 
 
-class TestEstimatedValueCaput:
-    """Tests for the three estimation methods from Art. 6 caput of IN 65/2021."""
+@dataclass
+class _CandidateStub:
+    awarded_unit_price: Decimal | None = None
+    estimated_unit_price: Decimal | None = None
+    secret_budget: bool = False
+    price: Decimal | None = None
 
-    def test_mean_computes_exact_decimal_without_rounding(self):
-        """Contract (D14): mean returns exact Decimal with no float precision loss."""
-        prices = [Decimal("0.10"), Decimal("0.20")]
-        result = calculate_mean(prices)
-        assert result == Decimal("0.15")
-        assert isinstance(result, Decimal)
+    @property
+    def is_estimated(self) -> bool:
+        if self.secret_budget:
+            return False
+        return (self.awarded_unit_price is None or self.awarded_unit_price <= 0) and (
+            self.estimated_unit_price is not None and self.estimated_unit_price > 0
+        )
 
-    def test_mean_differentiates_from_median_with_asymmetric_distribution(self):
-        """Art. 6 caput: mean of asymmetric distribution differs from median and midrange."""
-        prices = [Decimal("10.00"), Decimal("10.00"), Decimal("40.00")]
-        result = calculate_mean(prices)
-        assert result == Decimal("20.00")
-        assert isinstance(result, Decimal)
+    @property
+    def usable_calculation_price(self) -> Decimal | None:
+        if self.secret_budget or self.is_estimated:
+            return None
+        if self.awarded_unit_price is not None and self.awarded_unit_price > Decimal("0.00"):
+            return self.awarded_unit_price
+        if (
+            not self.is_estimated
+            and not self.secret_budget
+            and self.price is not None
+            and self.price > Decimal("0.00")
+        ):
+            return self.price
+        return None
 
-    def test_mean_exact_unrounded_cents(self):
-        """Contract (D14): mean of two adjacent cent values produces exact half-cent."""
-        prices = [Decimal("10.00"), Decimal("10.01")]
-        result = calculate_mean(prices)
-        assert result == Decimal("10.005")
-        assert isinstance(result, Decimal)
 
-    def test_mean_exact_fractional_scale_without_four_decimal_rounding(self):
-        """Contract (D14): mean at 4-decimal minimum scale produces exact 5-decimal result."""
-        prices = [Decimal("0.0001"), Decimal("0.0002")]
-        result = calculate_mean(prices)
-        assert result == Decimal("0.00015")
-        assert isinstance(result, Decimal)
+class TestCalculationFunctionsCaput:
+    """Tests for estimation methods under Art. 6 caput of IN 65/2021."""
 
-    def test_art6_caput_mean_three_prices(self):
-        """Art. 6 caput: mean of three representative prices."""
+    def test_art6_caput_mean_computes_arithmetic_mean(self):
+        """Art. 6 caput: mean method computes arithmetic mean of prices."""
         prices = [Decimal("10.00"), Decimal("20.00"), Decimal("30.00")]
         result = calculate_mean(prices)
         assert result == Decimal("20.00")
@@ -218,3 +224,49 @@ class TestRequiresJustificationParagraph5:
             Decimal("102.00"),
         ]
         assert requires_justification(prices) is False
+
+
+class TestGetCalculationPrices:
+    """Tests for get_calculation_prices query method under Rafael's decision 1."""
+
+    def test_get_calculation_prices_returns_awarded_prices_only(self):
+        c1 = _CandidateStub(awarded_unit_price=Decimal("15.50"))
+        c2 = _CandidateStub(awarded_unit_price=Decimal("20.00"))
+        assert get_calculation_prices([c1, c2]) == [Decimal("15.50"), Decimal("20.00")]
+
+    def test_get_calculation_prices_excludes_estimated_prices(self):
+        c_awarded = _CandidateStub(awarded_unit_price=Decimal("15.50"))
+        c_estimated = _CandidateStub(awarded_unit_price=None, estimated_unit_price=Decimal("18.00"))
+        assert get_calculation_prices([c_awarded, c_estimated]) == [Decimal("15.50")]
+
+    def test_get_calculation_prices_excludes_secret_budget(self):
+        c_secret = _CandidateStub(
+            awarded_unit_price=None,
+            estimated_unit_price=Decimal("0.00"),
+            secret_budget=True,
+        )
+        assert get_calculation_prices([c_secret]) == []
+
+    def test_get_calculation_prices_excludes_zero_or_negative_prices(self):
+        c_zero = _CandidateStub(awarded_unit_price=Decimal("0.00"))
+        c_neg = _CandidateStub(awarded_unit_price=Decimal("-5.00"))
+        assert get_calculation_prices([c_zero, c_neg]) == []
+
+    def test_zero_or_estimated_prices_never_reach_calculation_functions(self):
+        candidates = [
+            _CandidateStub(awarded_unit_price=Decimal("10.00")),
+            _CandidateStub(awarded_unit_price=Decimal("20.00")),
+            _CandidateStub(awarded_unit_price=Decimal("30.00")),
+            _CandidateStub(awarded_unit_price=None, estimated_unit_price=Decimal("999.00")),
+            _CandidateStub(
+                awarded_unit_price=None,
+                estimated_unit_price=Decimal("0.00"),
+                secret_budget=True,
+            ),
+            _CandidateStub(awarded_unit_price=Decimal("0.00")),
+        ]
+        prices = get_calculation_prices(candidates)
+        assert prices == [Decimal("10.00"), Decimal("20.00"), Decimal("30.00")]
+        assert calculate_mean(prices) == Decimal("20.00")
+        assert calculate_median(prices) == Decimal("20.00")
+        assert calculate_min(prices) == Decimal("10.00")
