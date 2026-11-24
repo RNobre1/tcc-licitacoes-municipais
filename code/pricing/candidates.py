@@ -60,14 +60,14 @@ class Candidate:
 
     @property
     def price_kind(self) -> str:
-        """Price classification: 'awarded', 'estimated', or 'secret_budget'."""
+        """Price classification: 'awarded', 'estimated', 'secret_budget', or 'no_price'."""
         if self.secret_budget:
             return "secret_budget"
         if self.awarded_unit_price is not None and self.awarded_unit_price > Decimal("0.00"):
             return "awarded"
         if self.estimated_unit_price is not None and self.estimated_unit_price > Decimal("0.00"):
             return "estimated"
-        return "secret_budget"
+        return "no_price"
 
     @property
     def usable_calculation_price(self) -> Decimal | None:

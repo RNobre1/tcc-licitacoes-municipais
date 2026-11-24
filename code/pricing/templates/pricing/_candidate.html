@@ -17,8 +17,10 @@
                     Aceito
                 {% elif candidate.is_estimated %}
                     fora do cálculo: preço estimado
-                {% elif candidate.secret_budget or candidate.price is None %}
+                {% elif candidate.secret_budget %}
                     fora do cálculo: orçamento sigiloso
+                {% elif candidate.price is None %}
+                    fora do cálculo: sem preço
                 {% else %}
                     fora do cálculo: unidade diferente
                 {% endif %}
@@ -26,8 +28,10 @@
                 fora do cálculo: unidade diferente
             {% elif candidate.is_estimated %}
                 fora do cálculo: preço estimado
-            {% elif candidate.secret_budget or candidate.price is None %}
+            {% elif candidate.secret_budget %}
                 fora do cálculo: orçamento sigiloso
+            {% elif candidate.price is None %}
+                fora do cálculo: sem preço
             {% else %}
                 Aceito
             {% endif %}
