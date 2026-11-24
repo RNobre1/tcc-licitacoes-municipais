@@ -76,6 +76,12 @@ def semantic_search(
         raise ValueError("date_window is mandatory (RN07, 12-month window)")
 
     start_date, end_date = date_window
+    if start_date > end_date:
+        raise ValueError(
+            f"Inverted date_window: start_date {start_date} is after end_date {end_date}"
+        )
+    if (end_date - start_date).days > 366:
+        raise ValueError("date_window exceeds 12-month limit (RN07, docs/requisitos/README.md)")
 
     # 3. Build Qdrant filter
     must_conditions: list[models.Condition] = [
@@ -123,13 +129,15 @@ def semantic_search(
     collection_name = collection_name_for_model(model)
 
     if not qdrant_client.collection_exists(collection_name):
-        return []
+        raise ValueError(f"Collection '{collection_name}' does not exist")
 
+    # Over-fetch from Qdrant so dropped ghosts never shrink the result below limit
+    fetch_limit = max(limit * 2, limit + 20)
     response = qdrant_client.query_points(
         collection_name=collection_name,
         query=query_vector,
         query_filter=qdrant_filter,
-        limit=limit,
+        limit=fetch_limit,
     )
 
     scored_points = response.points
@@ -145,5 +153,7 @@ def semantic_search(
         item = items_by_id.get(int(p.id))
         if item is not None:
             results.append(ScoredPublicItem(item=item, score=float(p.score)))
+            if len(results) >= limit:
+                break
 
     return results
