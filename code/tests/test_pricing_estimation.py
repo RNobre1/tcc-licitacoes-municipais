@@ -270,3 +270,14 @@ class TestGetCalculationPrices:
         assert calculate_mean(prices) == Decimal("20.00")
         assert calculate_median(prices) == Decimal("20.00")
         assert calculate_min(prices) == Decimal("10.00")
+
+    def test_get_calculation_prices_rejects_duck_typed_or_bare_decimal(self):
+        """N2: get_calculation_prices requires usable_calculation_price attribute or raises TypeError."""
+        class DuckCandidate:
+            price = Decimal("99.00")
+
+        with pytest.raises(TypeError, match="Candidate.*usable_calculation_price"):
+            get_calculation_prices([DuckCandidate()])
+
+        with pytest.raises(TypeError, match="Candidate.*usable_calculation_price"):
+            get_calculation_prices([Decimal("50.00")])
