@@ -87,21 +87,22 @@ def test_sentence_transformer_embedding_model_pins_revision_and_applies_e5_prefi
     mock_st_instance.get_sentence_embedding_dimension.return_value = 768
     mock_st_instance.encode.side_effect = lambda texts, **kwargs: [[0.1] * 768 for _ in texts]
 
+    pinned_rev = "d13f1b27baf31030b7fd040960d60d909913633f"
     with patch(
         "sentence_transformers.SentenceTransformer", return_value=mock_st_instance
     ) as mock_st_cls:
         model = SentenceTransformerEmbeddingModel(
             model_name="intfloat/multilingual-e5-base",
-            revision="e4ce9877abf3ed52277057f97ab5083a31c50494",
+            revision=pinned_rev,
         )
 
         mock_st_cls.assert_called_once_with(
             "intfloat/multilingual-e5-base",
-            revision="e4ce9877abf3ed52277057f97ab5083a31c50494",
+            revision=pinned_rev,
         )
 
         assert model.name == "intfloat/multilingual-e5-base"
-        assert model.revision == "e4ce9877abf3ed52277057f97ab5083a31c50494"
+        assert model.revision == pinned_rev
         assert model.dimension == 768
 
         # Embed queries -> query: prefix

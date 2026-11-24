@@ -24,7 +24,7 @@ class Command(BaseCommand):
             default=DEFAULT_REVISION,
             help=(
                 "Pinned model commit revision from Hugging Face hub "
-                f"(default: {DEFAULT_REVISION}, evaluated on MTEB benchmark)"
+                f"(default: {DEFAULT_REVISION})"
             ),
         )
         parser.add_argument(
