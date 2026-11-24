@@ -1,7 +1,12 @@
 """Benchmark harness, evaluation metrics and paired statistical tests."""
 
+import hashlib
+import json
 import random
 from collections.abc import Sequence
+from dataclasses import dataclass
+from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 
@@ -91,7 +96,6 @@ def permutation_test_paired(
     extreme_count = 0
 
     for _ in range(n_resamples):
-        # random sign flip for each pair
         perm_diff = sum(d if rng.random() < 0.5 else -d for d in diffs) / n
         if abs(perm_diff) >= obs_diff:
             extreme_count += 1
@@ -99,17 +103,106 @@ def permutation_test_paired(
     return extreme_count / n_resamples
 
 
+@dataclass(frozen=True)
 class DatasetSplit:
-    pass
+    tuning_items: tuple[str, ...]
+    measurement_items: tuple[str, ...]
+    sha256_hash: str
 
 
-def create_dataset_split(items, tuning_fraction: float = 0.4, seed: int = 42):
+def _compute_split_hash(tuning_items: Sequence[str], measurement_items: Sequence[str]) -> str:
+    content = json.dumps(
+        {
+            "tuning_items": list(tuning_items),
+            "measurement_items": list(measurement_items),
+        },
+        sort_keys=True,
+    )
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def create_dataset_split(
+    items: Sequence[dict[str, Any]],
+    tuning_fraction: float = 0.4,
+    seed: int = 42,
+) -> DatasetSplit:
+    """Stratified split by report_id and item_kind with fixed seed."""
+    groups: dict[tuple[str, str], list[str]] = {}
+    for it in items:
+        rep = str(it.get("report_id", ""))
+        kind = str(it.get("item_kind", ""))
+        item_id = str(it.get("item_id", ""))
+        groups.setdefault((rep, kind), []).append(item_id)
+
+    rng = random.Random(seed)
+    tuning_list: list[str] = []
+    measurement_list: list[str] = []
+
+    for key in sorted(groups.keys()):
+        item_ids = list(groups[key])
+        item_ids.sort()
+        rng.shuffle(item_ids)
+
+        n_tune = int(round(len(item_ids) * tuning_fraction))
+        tuning_list.extend(item_ids[:n_tune])
+        measurement_list.extend(item_ids[n_tune:])
+
+    tuning_list.sort()
+    measurement_list.sort()
+
+    sha256_hash = _compute_split_hash(tuning_list, measurement_list)
+
+    return DatasetSplit(
+        tuning_items=tuple(tuning_list),
+        measurement_items=tuple(measurement_list),
+        sha256_hash=sha256_hash,
+    )
+
+
+def verify_split_hash(
+    tuning_items: Sequence[str],
+    measurement_items: Sequence[str],
+    expected_hash: str,
+) -> bool:
+    """Verify SHA-256 hash of dataset split items."""
+    computed = _compute_split_hash(tuning_items, measurement_items)
+    return computed == expected_hash
+
+
+def check_thresholds_note_guard(note_path: Path) -> bool:
+    """Check that thresholds note exists and resides under TCC/decisões/."""
+    path = Path(note_path).resolve()
+    if not path.exists():
+        raise ValueError(f"Thresholds note file does not exist: {note_path}")
+
+    # Check path contains 'TCC/decisões' or resolved path is under repo's TCC/decisões
+    parts = path.parts
+    if "TCC" not in parts or "decisões" not in parts:
+        raise ValueError(f"Thresholds note must point to a file in TCC/decisões/: {note_path}")
+
+    return True
+
+
+@dataclass(frozen=True)
+class PriceCandidateSim:
+    id: int
+    price: Decimal
+    similarity: float
+    unit: str = "UNIDADE"
+
+
+def generate_anchor_prices(chosen_prices, sigmas, n_draws: int = 200, seed: int = 42):
     raise NotImplementedError
 
 
-def verify_split_hash(tuning_items, measurement_items, expected_hash: str) -> bool:
+def rank_by_price_only(candidates, anchor: Decimal):
     raise NotImplementedError
 
 
-def check_thresholds_note_guard(note_path) -> bool:
+def classify_easy_hard_items(
+    candidates,
+    anchor: Decimal,
+    ground_truth_ids: set,
+    k: int = 10,
+) -> bool:
     raise NotImplementedError
