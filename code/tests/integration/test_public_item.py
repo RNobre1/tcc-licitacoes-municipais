@@ -145,6 +145,8 @@ def test_build_public_items_builds_items_with_provenance_and_results():
         payload=[
             {
                 "numeroItem": 1,
+                "situacaoCompraItemResultadoNome": "Informado",
+                "dataCancelamento": None,
                 "valorUnitarioHomologado": 27.8,
                 "quantidadeHomologada": 100.0,
                 "dataResultado": "2026-10-28",
@@ -235,8 +237,292 @@ def test_build_public_items_is_idempotent():
 
 @pytest.mark.integration
 @pytest.mark.django_db
-def test_build_public_items_newest_copy_wins_and_does_not_duplicate():
+def test_build_public_items_skips_items_without_publication_metadata():
+    """B1: an items page without publication metadata is NEVER built."""
     t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/99999999000199/compras/2026/99/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Item sem publicacao",
+                "quantidade": 1.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 10.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+
+    result = build_public_items()
+    assert PublicItem.objects.count() == 0
+    assert result == 0
+    assert getattr(result, "skipped_without_publication", 0) == 1
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_supports_single_purchase_raw_record():
+    """B1: single purchase endpoint fills metadata for purchases missing from publication pages."""
+    t1 = timezone.now()
+    # Single purchase record
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/orgaos/00000000000000/compras/2026/5",
+        params={},
+        fetched_at=t1,
+        payload={
+            "orgaoEntidade": {"cnpj": "00000000000000", "razaoSocial": "Secretaria Municipal"},
+            "anoCompra": 2026,
+            "sequencialCompra": 5,
+            "dataPublicacaoPncp": "2026-10-27T10:00:00",
+            "modalidadeId": 8,
+            "unidadeOrgao": {"ufSigla": "PA"},
+        },
+        status_code=200,
+    )
+    # Item page record
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000000/compras/2026/5/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Item compra avulsa",
+                "quantidade": 5.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 20.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+
+    result = build_public_items()
+    assert result == 1
+    item = PublicItem.objects.get(cnpj="00000000000000", year=2026, purchase_sequence=5)
+    assert item.state == "PA"
+    assert item.modality == 8
+    assert item.published_on == date(2026, 10, 27)
+    assert item.agency_name == "Secretaria Municipal"
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_picks_valid_informado_result_and_ignores_cancelled():
+    """N5: builder picks valid 'Informado' result and ignores cancelled results."""
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000000", "razaoSocial": "Prefeitura"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Item com resultado cancelado",
+                "quantidade": 1.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 50.0,
+                "temResultado": True,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+    # Result payload with a cancelled result first, then valid informado result
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens/1/resultados",
+        params={},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "situacaoCompraItemResultadoNome": "Cancelado",
+                "dataCancelamento": "2026-10-27T10:00:00",
+                "valorUnitarioHomologado": 99.0,
+            },
+            {
+                "numeroItem": 1,
+                "situacaoCompraItemResultadoNome": "Informado",
+                "dataCancelamento": None,
+                "valorUnitarioHomologado": 10.0,
+            },
+        ],
+        status_code=200,
+    )
+
+    build_public_items()
+    item = PublicItem.objects.get()
+    assert item.awarded_unit_price == Decimal("10.0000")
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_survives_unit_longer_than_50_chars():
+    """N9: builder gracefully truncates units longer than 50 chars without failing."""
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000000", "razaoSocial": "Prefeitura"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    long_unit = "U" * 65
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Item com unidade longa",
+                "quantidade": 1.0,
+                "unidadeMedida": long_unit,
+                "valorUnitarioEstimado": 50.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+
+    count = build_public_items()
+    assert count == 1
+    item = PublicItem.objects.get()
+    assert len(item.unit) == 50
+    assert item.unit == "U" * 50
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_newest_copy_wins_when_older_copy_has_more_items():
+    """N2: older copy has item 1 and 2, but newer copy has only item 1."""
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000000", "razaoSocial": "Prefeitura"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    item_endpoint = "/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens"
+    # Older copy with item 1 and item 2
+    RawRecord.objects.create(
+        endpoint=item_endpoint,
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "Item 1",
+                "quantidade": 10.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 50.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            },
+            {
+                "numeroItem": 2,
+                "descricao": "Item 2 removed later",
+                "quantidade": 5.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 20.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            },
+        ],
+        status_code=200,
+    )
+
+    build_public_items()
+    assert PublicItem.objects.count() == 2
+
+    # Newer copy has only item 1
+    t2 = t1 + timezone.timedelta(hours=2)
+    RawRecord.objects.create(
+        endpoint=item_endpoint,
+        params={"pagina": 1},
+        fetched_at=t2,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "Item 1 updated",
+                "quantidade": 10.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 55.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+
+    build_public_items()
+    # Newest copy wins: item 2 should not exist or be removed from active public items for this purchase
+    assert PublicItem.objects.filter(item_number=1).count() == 1
+    assert PublicItem.objects.get(item_number=1).description == "Item 1 updated"
+    assert not PublicItem.objects.filter(item_number=2).exists()
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_newest_copy_wins_when_newer_has_lower_pk():
+    """N2: newer copy wins by fetched_at even if it has a lower id/pk."""
+    t1 = timezone.now()
+    t2 = t1 + timezone.timedelta(hours=1)
     RawRecord.objects.create(
         endpoint="/api/consulta/v1/contratacoes/publicacao",
         params={"pagina": 1},
@@ -257,40 +543,18 @@ def test_build_public_items_newest_copy_wins_and_does_not_duplicate():
     )
 
     item_endpoint = "/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens"
-    rec1 = RawRecord.objects.create(
-        endpoint=item_endpoint,
-        params={"pagina": 1},
-        fetched_at=t1,
-        payload=[
-            {
-                "numeroItem": 1,
-                "descricao": "Old description",
-                "quantidade": 10.0,
-                "unidadeMedida": "UNIDADE",
-                "valorUnitarioEstimado": 50.0,
-                "temResultado": False,
-                "orcamentoSigiloso": False,
-                "materialOuServico": "M",
-            }
-        ],
-        status_code=200,
-    )
-    build_public_items()
-    assert PublicItem.objects.get().description == "Old description"
-
-    # Second fetch of the same page at later time with updated description
-    t2 = t1 + timezone.timedelta(hours=2)
-    rec2 = RawRecord.objects.create(
+    # Newer record with lower pk
+    rec_newer = RawRecord.objects.create(
         endpoint=item_endpoint,
         params={"pagina": 1},
         fetched_at=t2,
         payload=[
             {
                 "numeroItem": 1,
-                "descricao": "New description updated",
+                "descricao": "Description from newer copy",
                 "quantidade": 10.0,
                 "unidadeMedida": "UNIDADE",
-                "valorUnitarioEstimado": 55.0,
+                "valorUnitarioEstimado": 60.0,
                 "temResultado": False,
                 "orcamentoSigiloso": False,
                 "materialOuServico": "M",
@@ -298,15 +562,110 @@ def test_build_public_items_newest_copy_wins_and_does_not_duplicate():
         ],
         status_code=200,
     )
+    # Older record with higher pk
+    rec_older = RawRecord.objects.create(
+        endpoint=item_endpoint,
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "Description from older copy",
+                "quantidade": 10.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 40.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+    assert rec_newer.pk < rec_older.pk
 
     build_public_items()
-    assert PublicItem.objects.count() == 1
-    updated_item = PublicItem.objects.get()
-    assert updated_item.description == "New description updated"
-    assert updated_item.estimated_unit_price == Decimal("55.0000")
-    # Provenance links to the newest copy
-    assert rec2 in updated_item.raw_records.all()
-    assert rec1 not in updated_item.raw_records.all()
+    item = PublicItem.objects.get()
+    assert item.description == "Description from newer copy"
+    assert item.estimated_unit_price == Decimal("60.0000")
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_newest_result_wins():
+    """N2: results deduplication: newest result record wins."""
+    t1 = timezone.now()
+    t2 = t1 + timezone.timedelta(hours=2)
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000000", "razaoSocial": "Prefeitura"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "Item 1",
+                "quantidade": 1.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 100.0,
+                "temResultado": True,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+    result_endpoint = "/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens/1/resultados"
+    # Older result
+    RawRecord.objects.create(
+        endpoint=result_endpoint,
+        params={},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "situacaoCompraItemResultadoNome": "Informado",
+                "dataCancelamento": None,
+                "valorUnitarioHomologado": 90.0,
+            }
+        ],
+        status_code=200,
+    )
+    # Newer result
+    RawRecord.objects.create(
+        endpoint=result_endpoint,
+        params={},
+        fetched_at=t2,
+        payload=[
+            {
+                "numeroItem": 1,
+                "situacaoCompraItemResultadoNome": "Informado",
+                "dataCancelamento": None,
+                "valorUnitarioHomologado": 85.0,
+            }
+        ],
+        status_code=200,
+    )
+
+    build_public_items()
+    item = PublicItem.objects.get()
+    assert item.awarded_unit_price == Decimal("85.0000")
 
 
 @pytest.mark.integration
