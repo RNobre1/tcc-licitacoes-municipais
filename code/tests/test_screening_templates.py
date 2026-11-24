@@ -46,8 +46,10 @@ class CandidateStub:
     date: datetime.date
     source: str
     provenance: str
-    price: Decimal
+    price: Decimal | None
     similarity: float
+    is_estimated: bool = False
+    secret_budget: bool = False
 
 
 pytestmark = pytest.mark.urls("tests.urls_pricing")
@@ -81,6 +83,8 @@ def _make_candidate(**kwargs) -> CandidateStub:
         "provenance": "DEMO-045/2026-01",
         "price": Decimal("24.80"),
         "similarity": 0.88,
+        "is_estimated": False,
+        "secret_budget": False,
     }
     defaults.update(kwargs)
     return CandidateStub(**defaults)
@@ -261,7 +265,8 @@ def test_candidate_fragment_renders_every_evidence_field_in_column_order():
 
 
 def test_screening_header_row_lists_every_column_in_the_fragment_order():
-    flat = _flat(_render_screening(_make_item(), candidates=[]))
+    c = _make_candidate()
+    flat = _flat(_render_screening(_make_item(), candidates=[c]))
     assert (
         "<th>Descrição</th> <th>Unidade</th> <th>Quantidade</th> <th>Órgão</th> <th>Data</th> "
         "<th>Fonte</th> <th>Procedência</th> <th>Preço</th> <th>Semelhança</th> "
@@ -528,3 +533,66 @@ def test_screening_renders_no_back_link_when_procurement_is_none():
     item = _make_item()
     rendered = _render_screening(item, candidates=[], procurement=None)
     assert "Voltar para o processo" not in rendered
+
+
+def test_candidate_fragment_renders_awarded_price():
+    candidate = _make_candidate(price=Decimal("24.80"), is_estimated=False)
+    rendered = _render_candidate_fragment(candidate)
+    assert "<td>24,80</td>" in rendered
+
+
+def test_candidate_fragment_renders_estimated_price_with_marker():
+    candidate = _make_candidate(price=Decimal("24.80"), is_estimated=True)
+    rendered = _render_candidate_fragment(candidate)
+    assert "24,80 (estimado)" in rendered
+
+
+def test_candidate_fragment_renders_dash_for_secret_budget():
+    candidate = _make_candidate(price=None, secret_budget=True)
+    rendered = _render_candidate_fragment(candidate)
+    assert "<td>—</td>" in rendered
+
+
+def test_screening_renders_clear_portuguese_message_when_no_candidates():
+    item = _make_item()
+    rendered = _render_screening(item, candidates=[])
+    assert "Nenhum preço candidato encontrado." in rendered
+    assert "<table>" not in rendered
+
+
+def test_screening_renders_table_when_candidates_present():
+    item = _make_item()
+    candidate = _make_candidate(id=1)
+    rendered = _render_screening(item, candidates=[candidate])
+    assert "Nenhum preço candidato encontrado." not in rendered
+    assert "<table>" in rendered
+
+
+def test_candidate_fragment_renders_fora_do_calculo_preco_estimado():
+    candidate = _make_candidate(id=1, is_estimated=True, unit="pacote")
+    estimate = {"counted_candidate_ids": set()}
+    rendered = render_to_string(
+        "pricing/_candidate.html",
+        {
+            "candidate": candidate,
+            "decision": "accept",
+            "estimate": estimate,
+            "item_unit": "pacote",
+        },
+    )
+    assert "fora do cálculo: preço estimado" in rendered
+
+
+def test_candidate_fragment_renders_fora_do_calculo_orcamento_sigiloso():
+    candidate = _make_candidate(id=1, price=None, secret_budget=True, unit="pacote")
+    estimate = {"counted_candidate_ids": set()}
+    rendered = render_to_string(
+        "pricing/_candidate.html",
+        {
+            "candidate": candidate,
+            "decision": "accept",
+            "estimate": estimate,
+            "item_unit": "pacote",
+        },
+    )
+    assert "fora do cálculo: orçamento sigiloso" in rendered
