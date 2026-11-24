@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import date
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from qdrant_client import models
 
-from ingestion.models import PublicItem
 from semantic_index.embedding import EmbeddingModel, collection_name_for_model
+
+if TYPE_CHECKING:
+    from ingestion.models import PublicItem
 
 
 @dataclass(frozen=True)
@@ -44,6 +48,7 @@ def semantic_search(
     client: Any = None,
 ) -> list[ScoredPublicItem]:
     """Search PublicItems by vector similarity under mandatory structured filter."""
+    from ingestion.models import PublicItem
     from semantic_index import get_qdrant_client
 
     # 1. Parse structured filter
