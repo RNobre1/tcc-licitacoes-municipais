@@ -265,14 +265,15 @@ def decide(request, candidate_id):
     if decision not in ["accept", "reject"]:
         return HttpResponseBadRequest(b"Invalid decision")
 
-    decisions = request.session.get("screening_decisions", {})
-    decisions[str(candidate_id)] = decision
-    request.session["screening_decisions"] = decisions
-
     item_id_raw = request.POST.get("item_id")
     item_id = int(item_id_raw) if item_id_raw else getattr(candidate, "item_id", None)
     item = get_item(item_id) if item_id else None
     item_unit = item.unit if item else None
+
+    decisions = request.session.get("screening_decisions", {})
+    dec_key = f"{item_id}:{candidate_id}" if item_id else str(candidate_id)
+    decisions[dec_key] = decision
+    request.session["screening_decisions"] = decisions
 
     expected_price = parse_expected_price(request.POST.get("expected_price"))
     cand_price = getattr(candidate, "price", None)
@@ -283,8 +284,16 @@ def decide(request, candidate_id):
     )
     proximity = format_proximity(cand_price, expected_price, prox, candidate.unit, item_unit)
 
-    adapted_decisions = {int(k): v for k, v in decisions.items()}
-    estimate = build_estimate_panel(item, adapted_decisions)
+    item_decisions = {}
+    for k, v in decisions.items():
+        if ":" in str(k):
+            it_str, cand_str = str(k).split(":", 1)
+            if item_id is None or int(it_str) == item_id:
+                item_decisions[int(cand_str)] = v
+        elif item_id is None:
+            item_decisions[int(k)] = v
+
+    estimate = build_estimate_panel(item, item_decisions)
 
     return render(
         request,
@@ -322,7 +331,16 @@ def screening(request, item_id):
         limit=20,
     )
 
-    decisions = {int(k): v for k, v in request.session.get("screening_decisions", {}).items()}
+    raw_decisions = request.session.get("screening_decisions", {})
+    decisions = {}
+    for k, v in raw_decisions.items():
+        if ":" in str(k):
+            it_str, cand_str = str(k).split(":", 1)
+            if int(it_str) == item_id:
+                decisions[int(cand_str)] = v
+        elif not any(":" in str(other_k) for other_k in raw_decisions):
+            # Backward compatibility with un-scoped decisions
+            decisions[int(k)] = v
     estimate = build_estimate_panel(item, decisions)
 
     proximities = {

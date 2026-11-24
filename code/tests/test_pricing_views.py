@@ -69,7 +69,7 @@ def test_pricing_decide_accept_updates_session_and_renders_partial_fragment(clie
     assert candidate.description in html
     assert "<!DOCTYPE" not in html
 
-    assert client.session["screening_decisions"][str(candidate.id)] == "accept"
+    assert client.session["screening_decisions"][f"{candidate.item_id}:{candidate.id}"] == "accept"
 
 
 def test_pricing_decide_reject_updates_session_and_renders_partial_fragment(client):
@@ -82,7 +82,7 @@ def test_pricing_decide_reject_updates_session_and_renders_partial_fragment(clie
     assert response.status_code == 200
     html = response.content.decode()
     assert "Descartado" in html
-    assert client.session["screening_decisions"][str(candidate.id)] == "reject"
+    assert client.session["screening_decisions"][f"{candidate.item_id}:{candidate.id}"] == "reject"
 
 
 def test_pricing_decide_returns_404_for_unknown_candidate(client):
@@ -101,7 +101,7 @@ def test_decide_stores_every_decision_and_the_last_one_for_a_candidate_wins(clie
     _decide(client, 2, "reject")
     _decide(client, 1, "reject")
 
-    assert client.session["screening_decisions"] == {"1": "reject", "2": "reject"}
+    assert client.session["screening_decisions"] == {"1:1": "reject", "1:2": "reject"}
 
 
 def test_decide_returns_the_row_of_the_candidate_that_was_asked_for(client):
@@ -263,7 +263,7 @@ def test_pricing_screening_ignores_invalid_or_non_positive_expected_price(client
 def test_pricing_screening_adapts_string_session_decisions_to_integer_keys(client):
     _decide(client, 1, "accept")
     _decide(client, 2, "reject")
-    assert client.session["screening_decisions"] == {"1": "accept", "2": "reject"}
+    assert client.session["screening_decisions"] == {"1:1": "accept", "1:2": "reject"}
 
     url = reverse("pricing:screening", args=[1])
     response = client.get(url)
