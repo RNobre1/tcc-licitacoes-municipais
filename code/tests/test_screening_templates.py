@@ -629,6 +629,7 @@ def test_screening_omits_partial_corpus_notice_when_not_partial():
     rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
     assert "Busca realizada em corpus parcial" not in rendered
 
+
 def test_candidate_fragment_renders_fora_do_calculo_sem_preco_when_not_secret():
     """N5: Item without price and not secret budget is labeled 'fora do cálculo: sem preço'."""
     candidate = _make_candidate(price=None, secret_budget=False)
@@ -643,3 +644,54 @@ def test_candidate_fragment_renders_fora_do_calculo_orcamento_sigiloso_only_when
     rendered = _render_candidate_fragment(candidate, decision="accept")
     assert "fora do cálculo: orçamento sigiloso" in rendered
     assert "fora do cálculo: sem preço" not in rendered
+
+
+def test_screening_renders_qdrant_error_notice_when_qdrant_unavailable():
+    """N1 & N7: When Qdrant is down or errored, render Portuguese warning."""
+    from pricing.views import CorpusInfo
+
+    item = _make_item()
+    corpus_info = CorpusInfo(
+        indexed_items_count=0,
+        start_date=None,
+        end_date=None,
+        is_partial=True,
+        db_items_count=5111,
+        qdrant_error=True,
+    )
+    rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
+    assert "Índice de busca semântica temporariamente indisponível." in rendered
+
+
+def test_screening_renders_empty_index_notice_when_indexed_is_zero_and_no_error():
+    """N1: When index is empty, render Portuguese warning."""
+    from pricing.views import CorpusInfo
+
+    item = _make_item()
+    corpus_info = CorpusInfo(
+        indexed_items_count=0,
+        start_date=None,
+        end_date=None,
+        is_partial=True,
+        db_items_count=5111,
+        empty_index=True,
+    )
+    rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
+    assert "Índice de busca semântica vazio." in rendered
+
+
+def test_screening_renders_both_counts_and_indexed_date_range():
+    """N1: Shows X de Y itens do banco indexados and date range."""
+    from pricing.views import CorpusInfo
+
+    item = _make_item()
+    corpus_info = CorpusInfo(
+        indexed_items_count=5111,
+        start_date=datetime.date(2026, 10, 26),
+        end_date=datetime.date(2026, 10, 30),
+        is_partial=True,
+        db_items_count=5111,
+    )
+    rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
+    assert "5111 de 5111 itens do banco indexados" in rendered
+    assert "26/10/2026 a 30/10/2026" in rendered

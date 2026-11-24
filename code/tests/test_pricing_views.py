@@ -1037,6 +1037,7 @@ def test_screening_view_passes_corpus_info_and_renders_notice_when_partial(clien
     assert "5111 itens indexados" in html
     assert "26/10/2026 a 30/10/2026" in html
 
+
 def test_get_embedding_model_thread_safe_concurrent_first_calls(monkeypatch):
     """N3: Concurrent calls to get_embedding_model load the model exactly once under lock."""
     import threading
@@ -1054,6 +1055,7 @@ def test_get_embedding_model_thread_safe_concurrent_first_calls(monkeypatch):
     monkeypatch.setattr(views, "_EMBEDDING_MODEL", None)
     # Patch SentenceTransformerEmbeddingModel import target or class
     import semantic_index.embedding
+
     monkeypatch.setattr(semantic_index.embedding, "SentenceTransformerEmbeddingModel", fake_loader)
 
     models_loaded = []
@@ -1072,8 +1074,9 @@ def test_get_embedding_model_thread_safe_concurrent_first_calls(monkeypatch):
     assert len(models_loaded) == 8
     assert all(m is models_loaded[0] for m in models_loaded)
 
+
 def test_decide_and_screening_keys_decisions_by_requested_item_and_candidate(client):
-    """N4: Decisions are isolated per requested item so an accept on item 2 never leaks to item 3."""
+    """N4: Decisions are isolated per requested item so accepts do not leak across items."""
     url_decide = reverse("pricing:decide", args=[1])
     # Decide accept for candidate 1 on item 1
     resp = client.post(url_decide, {"decision": "accept", "item_id": "1"})
@@ -1090,6 +1093,7 @@ def test_decide_and_screening_keys_decisions_by_requested_item_and_candidate(cli
     # Panel on item 2 must not count candidate 1
     assert 1 not in resp2.context["estimate"]["counted_candidate_ids"]
 
+
 def test_screening_view_limit_is_strictly_20(monkeypatch):
     """Mutant killer 2: Screening view requests limit=20 candidates, not 10."""
     recorded_limit = None
@@ -1102,3 +1106,100 @@ def test_screening_view_limit_is_strictly_20(monkeypatch):
     monkeypatch.setattr(views, "search_function", fake_search)
     views.get_screening_candidates(views.get_item(1))
     assert recorded_limit == 20
+
+
+def test_get_corpus_info_reads_date_range_from_qdrant_payload(monkeypatch):
+    """N1: get_corpus_info queries Qdrant scroll for min and max published_on payload."""
+    from pricing.views import get_corpus_info
+
+    mock_client = MagicMock()
+    mock_client.collection_exists.return_value = True
+    mock_count = MagicMock()
+    mock_count.count = 3
+    mock_client.count.return_value = mock_count
+
+    p_min = MagicMock()
+    p_min.payload = {"published_on": "2026-10-26"}
+    p_max = MagicMock()
+    p_max.payload = {"published_on": "2026-10-30"}
+
+    mock_client.scroll.side_effect = [
+        ([p_min], None),
+        ([p_max], None),
+    ]
+
+    mock_model = MagicMock()
+    mock_model.name = "test"
+    mock_model.revision = "rev1"
+
+    info = get_corpus_info(
+        client=mock_client, model=mock_model, reference_date=datetime.date(2026, 11, 24)
+    )
+    assert info.start_date == datetime.date(2026, 10, 26)
+    assert info.end_date == datetime.date(2026, 10, 30)
+    assert info.indexed_items_count == 3
+    assert info.is_partial is True
+
+
+def test_get_corpus_info_handles_qdrant_exception_without_500():
+    """N1 & N7: When Qdrant raises exception, returns CorpusInfo with qdrant_error=True."""
+    from pricing.views import get_corpus_info
+
+    mock_client = MagicMock()
+    mock_client.collection_exists.side_effect = Exception("Qdrant connection refused")
+    mock_model = MagicMock()
+
+    info = get_corpus_info(client=mock_client, model=mock_model)
+    assert info.qdrant_error is True
+    assert info.indexed_items_count == 0
+    assert info.is_partial is True
+
+
+def test_get_corpus_info_tolerates_one_day_of_lag():
+    """N1: Tolerate one day lag: if latest item in index is yesterday, do not mark partial."""
+    from pricing.views import get_corpus_info
+
+    mock_client = MagicMock()
+    mock_client.collection_exists.return_value = True
+    mock_count = MagicMock()
+    mock_count.count = 10
+    mock_client.count.return_value = mock_count
+
+    ref_date = datetime.date(2026, 11, 24)
+    yesterday = ref_date - datetime.timedelta(days=1)
+    one_year_ago = ref_date - datetime.timedelta(days=365)
+
+    p_min = MagicMock()
+    p_min.payload = {"published_on": one_year_ago.isoformat()}
+    p_max = MagicMock()
+    p_max.payload = {"published_on": yesterday.isoformat()}
+
+    mock_client.scroll.side_effect = [
+        ([p_min], None),
+        ([p_max], None),
+    ]
+
+    mock_model = MagicMock()
+    mock_model.name = "test"
+    mock_model.revision = "rev1"
+
+    # Monkeypatch cached DB count to match 10
+    from django.core.cache import cache
+
+    cache.set("corpus_db_items_count", 10, 60)
+
+    info = get_corpus_info(client=mock_client, model=mock_model, reference_date=ref_date)
+    assert info.is_partial is False
+
+
+def test_screening_view_handles_qdrant_down_gracefully_without_500(client, monkeypatch):
+    """N7: If search_function raises, view does not 500, but renders error notice."""
+
+    def failing_search(**kwargs):
+        raise RuntimeError("Qdrant down")
+
+    monkeypatch.setattr(views, "search_function", failing_search)
+    response = client.get(reverse("pricing:screening", args=[1]))
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Nenhum preço candidato encontrado." in html
