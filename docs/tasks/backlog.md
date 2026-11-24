@@ -35,8 +35,8 @@ O que destrava mais coisa adiante, em ordem.
 | C2 | Montar o conjunto de avaliação a partir dos relatórios de cotação já recebidos | Autor | aberto | Decisão A2, que é a que mais afeta o resultado |
 | C3 | Levantar candidatos a modelo de representação e rodar a bateria contra C2 | Autor | aberto | Fecha A2 |
 | C4 | ~~Escrever a seção de resultados esperados~~ | Autor | **fechado** | R1 a R8 escritos, um indicador cada; os limiares ficam em C11 |
-| C5 | Sessão de julgamento às cegas com a fonte de domínio | Fonte de domínio | aberto | **Condição** para a medição ter conclusão nos dois sentidos |
-| C6 | **Escrever o roteiro da sessão de observação do banco de preços** | Autor | aberto | É o pré-requisito de C5, e precisa existir antes de marcar a sessão |
+| C5 | Sessão de julgamento às cegas com a fonte de domínio | Fonte de domínio | aberto — **adiada para o início do TCC II** (decisão do autor, 24/11), junto com a observação de uso | **Condição** para a medição ter conclusão nos dois sentidos |
+| C6 | **Escrever o roteiro da sessão de observação do banco de preços** | Autor | aberto — a sessão fica para o início do TCC II; o roteiro pode ser escrito antes | É o pré-requisito de C5, e precisa existir antes de marcar a sessão |
 | C7 | ~~Decidir a classificação da pesquisa~~ | Autor | **fechado 15/10** | DSR adotada. Abre C10 a C13 |
 | C10 | ~~Escrever a subseção de classificação da pesquisa~~ | Autor | **fechado 15/10** | Classificação, ciclos, posicionamento e contribuição escritos |
 | C11 | **Fixar limiar de aceitação de cada resultado esperado, antes de medir** | Autor | **fechado para R1 e R2 em 24/11**: Recall\@10, margem de 0,05 contra o BM25 ajustado, empate só em ±0,08, R2 como curva com linha de base só-preço. Ver `TCC/decisões/2026-11-24-limiares-de-aceitacao-r1-r2.md`. R3 a R8 vêm com as medições deles | Exigência da classificação adotada; muda a ordem de trabalho |
@@ -257,7 +257,7 @@ leitura integral que vale para artigo — é referência de uso, não de argumen
 | # | O que | Dono | Estado |
 |---|---|---|---|
 | A1 | ~~Linguagem, arcabouço e banco relacional~~ | Autor | **fechado 18/10** — Python, Django, HTMX e PostgreSQL |
-| A2 | Modelo de representação das descrições | Autor | aberto — depende de C2 e C3. **Provisório desde 24/11, por decisão do autor:** multilingual-E5, com pesos abertos e revisão fixada, até a bateria escolher |
+| A2 | Modelo de representação das descrições | Autor | aberto — depende de C2 e C3. **Provisório desde 24/11:** multilingual-E5, com pesos abertos e revisão fixada, até a bateria escolher. Ver `TCC/decisões/2026-11-24-modelo-provisorio-da-busca.md` |
 | A3 | Estratégia de atualização da ingestão | Autor | aberto — C1 fechado em 05/11: uma semana do Pará coletada em 49,6 s, sem falha. Falta decidir, e a coleta do preço homologado (D17) muda esse tempo |
 | A4 | Onde reside a geração dos documentos | Autor | aberto |
 | A5 | ~~Mecanismo concreto de autenticação~~ | Autor | **fechado 18/10** — o do próprio arcabouço, com o perfil único de 22/09 |
