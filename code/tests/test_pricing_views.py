@@ -1,6 +1,7 @@
 import re
 from decimal import Decimal
 from html import escape
+from unittest.mock import MagicMock
 
 import pytest
 from django.test import Client
@@ -703,3 +704,65 @@ def test_the_row_label_follows_the_builder_and_not_a_rule_of_its_own(client, mon
     assert "fora do cálculo: unidade diferente" in swapped and "Aceito" not in swapped
     page = client.get(reverse("pricing:screening", args=[1])).content.decode()
     assert "fora do cálculo: unidade diferente" in _row(page, 1)
+
+
+def test_get_screening_date_window_covers_12_months():
+    from datetime import date
+
+    from pricing.views import get_screening_date_window
+
+    ref = date(2026, 11, 24)
+    start, end = get_screening_date_window(ref)
+    assert end == ref
+    assert start == date(2025, 11, 24)
+    assert (end - start).days in (365, 366)
+
+
+def test_get_embedding_model_loads_lazily_and_caches_instance(monkeypatch):
+    from pricing import views
+
+    monkeypatch.setattr(views, "_EMBEDDING_MODEL", None)
+    mock_st_class = MagicMock()
+    mock_instance = MagicMock()
+    mock_st_class.return_value = mock_instance
+
+    import semantic_index.embedding
+
+    monkeypatch.setattr(
+        semantic_index.embedding, "SentenceTransformerEmbeddingModel", mock_st_class
+    )
+
+    # First call initializes
+    model1 = views.get_embedding_model()
+    assert mock_st_class.called
+    assert model1 == mock_instance
+
+    # Second call returns cached instance without re-instantiating
+    mock_st_class.reset_mock()
+    model2 = views.get_embedding_model()
+    assert not mock_st_class.called
+    assert model2 == model1
+
+
+def test_get_screening_candidates_calls_search_and_ranks():
+    from unittest.mock import MagicMock
+
+    from pricing.views import get_screening_candidates
+
+    mock_item = MagicMock()
+    mock_item.id = 1
+    mock_item.description = "Papel sulfite A4"
+    mock_item.unit = "pacote"
+
+    mock_search = MagicMock(return_value=[])
+
+    candidates = get_screening_candidates(
+        mock_item,
+        expected_price=Decimal("25.00"),
+        search_fn=mock_search,
+        limit=20,
+    )
+    assert candidates == []
+    assert mock_search.called
+    assert mock_search.call_args.kwargs["query"] == "Papel sulfite A4"
+    assert mock_search.call_args.kwargs["limit"] == 20
