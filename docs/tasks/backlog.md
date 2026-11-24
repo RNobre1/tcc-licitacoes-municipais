@@ -39,8 +39,8 @@ O que destrava mais coisa adiante, em ordem.
 | C6 | **Escrever o roteiro da sessão de observação do banco de preços** | Autor | aberto | É o pré-requisito de C5, e precisa existir antes de marcar a sessão |
 | C7 | ~~Decidir a classificação da pesquisa~~ | Autor | **fechado 15/10** | DSR adotada. Abre C10 a C13 |
 | C10 | ~~Escrever a subseção de classificação da pesquisa~~ | Autor | **fechado 15/10** | Classificação, ciclos, posicionamento e contribuição escritos |
-| C11 | **Fixar limiar de aceitação de cada resultado esperado, antes de medir** | Autor | aberto | Exigência da classificação adotada; muda a ordem de trabalho |
-| C15 | Fixar os limites de faixa de comparabilidade do RF23, hoje provisórios (0,80 e 0,60), num subconjunto de ajuste e antes de medir | Autor | aberto | Parte de C11: limite escolhido olhando o resultado invalida a medição |
+| C11 | **Fixar limiar de aceitação de cada resultado esperado, antes de medir** | Autor | **fechado para R1 e R2 em 24/11**: Recall\@10, margem de 0,05 contra o BM25 ajustado, empate só em ±0,08, R2 como curva com linha de base só-preço. Ver `TCC/decisões/2026-11-24-limiares-de-aceitacao-r1-r2.md`. R3 a R8 vêm com as medições deles | Exigência da classificação adotada; muda a ordem de trabalho |
+| C15 | Fixar os limites de faixa de comparabilidade do RF23, hoje provisórios (0,80 e 0,60), num subconjunto de ajuste e antes de medir | Autor | aberto — a partição foi decidida em 24/11: 40% de ajuste e 60% de medição, por item, congelada por resumo antes de rodar | Parte de C11: limite escolhido olhando o resultado invalida a medição |
 | C16 | Explicar no texto a decisão do RF23 e incorporar as emendas ao protocolo. Na arquitetura: a ordenação por faixa, a proximidade pelo logaritmo da razão e por que não um escore único. Na metodologia: P1, o R2 como curva; P2, o preço esperado antes dos candidatos na C5; P3, o preço visível ou oculto sorteado por item. **A justificativa é o que sustenta a escolha diante da orientação e da banca**, então cada afirmação aponta a fonte ou declara que é inferência Na exibição: o fator de proximidade com duas casas, e por que dois fatores iguais na tela podem diferir na ordem (nota de 03/11). | Autor | aberto | Texto e roteiro de C6. Decidido em 28/10, e a orientação é informada em 07/11 |
 | C12 | ~~Declarar o artefato que é a contribuição e o tipo dela~~ | Autor | **fechado 15/10** | Dois níveis declarados; o protocolo de avaliação é a contribuição principal |
 | C13 | ~~Declarar a classe de problemas~~ | Autor | **fechado 15/10** | Escrita na metodologia |
@@ -257,7 +257,7 @@ leitura integral que vale para artigo — é referência de uso, não de argumen
 | # | O que | Dono | Estado |
 |---|---|---|---|
 | A1 | ~~Linguagem, arcabouço e banco relacional~~ | Autor | **fechado 18/10** — Python, Django, HTMX e PostgreSQL |
-| A2 | Modelo de representação das descrições | Autor | aberto — depende de C2 e C3 |
+| A2 | Modelo de representação das descrições | Autor | aberto — depende de C2 e C3. **Provisório desde 24/11, por decisão do autor:** multilingual-E5, com pesos abertos e revisão fixada, até a bateria escolher |
 | A3 | Estratégia de atualização da ingestão | Autor | aberto — C1 fechado em 05/11: uma semana do Pará coletada em 49,6 s, sem falha. Falta decidir, e a coleta do preço homologado (D17) muda esse tempo |
 | A4 | Onde reside a geração dos documentos | Autor | aberto |
 | A5 | ~~Mecanismo concreto de autenticação~~ | Autor | **fechado 18/10** — o do próprio arcabouço, com o perfil único de 22/09 |
