@@ -15,6 +15,7 @@ from ingestion.client import (
     fetch_item_results,
     fetch_items,
     fetch_publications,
+    fetch_purchase,
     urllib_transport,
 )
 
@@ -601,3 +602,67 @@ def test_fetch_item_results_saves_record_when_save_is_true():
     saved = RawRecord.objects.get(pk=record.pk)
     assert saved.endpoint == f"/api/pncp/v1/orgaos/{CNPJ}/compras/2026/1/itens/1/resultados"
     assert saved.payload == results
+
+
+def test_fetch_purchase_success():
+    payload = {
+        "anoCompra": 2026,
+        "sequencialCompra": 1,
+        "dataPublicacaoPncp": "2026-10-26T10:00:00",
+        "modalidadeId": 6,
+        "orgaoEntidade": {"cnpj": CNPJ, "razaoSocial": "Prefeitura Teste"},
+        "unidadeOrgao": {"ufSigla": "PA"},
+    }
+    calls = []
+
+    def mock_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        if "/compras/2026/1" in url:
+            return 200, payload
+        return 404, {"message": "Not found"}
+
+    record = fetch_purchase(
+        cnpj=CNPJ,
+        ano=2026,
+        sequencial=1,
+        transport=mock_transport,
+        save=False,
+    )
+
+    assert len(calls) == 1
+    assert calls[0][0] == f"https://pncp.gov.br/api/consulta/v1/orgaos/{CNPJ}/compras/2026/1"
+    assert calls[0][1] is None
+    assert record.endpoint == f"/api/consulta/v1/orgaos/{CNPJ}/compras/2026/1"
+    assert record.params == {}
+    assert record.payload == payload
+    assert record.status_code == 200
+
+
+def test_fetch_purchase_raises_on_non_200():
+    def error_transport(url: str, params: dict | None = None):
+        return 404, {"message": "Not found"}
+
+    with pytest.raises(PncpResponseError) as exc_info:
+        fetch_purchase(
+            cnpj=CNPJ,
+            ano=2026,
+            sequencial=1,
+            transport=error_transport,
+            save=False,
+        )
+    assert exc_info.value.status == 404
+
+
+def test_fetch_purchase_raises_on_invalid_payload():
+    def invalid_transport(url: str, params: dict | None = None):
+        return 200, "not a dictionary"
+
+    with pytest.raises(PncpResponseError) as exc_info:
+        fetch_purchase(
+            cnpj=CNPJ,
+            ano=2026,
+            sequencial=1,
+            transport=invalid_transport,
+            save=False,
+        )
+    assert "invalid payload" in str(exc_info.value).lower()
