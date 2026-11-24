@@ -79,6 +79,8 @@ DATABASES = {
         "PASSWORD": DATABASE_CONFIG["PASSWORD"],
         "HOST": DATABASE_CONFIG["HOST"],
         "PORT": DATABASE_CONFIG["PORT"],
+        # Lets parallel worktrees keep their integration tests on separate databases.
+        "TEST": {"NAME": DATABASE_CONFIG["TEST_NAME"]},
     }
 }
 

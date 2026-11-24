@@ -21,6 +21,7 @@ def load_environment(env=None):
         "NAME": env.get("DATABASE_NAME", "preparatory_phase"),
         "USER": env.get("DATABASE_USER", "preparatory_phase"),
         "PASSWORD": env.get("DATABASE_PASSWORD", ""),
+        "TEST_NAME": env.get("DATABASE_TEST_NAME", "").strip() or None,
     }
 
     return debug, secret_key, allowed_hosts, db_config
