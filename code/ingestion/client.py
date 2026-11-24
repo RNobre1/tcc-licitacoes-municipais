@@ -360,7 +360,35 @@ class PncpClient:
         save: bool = True,
     ) -> RawRecord:
         """Fetch single purchase header metadata by its key."""
-        raise NotImplementedError
+        endpoint = f"/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}"
+        url = f"{self.base_url}{endpoint}"
+
+        status, payload = self.transport(url, None)
+
+        if status != 200:
+            raise PncpResponseError(
+                f"PNCP purchase request failed with status {status}: {payload}",
+                status=status,
+            )
+        if not isinstance(payload, dict):
+            raise PncpResponseError(
+                f"PNCP purchase request returned invalid payload: {payload}",
+                status=status,
+            )
+
+        record = RawRecord(
+            endpoint=endpoint,
+            params={},
+            fetched_at=timezone.now(),
+            payload=payload,
+            status_code=status,
+        )
+
+        if save:
+            with transaction.atomic():
+                record.save()
+
+        return record
 
 
 def fetch_publications(
