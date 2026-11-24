@@ -51,7 +51,7 @@ Para um conjunto de cerca de 230 itens, com poucos relevantes por item e gabarit
 
 - **Nível**: L2. A decisão afeta o que é medido (critério 1 da regra de decisões relevantes), então a nota propõe e não decide.
 - **Ferramentas**: busca em base de literatura revisada por pares (22 buscas, 3 resultados cada, no plano gratuito); OpenAlex e a API do arXiv **só para localizar cópia aberta e conferir metadado**; leitura de PDF por extração de texto. **Busca web geral não foi usada.**
-- **Texto integral**: 17 fontes lidas: 14 por PDF obtido hoje (com as exceções de leitura parcial indicadas no §5) e 3 pelos fichamentos de rodadas anteriores, com os números citados reconferidos hoje contra o PDF. Os PDFs da ACM foram obtidos pela sessão de navegador do autor. Duas fontes foram lidas só nas conclusões e **não sustentam nenhuma afirmação** desta nota; outras ficam na fila, com só o resumo visto (§5).
+- **Texto integral**: 17 fontes lidas: 14 por PDF obtido em 24/11/2026 (com as exceções de leitura parcial indicadas no §5) e 3 pelos fichamentos de rodadas anteriores, com os números citados reconferidos em 24/11/2026 contra o PDF. Os PDFs da ACM foram obtidos pela sessão de navegador do autor. Duas fontes foram lidas só nas conclusões e **não sustentam nenhuma afirmação** desta nota; outras ficam na fila, com só o resumo visto (§5).
 - **Cálculo próprio**: fórmulas de poder e uma simulação do IC por reamostragem, descritas no §6.1. Os scripts não estão versionados; os parâmetros estão na nota, e o cálculo se refaz em minutos.
 - **Revisão adversarial**: não executada por revisor independente. Há um registro de autocrítica no §12 e a recomendação de que alguém releia antes da reunião.
 
@@ -78,7 +78,7 @@ Todas primárias (artigo ou preprint). Metadado conferido **no PDF**, salvo onde
 | 13 | Dror, R.; Baumer, G.; Shlomov, S.; Reichart, R. The hitchhiker's guide to testing statistical significance in natural language processing. *ACL 2018* (artigos longos), Melbourne, p. 1383–1392 | — |
 | 14 | Berg-Kirkpatrick, T.; Burkett, D.; Klein, D. An empirical investigation of statistical significance in NLP. *EMNLP-CoNLL 2012*, Jeju, 12–14 jul. 2012, p. 995–1005 | — |
 
-**Lidas em rodada anterior (fichamento em `TCC/papers/`), com os números citados aqui reconferidos hoje contra o PDF**
+**Lidas em rodada anterior (fichamento em `TCC/papers/`), com os números citados aqui reconferidos em 24/11/2026 contra o PDF**
 
 | # | Referência | O que foi reconferido |
 | --- | --- | --- |
@@ -272,11 +272,11 @@ Valores em pontos de sucesso\@10. Com quatro contrastes e Bonferroni, multiplica
 
 **O que mudaria a recomendação**
 
-- A distribuição que chegar na quarta mostrar que os relevantes estão concentrados na mesma UF e nos mesmos meses do relatório: o C(q) é pequeno, o denso fica favorecido \[9], e o alargado deixa de ser sensibilidade e vira necessidade.
+- A distribuição real dos relevantes mostrar que os relevantes estão concentrados na mesma UF e nos mesmos meses do relatório: o C(q) é pequeno, o denso fica favorecido \[9], e o alargado deixa de ser sensibilidade e vira necessidade.
 - Os relevantes espalhados por muitas UFs ou fora da janela: o filtro do RF17 corta relevantes do gabarito, e o teto do filtro cai; decidir se o filtro operacional muda ou se o gabarito é restringido ao que o filtro alcança (decisão relevante, do autor).
 - A C5 não acontecer: nenhum julgamento cego, e o R1 fica só com o gabarito original, com a leitura de §6.1.
 
-**O que cruzar na quarta**: fração dos relevantes que passa em cada filtro isolado e em todos juntos; distribuição de |C(q)|; idade do relevante na data da pesquisa; UF do relevante contra UF do órgão; modalidade; **número de relatórios e de itens por relatório**; número de relevantes por item.
+**O que cruzar com a distribuição real dos relevantes**: fração dos relevantes que passa em cada filtro isolado e em todos juntos; distribuição de |C(q)|; idade do relevante na data da pesquisa; UF do relevante contra UF do órgão; modalidade; **número de relatórios e de itens por relatório**; número de relevantes por item.
 
 ---
 
@@ -321,7 +321,7 @@ Triangulados: 4 de 12 (0,33). **Cinco recomendações dependem de afirmação de
 - **Leitura de \[8] e \[13], \[14] parcial** nos pontos descritos no §5; \[12] é preprint.
 - **Cobertura de busca limitada** (3 resultados por busca). Um trabalho que contradiga alguma afirmação pode estar fora do que vi.
 - **Os 40 itens sem relevante no PNCP** ficam fora da medição; R1 vale para os itens com preço reencontrável (85%), e isso precisa constar como escopo.
-- **Dois pontos do R2 e do corpus dependem de dados que chegam na quarta ou da C5.**
+- **Dois pontos do R2 e do corpus dependem de dados da extração dos relatórios ou da C5.**
 
 ## 10. Decisão sugerida (não vinculante)
 
@@ -337,11 +337,11 @@ Adotar, **antes de rodar qualquer método no conjunto de medição**, um registr
 | Piso absoluto | não ter / ancorar na C6 | A C6 |
 | Fração de ajuste | 25–40% (proposto ≈ 40%) | Contagem de relatórios |
 | Níveis de σ do R2 | calibrar em σ̂ da C5 / grade fixa | A C5 |
-| Filtros que definem C(q) e janela | os do RF17 / alargar | A distribuição da quarta |
+| Filtros que definem C(q) e janela | os do RF17 / alargar | A distribuição real dos relevantes |
 
 ## 11. Seguimentos
 
-- [ ] Receber na quarta: relatórios e itens por relatório, relevantes por item, passagem nos filtros (§6.4).
+- [ ] Receber com a extração dos relatórios: relatórios e itens por relatório, relevantes por item, passagem nos filtros (§6.4).
 - [ ] Com o arnês: calcular pd e a diferença mínima detectável **só no conjunto de ajuste**, antes de congelar o k.
 - [ ] Implementar a linha de base só-preço e a partição fácil/difícil no arnês de R2.
 - [ ] Implementar reamostragem por relatório no arnês e o p-valor por permutação como conferência.
