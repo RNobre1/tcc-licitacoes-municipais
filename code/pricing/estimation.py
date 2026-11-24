@@ -1,6 +1,7 @@
 import statistics
 from collections.abc import Sequence
 from decimal import Decimal
+from typing import Any
 
 
 def calculate_mean(prices: Sequence[Decimal]) -> Decimal:
@@ -27,3 +28,12 @@ def calculate_min(prices: Sequence[Decimal]) -> Decimal:
 def requires_justification(prices: Sequence[Decimal]) -> bool:
     """Check whether estimation requires justification (IN 65/2021, Art. 6 § 5, RN06)."""
     return len(prices) < 3
+
+
+def get_calculation_prices(candidates: Sequence[Any]) -> list[Decimal]:
+    """Return the prices usable for calculation from a sequence of candidates.
+
+    Only awarded prices are usable. Zero prices, estimated prices, and secret-budget
+    items are excluded so they never reach calculation functions.
+    """
+    raise NotImplementedError
