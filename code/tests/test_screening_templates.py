@@ -97,6 +97,7 @@ def _render_screening(
     proximities: dict[int, str] | None = None,
     expected_price: Decimal | None = None,
     procurement: ProcurementStub | None = None,
+    corpus_info: object | None = None,
 ) -> str:
     request = RequestFactory().get(f"/items/{item.id}/screening/")
     return render_to_string(
@@ -108,6 +109,7 @@ def _render_screening(
             "proximities": proximities or {},
             "expected_price": expected_price,
             "procurement": procurement,
+            "corpus_info": corpus_info,
         },
         request=request,
     )
@@ -596,3 +598,33 @@ def test_candidate_fragment_renders_fora_do_calculo_orcamento_sigiloso():
         },
     )
     assert "fora do cálculo: orçamento sigiloso" in rendered
+
+
+def test_screening_renders_partial_corpus_notice_when_partial():
+    from pricing.views import CorpusInfo
+
+    item = _make_item()
+    corpus_info = CorpusInfo(
+        indexed_items_count=5111,
+        start_date=datetime.date(2026, 10, 26),
+        end_date=datetime.date(2026, 10, 30),
+        is_partial=True,
+    )
+    rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
+    assert "Busca realizada em corpus parcial" in rendered
+    assert "5111 itens indexados" in rendered
+    assert "26/10/2026 a 30/10/2026" in rendered
+
+
+def test_screening_omits_partial_corpus_notice_when_not_partial():
+    from pricing.views import CorpusInfo
+
+    item = _make_item()
+    corpus_info = CorpusInfo(
+        indexed_items_count=50000,
+        start_date=datetime.date(2025, 11, 24),
+        end_date=datetime.date(2026, 11, 24),
+        is_partial=False,
+    )
+    rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
+    assert "Busca realizada em corpus parcial" not in rendered

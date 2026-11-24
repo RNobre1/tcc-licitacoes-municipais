@@ -908,3 +908,127 @@ def test_screening_estimate_panel_ignores_estimated_prices(client, monkeypatch):
     assert estimate["count"] == 1
     assert estimate["mean"] == Decimal("20.00")
     assert estimate["counted_candidate_ids"] == {2001}
+
+
+def test_get_corpus_info_returns_qdrant_count_and_db_date_range():
+    from ingestion.models import PublicItem
+    from pricing.views import get_corpus_info
+
+    PublicItem.objects.create(
+        cnpj="01611858000155",
+        year=2026,
+        purchase_sequence=1,
+        item_number=1,
+        description="Item 1",
+        unit="unidade",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("10.00"),
+        agency_name="Órgão 1",
+        published_on=datetime.date(2026, 10, 26),
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+    PublicItem.objects.create(
+        cnpj="01611858000155",
+        year=2026,
+        purchase_sequence=1,
+        item_number=2,
+        description="Item 2",
+        unit="unidade",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("10.00"),
+        agency_name="Órgão 1",
+        published_on=datetime.date(2026, 10, 30),
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+
+    mock_client = MagicMock()
+    mock_client.collection_exists.return_value = True
+    mock_count_res = MagicMock()
+    mock_count_res.count = 5111
+    mock_client.count.return_value = mock_count_res
+
+    mock_model = MagicMock()
+
+    ref_date = datetime.date(2026, 11, 24)
+    info = get_corpus_info(client=mock_client, model=mock_model, reference_date=ref_date)
+
+    assert info.indexed_items_count == 5111
+    assert info.start_date == datetime.date(2026, 10, 26)
+    assert info.end_date == datetime.date(2026, 10, 30)
+    assert info.is_partial is True
+
+
+def test_get_corpus_info_is_not_partial_when_full_window_covered():
+    from ingestion.models import PublicItem
+    from pricing.views import get_corpus_info
+
+    ref_date = datetime.date(2026, 11, 24)
+    PublicItem.objects.create(
+        cnpj="01611858000155",
+        year=2025,
+        purchase_sequence=1,
+        item_number=1,
+        description="Item Antigo",
+        unit="unidade",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("10.00"),
+        agency_name="Órgão 1",
+        published_on=datetime.date(2025, 11, 20),
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+    PublicItem.objects.create(
+        cnpj="01611858000155",
+        year=2026,
+        purchase_sequence=1,
+        item_number=2,
+        description="Item Novo",
+        unit="unidade",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("10.00"),
+        agency_name="Órgão 1",
+        published_on=datetime.date(2026, 11, 24),
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+
+    mock_client = MagicMock()
+    mock_client.collection_exists.return_value = True
+    mock_count_res = MagicMock()
+    mock_count_res.count = 2
+    mock_client.count.return_value = mock_count_res
+
+    mock_model = MagicMock()
+
+    info = get_corpus_info(client=mock_client, model=mock_model, reference_date=ref_date)
+
+    assert info.indexed_items_count == 2
+    assert info.start_date == datetime.date(2025, 11, 20)
+    assert info.end_date == datetime.date(2026, 11, 24)
+    assert info.is_partial is False
+
+
+def test_screening_view_passes_corpus_info_and_renders_notice_when_partial(client, monkeypatch):
+    from pricing.views import CorpusInfo
+
+    partial_info = CorpusInfo(
+        indexed_items_count=5111,
+        start_date=datetime.date(2026, 10, 26),
+        end_date=datetime.date(2026, 10, 30),
+        is_partial=True,
+    )
+    monkeypatch.setattr(views, "corpus_info_function", lambda: partial_info)
+
+    response = client.get(reverse("pricing:screening", args=[1]))
+    assert response.status_code == 200
+    assert response.context["corpus_info"] == partial_info
+    html = response.content.decode()
+    assert "Busca realizada em corpus parcial" in html
+    assert "5111 itens indexados" in html
+    assert "26/10/2026 a 30/10/2026" in html
