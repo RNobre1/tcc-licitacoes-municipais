@@ -1,10 +1,28 @@
-"""Semantic index client and collection management for Qdrant."""
+"""Semantic index client, collection management, and embedding models for Qdrant."""
 
 import os
 from typing import Any
 
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import UnexpectedResponse
+
+from semantic_index.embedding import (
+    EmbeddingModel,
+    SentenceTransformerEmbeddingModel,
+    collection_name_for_model,
+)
+from semantic_index.indexing import index_public_items
+
+__all__ = [
+    "CollectionConfigurationMismatchError",
+    "EmbeddingModel",
+    "SentenceTransformerEmbeddingModel",
+    "check_health",
+    "collection_name_for_model",
+    "create_collection",
+    "get_qdrant_client",
+    "index_public_items",
+]
 
 
 class CollectionConfigurationMismatchError(ValueError):
