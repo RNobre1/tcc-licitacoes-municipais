@@ -135,6 +135,5 @@ MAILERS = {
     },
 }
 
-# Signed, not encrypted: fine for invented demo data only. Revisit before real
-# data (backlog D10). Needed because there is no database until day 07.
-SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+# Database-backed sessions (backlog D10).
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
