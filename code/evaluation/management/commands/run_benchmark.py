@@ -150,6 +150,11 @@ class Command(BaseCommand):
             "split": split_name,
             "synthetic": True,
             "items_count": len(recalls_at_10),
+            "constants": {
+                "n_noise_draws": 200,
+                "n_bootstrap_resamples": 10000,
+                "seed": 42,
+            },
             "metrics": {
                 "recall_at_10": avg_recall,
                 "mrr_at_20": avg_mrr,

@@ -2,9 +2,11 @@
 
 import hashlib
 import json
+import math
 import random
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -21,6 +23,18 @@ def compute_recall_at_k(ranked_ids: Sequence[Any], ground_truth_ids: set[Any], k
     top_k = set(ranked_ids[:k])
     hits = len(top_k.intersection(ground_truth_ids))
     return hits / len(ground_truth_ids)
+
+
+def compute_success_at_k(ranked_ids: Sequence[Any], ground_truth_ids: set[Any], k: int) -> float:
+    """Compute Success@k (1.0 if at least one ground truth item is in top k, else 0.0).
+
+    Descriptive metric only.
+    """
+    if not ground_truth_ids or k <= 0:
+        return 0.0
+
+    top_k = set(ranked_ids[:k])
+    return 1.0 if bool(top_k.intersection(ground_truth_ids)) else 0.0
 
 
 def compute_mrr_at_k(ranked_ids: Sequence[Any], ground_truth_ids: set[Any], k: int = 20) -> float:
@@ -42,7 +56,7 @@ def bootstrap_paired_difference(
     scores_a: Sequence[float],
     scores_b: Sequence[float],
     alpha: float = 0.05,
-    n_resamples: int = 1000,
+    n_resamples: int = 10000,
     seed: int = 42,
 ) -> tuple[float, float, float]:
     """Percentile bootstrap over items for paired difference (A - B).
@@ -79,7 +93,7 @@ def bootstrap_paired_difference(
 def permutation_test_paired(
     scores_a: Sequence[float],
     scores_b: Sequence[float],
-    n_resamples: int = 1000,
+    n_resamples: int = 10000,
     seed: int = 42,
 ) -> float:
     """Two-sided paired permutation test on difference of means."""
@@ -207,8 +221,6 @@ def generate_anchor_prices(
     if not valid_prices:
         raise ValueError("At least one positive price required")
 
-    import math
-
     mean_ln = sum(math.log(p) for p in valid_prices) / len(valid_prices)
 
     rng = random.Random(seed)
@@ -227,17 +239,16 @@ def rank_by_price_only(
     anchor: Decimal | float,
 ) -> list[Any]:
     """Rank candidates by |ln(price / anchor)| asc, breaking ties by candidate id."""
-    import math
-
     anchor_f = float(anchor)
     if anchor_f <= 0:
         raise ValueError("Anchor price must be positive")
 
-    def sort_key(candidate):
-        p = float(candidate.price) if candidate.price is not None else 0.0
-        if p <= 0:
+    def sort_key(candidate: Any) -> tuple[float, Any]:
+        p = getattr(candidate, "price", None)
+        p_val = float(p) if p is not None else 0.0
+        if p_val <= 0:
             return (float("inf"), candidate.id)
-        dist = abs(math.log(p / anchor_f))
+        dist = abs(math.log(p_val / anchor_f))
         return (round(dist, 9), candidate.id)
 
     return sorted(candidates, key=sort_key)
@@ -257,35 +268,120 @@ def classify_easy_hard_items(
     return bool(top_k_ids.intersection(ground_truth_ids))
 
 
-class PublicItemSim:
-    pass
-
-
-def compute_success_at_k(ranked_ids: Sequence[Any], ground_truth_ids: set[Any], k: int) -> float:
-    raise NotImplementedError
-
-
 def evaluate_r1_acceptance(
     diff_mean: float,
     ci_95_lower: float,
     ci_95_upper: float,
     ci_90_lower: float,
     ci_90_upper: float,
-) -> dict[str, str]:
-    raise NotImplementedError
+) -> dict[str, Any]:
+    """Evaluate R1 acceptance rules.
+
+    - Accept if lower bound of 95% CI of paired difference > 0.05.
+    - Declare a tie only if 90% CI lies entirely within (-0.08, +0.08).
+    - Otherwise call it inconclusive.
+    """
+    if ci_95_lower > 0.05:
+        outcome = "accepted"
+    elif ci_90_lower > -0.08 and ci_90_upper < 0.08:
+        outcome = "tie"
+    else:
+        outcome = "inconclusive"
+
+    return {
+        "outcome": outcome,
+        "diff_mean": diff_mean,
+        "ci_95": (ci_95_lower, ci_95_upper),
+        "ci_90": (ci_90_lower, ci_90_upper),
+    }
 
 
 def evaluate_r2_acceptance(
-    r1_result: dict[str, str],
+    r1_result: dict[str, Any],
     sigma_025_ci: tuple[float, float, float],
     hard_gain_ci: tuple[float, float, float],
 ) -> bool:
-    raise NotImplementedError
+    """Evaluate R2 acceptance rules.
+
+    Accepted when all three hold:
+    (a) R1 is accepted;
+    (b) at sigma=0.25, system beats price-only with lower 95% CI > 0;
+    (c) finalist gain over BM25 persists on hard items with lower 95% CI > 0.
+    """
+    if r1_result.get("outcome") != "accepted":
+        return False
+    if sigma_025_ci[1] <= 0:
+        return False
+    return hard_gain_ci[1] > 0
 
 
-def filter_candidate_corpus(items: Sequence[Any], survey_date) -> list[Any]:
-    raise NotImplementedError
+def resolve_candidate_price(
+    item: Any,
+    prefer_awarded: bool = True,
+) -> Decimal | None:
+    """Resolve candidate item price for R2 anchor and price-only ranking.
+
+    The candidate price is the awarded price when stored and positive,
+    otherwise the estimated price when positive.
+    Secret-budget items have no price, and a price of zero is never a price.
+    Note: The specific price metric used in measured R2 remains configurable.
+    """
+    if getattr(item, "secret_budget", False):
+        return None
+
+    awarded = getattr(item, "awarded_unit_price", None)
+    estimated = getattr(item, "estimated_unit_price", None)
+
+    if prefer_awarded:
+        if awarded is not None and awarded > Decimal("0"):
+            return awarded
+        if estimated is not None and estimated > Decimal("0"):
+            return estimated
+    else:
+        if estimated is not None and estimated > Decimal("0"):
+            return estimated
+        if awarded is not None and awarded > Decimal("0"):
+            return awarded
+    return None
 
 
-def resolve_candidate_price(item: Any) -> Decimal | None:
-    raise NotImplementedError
+@dataclass(frozen=True)
+class PublicItemSim:
+    id: Any
+    published_on: Any = None
+    modality: int | None = None
+    state: str = ""
+    awarded_unit_price: Decimal | None = None
+    estimated_unit_price: Decimal | None = None
+    secret_budget: bool = False
+    unit: str = "UNIDADE"
+
+    @property
+    def price(self) -> Decimal | None:
+        return resolve_candidate_price(self)
+
+
+def filter_candidate_corpus(
+    items: Sequence[Any],
+    survey_date: date,
+    allowed_modalities: tuple[int, ...] = (6, 7, 8),
+) -> list[Any]:
+    """Filter candidate items to define C(q).
+
+    RN07 window: 12 months up to survey date (report date).
+    Allowed modalities: 6, 7, 8 (all states included).
+    """
+    try:
+        start_date = survey_date.replace(year=survey_date.year - 1)
+    except ValueError:
+        start_date = survey_date.replace(year=survey_date.year - 1, day=28)
+
+    filtered = []
+    for it in items:
+        pub = getattr(it, "published_on", None)
+        mod = getattr(it, "modality", None)
+        if pub is None or mod is None:
+            continue
+        if start_date <= pub <= survey_date and mod in allowed_modalities:
+            filtered.append(it)
+    return filtered
