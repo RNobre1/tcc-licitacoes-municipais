@@ -1036,3 +1036,38 @@ def test_screening_view_passes_corpus_info_and_renders_notice_when_partial(clien
     assert "Busca realizada em corpus parcial" in html
     assert "5111 itens indexados" in html
     assert "26/10/2026 a 30/10/2026" in html
+
+def test_get_embedding_model_thread_safe_concurrent_first_calls(monkeypatch):
+    """N3: Concurrent calls to get_embedding_model load the model exactly once under lock."""
+    import threading
+    import time
+    from unittest.mock import MagicMock
+
+    load_count = 0
+
+    def fake_loader(*args, **kwargs):
+        nonlocal load_count
+        time.sleep(0.02)
+        load_count += 1
+        return MagicMock(name="fake_sentence_transformer")
+
+    monkeypatch.setattr(views, "_EMBEDDING_MODEL", None)
+    # Patch SentenceTransformerEmbeddingModel import target or class
+    import semantic_index.embedding
+    monkeypatch.setattr(semantic_index.embedding, "SentenceTransformerEmbeddingModel", fake_loader)
+
+    models_loaded = []
+
+    def worker():
+        m = views.get_embedding_model()
+        models_loaded.append(m)
+
+    threads = [threading.Thread(target=worker) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert load_count == 1
+    assert len(models_loaded) == 8
+    assert all(m is models_loaded[0] for m in models_loaded)
