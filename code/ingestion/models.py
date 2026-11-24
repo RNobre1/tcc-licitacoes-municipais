@@ -59,22 +59,6 @@ class PublicItem(models.Model):
         return (self.cnpj, self.year, self.purchase_sequence, self.item_number)
 
     @property
-    def ano(self) -> int:
-        return self.year
-
-    @property
-    def sequencial(self) -> int:
-        return self.purchase_sequence
-
-    @property
-    def numero_item(self) -> int:
-        return self.item_number
-
-    @property
-    def numeroItem(self) -> int:
-        return self.item_number
-
-    @property
     def has_usable_estimated_price(self) -> bool:
         """Return False if secret_budget is True or estimated_unit_price <= 0."""
         return not self.secret_budget and self.estimated_unit_price > Decimal("0.00")
