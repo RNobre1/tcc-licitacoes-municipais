@@ -136,13 +136,22 @@ class RetryingTransport:
                 OSError,
                 http.client.HTTPException,
             ) as exc:
-                code = None
+                is_429 = False
                 if isinstance(exc, urllib.error.HTTPError):
-                    code = exc.code
+                    if exc.code == 429:
+                        is_429 = True
+                    elif exc.code < 500:
+                        raise
                 elif isinstance(exc, PncpResponseError):
-                    code = exc.status
+                    if exc.status == 429:
+                        is_429 = True
+                    elif exc.status is not None and exc.status >= 500:
+                        pass
+                    else:
+                        # Envelope/completeness violation: data integrity failure, fail immediately
+                        raise
 
-                if code == 429:
+                if is_429:
                     if rate_limit_attempt >= self.rate_limit_max_attempts:
                         raise
                     retry_after = getattr(exc, "retry_after", None)
@@ -162,9 +171,6 @@ class RetryingTransport:
                         self.sleep_func(sleep_duration)
                     rate_limit_attempt += 1
                     continue
-
-                if code is not None and code < 500:
-                    raise
 
                 if attempt >= self.max_attempts:
                     raise
