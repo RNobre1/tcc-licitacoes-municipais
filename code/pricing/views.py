@@ -152,3 +152,18 @@ def screening(request, item_id):
             "estimate": estimate,
         },
     )
+
+
+def get_embedding_model():
+    """Load the embedding model once per process, lazily, never per request."""
+    raise NotImplementedError
+
+
+def get_screening_date_window(reference_date=None):
+    """Return the mandatory 12-month date window up to reference_date (RN07)."""
+    raise NotImplementedError
+
+
+def get_screening_candidates(item, expected_price=None, search_fn=None, limit=20):
+    """Fetch and rank screening candidates for an item from semantic search."""
+    raise NotImplementedError
