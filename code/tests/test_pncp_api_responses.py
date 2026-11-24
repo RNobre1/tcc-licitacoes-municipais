@@ -27,6 +27,46 @@ DOCUMENTED_ITEM_KEYS = {
     "orcamentoSigiloso",
 }
 
+DOCUMENTED_ITEM_RESULT_KEYS = {
+    "numeroItem",
+    "porteFornecedorId",
+    "niFornecedor",
+    "tipoPessoa",
+    "dataInclusao",
+    "dataAtualizacao",
+    "reservaRemanescente",
+    "timezoneCotacaoMoedaEstrangeira",
+    "moedaEstrangeira",
+    "valorNominalMoedaEstrangeira",
+    "dataCotacaoMoedaEstrangeira",
+    "nomeRazaoSocialFornecedor",
+    "codigoPais",
+    "quantidadeHomologada",
+    "valorUnitarioHomologado",
+    "valorTotalHomologado",
+    "percentualDesconto",
+    "amparoLegalMargemPreferencia",
+    "amparoLegalCriterioDesempate",
+    "paisOrigemProdutoServico",
+    "localidadeExterior",
+    "indicadorSubcontratacao",
+    "ordemClassificacaoSrp",
+    "dataResultado",
+    "motivoCancelamento",
+    "dataCancelamento",
+    "numeroControlePNCPCompra",
+    "aplicacaoMargemPreferencia",
+    "aplicacaoBeneficioMeEpp",
+    "aplicacaoCriterioDesempate",
+    "naturezaJuridicaId",
+    "situacaoCompraItemResultadoId",
+    "porteFornecedorNome",
+    "situacaoCompraItemResultadoNome",
+    "sequencialResultado",
+    "naturezaJuridicaNome",
+    "localidadeFornecedor",
+}
+
 
 def _read_json(filename: str):
     return json.loads((PNCP_RESPONSES_DIR / filename).read_text(encoding="utf-8"))
@@ -50,6 +90,7 @@ def test_pncp_response_files_exist():
         "items_page_1.json",
         "items_page_2.json",
         "items_quantity.json",
+        "item_results.json",
         "README.md",
     ]
     for filename in expected_files:
@@ -142,6 +183,24 @@ def test_items_bare_arrays_and_documented_fields():
         assert isinstance(item["orcamentoSigiloso"], bool)
 
 
+def test_item_results_bare_array_and_documented_fields():
+    results = _read_json("item_results.json")
+    assert isinstance(results, list)
+    assert len(results) >= 1
+
+    for res in results:
+        assert set(res) <= DOCUMENTED_ITEM_RESULT_KEYS
+        assert isinstance(res["numeroItem"], int)
+        assert isinstance(res["valorUnitarioHomologado"], (int, float))
+        assert isinstance(res["quantidadeHomologada"], (int, float))
+        assert isinstance(res["dataResultado"], str)
+        assert isinstance(res["nomeRazaoSocialFornecedor"], str)
+        assert res["nomeRazaoSocialFornecedor"].startswith("DEMO-")
+        assert set(res["niFornecedor"]) <= {"0", "1"}
+        assert isinstance(res["porteFornecedorNome"], str)
+        assert isinstance(res["situacaoCompraItemResultadoNome"], str)
+
+
 def test_items_metrics_edge_cases():
     items_1 = _read_json("items_page_1.json")
     items_2 = _read_json("items_page_2.json")
@@ -197,12 +256,13 @@ def test_readme_documents_synthetic_data_and_endpoints():
     assert "/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens" in content
     assert "itens/quantidade" in content
     assert "tamanhoPagina" in content
+    assert "itens/{numeroItem}/resultados" in content
 
 
 def test_no_14_digit_identifier_in_any_file_is_a_real_looking_cnpj():
-    for path in PNCP_RESPONSES_DIR.glob("*"):
+    for path in PNCP_RESPONSES_DIR.glob("*.json"):
         for run in re.findall(r"\d{14}", path.read_text(encoding="utf-8")):
-            assert set(run) <= {"0", "9"}, f"{path.name}: {run} could be a real CNPJ"
+            assert set(run) <= {"0", "1", "9"}, f"{path.name}: {run} could be a real CNPJ"
 
 
 def test_municipality_names_and_ibge_codes_are_plainly_fictitious():

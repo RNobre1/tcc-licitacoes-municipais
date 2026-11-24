@@ -18,6 +18,8 @@ All public bodies, CNPJs, descriptions, and quantities are fictitious.
   as a bare JSON array. Represents `tamanhoPagina=3`.
 - `items_quantity.json`: mimics `GET /api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens/quantidade`,
   returning an integer (`6`) matching the total number of items across all item pages.
+- `item_results.json`: mimics `GET /api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens/{numeroItem}/resultados`
+  as a bare JSON array of awarded item results, returning awarded unit price, quantity, date, and winner.
 
 ## Item ownership and publication key
 
@@ -26,3 +28,5 @@ The items in `items_page_1.json` and `items_page_2.json` belong to the first pub
 - `cnpj`: `00000000000000`
 - `anoCompra`: `2026`
 - `sequencialCompra`: `1`
+
+The results in `item_results.json` belong to item 1 (`numeroItem: 1`) of that publication.
