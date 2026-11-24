@@ -351,6 +351,17 @@ class PncpClient:
 
         return record
 
+    def fetch_purchase(
+        self,
+        cnpj: str,
+        ano: int,
+        sequencial: int,
+        *,
+        save: bool = True,
+    ) -> RawRecord:
+        """Fetch single purchase header metadata by its key."""
+        raise NotImplementedError
+
 
 def fetch_publications(
     params: dict[str, Any] | None = None,
@@ -396,5 +407,24 @@ def fetch_item_results(
         ano=ano,
         sequencial=sequencial,
         numero_item=numero_item,
+        save=save,
+    )
+
+
+def fetch_purchase(
+    cnpj: str,
+    ano: int,
+    sequencial: int,
+    transport: TransportCallable | None = None,
+    base_url: str = DEFAULT_PNCP_BASE_URL,
+    *,
+    save: bool = True,
+) -> RawRecord:
+    """Convenience functional wrapper for PncpClient.fetch_purchase."""
+    client = PncpClient(base_url=base_url, transport=transport)
+    return client.fetch_purchase(
+        cnpj=cnpj,
+        ano=ano,
+        sequencial=sequencial,
         save=save,
     )
