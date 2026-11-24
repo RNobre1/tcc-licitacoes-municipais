@@ -1,15 +1,18 @@
 """Management command to resolve ground-truth records in PNCP."""
 
 import json
+import os
 import time
 from dataclasses import asdict
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from evaluation.ground_truth import match_ground_truth_item, resolve_purchase_items
+from ingestion.builder import _deduplicate_raw_records
 from ingestion.client import ItemCountMismatchError, PncpResponseError
 from ingestion.models import RawRecord
 
@@ -25,11 +28,20 @@ class Command(BaseCommand):
     help = "Resolve ground-truth chosen prices in PNCP via ingestion client."
 
     def add_arguments(self, parser):
+        default_eval_dir = os.environ.get("EVALUATION_DATA_DIR") or str(
+            Path(settings.BASE_DIR).parent / "dados-dominio" / "avaliacao"
+        )
         parser.add_argument(
             "--eval-dir",
             type=str,
-            default="/Users/rnobre/Documents/UFOPA/Projetos Codigo/TCC/dados-dominio/avaliacao/",
+            default=default_eval_dir,
             help="Directory containing the parsed evaluation JSON files.",
+        )
+        parser.add_argument(
+            "--pattern",
+            type=str,
+            default="105588_Cotacao_*.json",
+            help="Filename glob pattern for report JSON files.",
         )
         parser.add_argument(
             "--skip-fetch",
@@ -40,10 +52,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         eval_dir = Path(options["eval_dir"])
         skip_fetch = options["skip_fetch"]
+        pattern = options["pattern"]
 
-        report_files = sorted(eval_dir.glob("105588_Cotacao_*.json"))
+        report_files = sorted(eval_dir.glob(pattern))
         if not report_files:
-            # check for any other json if test environment
+            # fallback for general test environment
             report_files = sorted(
                 f for f in eval_dir.glob("*.json") if f.name != "ground_truth_resolved.json"
             )
@@ -51,7 +64,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Found {len(report_files)} report JSON file(s).")
 
         # Collect all PNCP keys across reports
-        # purchase_key: (cnpj, ano, sequencial) -> list of reference dicts
+        # purchase_key: (cnpj, year, purchase_sequence) -> list of reference dicts
         purchases: dict[tuple[str, int, int], list[dict[str, Any]]] = {}
         total_pncp_references = 0
 
@@ -64,13 +77,16 @@ class Command(BaseCommand):
                     k = price.get("pncp_key")
                     if k:
                         total_pncp_references += 1
-                        p_key = (k["cnpj"], k["ano"], k["sequencial"])
+                        year_val = k.get("year", k.get("ano"))
+                        seq_val = k.get("purchase_sequence", k.get("sequencial"))
+                        item_num_val = k.get("item_number", k.get("numero_item"))
+                        p_key = (str(k["cnpj"]), int(year_val), int(seq_val))
                         purchases.setdefault(p_key, []).append(
                             {
                                 "report_id": report_id,
                                 "requested_item_number": item_number,
                                 "price_number": price["price_number"],
-                                "numero_item": k["numero_item"],
+                                "item_number": int(item_num_val),
                             }
                         )
 
@@ -84,16 +100,22 @@ class Command(BaseCommand):
         failures_by_cause: dict[str, int] = {}
         resolved_items_map: dict[str, Any] = {}
 
-        for idx, ((cnpj, ano, sequencial), refs) in enumerate(purchases.items(), start=1):
-            endpoint = f"/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens"
+        for idx, ((cnpj, year, purchase_sequence), refs) in enumerate(purchases.items(), start=1):
+            endpoint = f"/api/pncp/v1/orgaos/{cnpj}/compras/{year}/{purchase_sequence}/itens"
             records = list(RawRecord.objects.filter(endpoint=endpoint))
 
             if not records and not skip_fetch:
                 self.stdout.write(
-                    f"[{idx}/{len(purchases)}] Fetching PNCP items for {cnpj}/{ano}/{sequencial}..."
+                    f"[{idx}/{len(purchases)}] Fetching PNCP items for "
+                    f"{cnpj}/{year}/{purchase_sequence}..."
                 )
                 try:
-                    records = resolve_purchase_items(cnpj, ano, sequencial, save=True)
+                    records = resolve_purchase_items(
+                        cnpj=cnpj,
+                        year=year,
+                        purchase_sequence=purchase_sequence,
+                        save=True,
+                    )
                 except (PncpResponseError, ItemCountMismatchError) as err:
                     cause = f"fetch_error_{type(err).__name__}"
                     self.stderr.write(f"  Error fetching {endpoint}: {err}")
@@ -106,9 +128,9 @@ class Command(BaseCommand):
                         )
                         resolved_items_map[ref_key] = {
                             "cnpj": cnpj,
-                            "ano": ano,
-                            "sequencial": sequencial,
-                            "numero_item": ref["numero_item"],
+                            "year": year,
+                            "purchase_sequence": purchase_sequence,
+                            "item_number": ref["item_number"],
                             "found": False,
                             "failure_cause": str(err),
                         }
@@ -125,9 +147,9 @@ class Command(BaseCommand):
                         )
                         resolved_items_map[ref_key] = {
                             "cnpj": cnpj,
-                            "ano": ano,
-                            "sequencial": sequencial,
-                            "numero_item": ref["numero_item"],
+                            "year": year,
+                            "purchase_sequence": purchase_sequence,
+                            "item_number": ref["item_number"],
                             "found": False,
                             "failure_cause": str(err),
                         }
@@ -147,21 +169,31 @@ class Command(BaseCommand):
                     )
                     resolved_items_map[ref_key] = {
                         "cnpj": cnpj,
-                        "ano": ano,
-                        "sequencial": sequencial,
-                        "numero_item": ref["numero_item"],
+                        "year": year,
+                        "purchase_sequence": purchase_sequence,
+                        "item_number": ref["item_number"],
                         "found": False,
                         "failure_cause": cause,
                     }
                 continue
 
+            deduped_records = _deduplicate_raw_records(records)
+
             for ref in refs:
+                item_num = ref["item_number"]
+                res_endpoint = (
+                    f"/api/pncp/v1/orgaos/{cnpj}/compras/{year}/{purchase_sequence}"
+                    f"/itens/{item_num}/resultados"
+                )
+                result_records = list(RawRecord.objects.filter(endpoint=res_endpoint))
+
                 res = match_ground_truth_item(
                     cnpj=cnpj,
-                    ano=ano,
-                    sequencial=sequencial,
-                    numero_item=ref["numero_item"],
-                    records=records,
+                    year=year,
+                    purchase_sequence=purchase_sequence,
+                    item_number=item_num,
+                    item_records=deduped_records,
+                    result_records=result_records,
                 )
                 ref_key = (
                     f"{ref['report_id']}_it{ref['requested_item_number']}_p{ref['price_number']}"

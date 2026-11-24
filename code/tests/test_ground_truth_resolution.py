@@ -1,6 +1,6 @@
 """Tests for resolving ground-truth records from PNCP raw records."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from evaluation.ground_truth import (
@@ -16,7 +16,7 @@ def test_match_ground_truth_item_found_with_results():
         endpoint="/api/pncp/v1/orgaos/11111111000111/compras/2026/100/itens",
         params={"pagina": 1},
         status_code=200,
-        fetched_at=datetime(2026, 11, 1, 10, 0, tzinfo=timezone.utc),
+        fetched_at=datetime(2026, 11, 1, 10, 0, tzinfo=UTC),
         payload=[
             {
                 "numeroItem": 1,
@@ -26,7 +26,8 @@ def test_match_ground_truth_item_found_with_results():
                 "unidadeMedida": "PACOTE",
                 "quantidade": 50.0,
                 "valorUnitarioEstimado": 28.5,
-                "valorUnitarioHomologado": 999.0,  # Should be ignored (N6: comes from results, never item)
+                # N6: Awarded price on item must be ignored
+                "valorUnitarioHomologado": 999.0,
                 "temResultado": True,
                 "orcamentoSigiloso": False,
             },
@@ -38,7 +39,7 @@ def test_match_ground_truth_item_found_with_results():
         endpoint="/api/pncp/v1/orgaos/11111111000111/compras/2026/100/itens/1/resultados",
         params={},
         status_code=200,
-        fetched_at=datetime(2026, 11, 1, 10, 5, tzinfo=timezone.utc),
+        fetched_at=datetime(2026, 11, 1, 10, 5, tzinfo=UTC),
         payload=[
             {
                 "situacaoCompraItemResultadoNome": "Informado",
@@ -109,7 +110,7 @@ def test_match_ground_truth_item_newest_copy_wins():
         endpoint="/api/pncp/v1/orgaos/11111111000111/compras/2026/100/itens",
         params={"pagina": 1},
         status_code=200,
-        fetched_at=datetime(2026, 10, 1, tzinfo=timezone.utc),
+        fetched_at=datetime(2026, 10, 1, tzinfo=UTC),
         payload=[
             {
                 "numeroItem": 1,
@@ -123,7 +124,7 @@ def test_match_ground_truth_item_newest_copy_wins():
         endpoint="/api/pncp/v1/orgaos/11111111000111/compras/2026/100/itens",
         params={"pagina": 1},
         status_code=200,
-        fetched_at=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        fetched_at=datetime(2026, 11, 1, tzinfo=UTC),
         payload=[
             {
                 "numeroItem": 1,
