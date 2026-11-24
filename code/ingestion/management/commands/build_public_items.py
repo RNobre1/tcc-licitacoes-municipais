@@ -12,7 +12,11 @@ class Command(BaseCommand):
         start_time = time.monotonic()
         self.stdout.write("Building public items from latest raw records...")
 
-        count = build_public_items()
+        result = build_public_items()
         elapsed = time.monotonic() - start_time
 
-        self.stdout.write(f"Successfully built or updated {count} public items in {elapsed:.2f}s.")
+        self.stdout.write(
+            f"Successfully built or updated {result.built_count} public items "
+            f"(skipped {result.skipped_without_publication} without publication metadata) "
+            f"in {elapsed:.2f}s."
+        )
