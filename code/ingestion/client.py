@@ -308,6 +308,18 @@ class PncpClient:
 
         return records
 
+    def fetch_item_results(
+        self,
+        cnpj: str,
+        ano: int,
+        sequencial: int,
+        numero_item: int,
+        *,
+        save: bool = True,
+    ) -> RawRecord:
+        """Fetch item results (awarded price and winner) for a specific item."""
+        raise NotImplementedError
+
 
 def fetch_publications(
     params: dict[str, Any] | None = None,
@@ -334,3 +346,17 @@ def fetch_items(
     """Convenience functional wrapper for PncpClient.fetch_items."""
     client = PncpClient(base_url=base_url, transport=transport)
     return client.fetch_items(cnpj=cnpj, ano=ano, sequencial=sequencial, params=params, save=save)
+
+
+def fetch_item_results(
+    cnpj: str,
+    ano: int,
+    sequencial: int,
+    numero_item: int,
+    transport: TransportCallable | None = None,
+    base_url: str = DEFAULT_PNCP_BASE_URL,
+    *,
+    save: bool = True,
+) -> RawRecord:
+    """Convenience functional wrapper for PncpClient.fetch_item_results."""
+    raise NotImplementedError
