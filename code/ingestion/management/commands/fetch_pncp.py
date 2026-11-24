@@ -5,16 +5,19 @@ from datetime import datetime
 from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 
 from ingestion.client import (
     DEFAULT_PNCP_BASE_URL,
     PncpError,
     PncpResponseError,
     TransportCallable,
+    fetch_item_results,
     fetch_items,
     fetch_publications,
     urllib_transport,
 )
+from ingestion.models import RawRecord
 
 
 class RetryingTransport:
@@ -103,6 +106,12 @@ class Command(BaseCommand):
             default=DEFAULT_PNCP_BASE_URL,
             help="Base URL for PNCP API",
         )
+        parser.add_argument(
+            "--with-results",
+            action="store_true",
+            default=False,
+            help="Fetch item results for items with temResultado=True",
+        )
 
     def handle(self, *args, **options):
         start_str = options["start"]
@@ -122,6 +131,7 @@ class Command(BaseCommand):
         uf = options.get("uf")
         modality = options.get("modality")
         base_url = options.get("base_url", DEFAULT_PNCP_BASE_URL)
+        with_results = bool(options.get("with_results"))
 
         transport = options.get("transport") or create_retrying_transport()
 
@@ -154,6 +164,7 @@ class Command(BaseCommand):
         publications_count = 0
         item_pages_count = 0
         items_count = 0
+        results_count = 0
         failures_count = 0
 
         # Extract publications from pages
@@ -178,18 +189,55 @@ class Command(BaseCommand):
                 continue
 
             try:
-                item_records = fetch_items(
-                    cnpj=str(cnpj),
-                    ano=int(ano),
-                    sequencial=int(sequencial),
-                    transport=transport,
-                    base_url=base_url,
-                    save=True,
-                )
-                item_pages_count += len(item_records)
-                for item_record in item_records:
-                    if isinstance(item_record.payload, list):
-                        items_count += len(item_record.payload)
+                if with_results:
+                    item_records = fetch_items(
+                        cnpj=str(cnpj),
+                        ano=int(ano),
+                        sequencial=int(sequencial),
+                        transport=transport,
+                        base_url=base_url,
+                        save=False,
+                    )
+                    items_for_pub: list[dict[str, Any]] = []
+                    for item_record in item_records:
+                        if isinstance(item_record.payload, list):
+                            items_for_pub.extend(item_record.payload)
+
+                    result_records: list[RawRecord] = []
+                    for item in items_for_pub:
+                        if item.get("temResultado") is True:
+                            numero_item = item.get("numeroItem")
+                            if numero_item is not None:
+                                res_rec = fetch_item_results(
+                                    cnpj=str(cnpj),
+                                    ano=int(ano),
+                                    sequencial=int(sequencial),
+                                    numero_item=int(numero_item),
+                                    transport=transport,
+                                    base_url=base_url,
+                                    save=False,
+                                )
+                                result_records.append(res_rec)
+
+                    with transaction.atomic():
+                        RawRecord.objects.bulk_create(item_records + result_records)
+
+                    item_pages_count += len(item_records)
+                    items_count += len(items_for_pub)
+                    results_count += len(result_records)
+                else:
+                    item_records = fetch_items(
+                        cnpj=str(cnpj),
+                        ano=int(ano),
+                        sequencial=int(sequencial),
+                        transport=transport,
+                        base_url=base_url,
+                        save=True,
+                    )
+                    item_pages_count += len(item_records)
+                    for item_record in item_records:
+                        if isinstance(item_record.payload, list):
+                            items_count += len(item_record.payload)
             except PncpError as exc:
                 self.stderr.write(f"Skipping publication {controle} due to items error: {exc}")
                 failures_count += 1
@@ -203,5 +251,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Publications: {publications_count}")
         self.stdout.write(f"Item pages: {item_pages_count}")
         self.stdout.write(f"Items: {items_count}")
+        if with_results:
+            self.stdout.write(f"Item results: {results_count}")
         self.stdout.write(f"Failures: {failures_count}")
         self.stdout.write(f"Elapsed: {elapsed:.2f}s")

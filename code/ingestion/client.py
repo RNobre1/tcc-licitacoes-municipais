@@ -318,7 +318,38 @@ class PncpClient:
         save: bool = True,
     ) -> RawRecord:
         """Fetch item results (awarded price and winner) for a specific item."""
-        raise NotImplementedError
+        endpoint_base = f"/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens"
+        endpoint = f"{endpoint_base}/{numero_item}/resultados"
+        url = f"{self.base_url}{endpoint}"
+
+        status, payload = self.transport(url, None)
+
+        if status == 204:
+            payload = []
+        elif status != 200:
+            raise PncpResponseError(
+                f"PNCP item results request failed with status {status}: {payload}",
+                status=status,
+            )
+        elif not isinstance(payload, list):
+            raise PncpResponseError(
+                f"PNCP item results request returned invalid payload: {payload}",
+                status=status,
+            )
+
+        record = RawRecord(
+            endpoint=endpoint,
+            params={},
+            fetched_at=timezone.now(),
+            payload=payload,
+            status_code=status,
+        )
+
+        if save:
+            with transaction.atomic():
+                record.save()
+
+        return record
 
 
 def fetch_publications(
@@ -359,4 +390,11 @@ def fetch_item_results(
     save: bool = True,
 ) -> RawRecord:
     """Convenience functional wrapper for PncpClient.fetch_item_results."""
-    raise NotImplementedError
+    client = PncpClient(base_url=base_url, transport=transport)
+    return client.fetch_item_results(
+        cnpj=cnpj,
+        ano=ano,
+        sequencial=sequencial,
+        numero_item=numero_item,
+        save=save,
+    )
