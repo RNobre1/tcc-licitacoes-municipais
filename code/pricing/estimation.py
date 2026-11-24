@@ -33,20 +33,18 @@ def requires_justification(prices: Sequence[Decimal]) -> bool:
 def get_calculation_prices(candidates: Sequence[Any]) -> list[Decimal]:
     """Return the prices usable for calculation from a sequence of candidates.
 
-    Only awarded prices are usable. Zero prices, estimated prices, and secret-budget
-    items are excluded so they never reach calculation functions.
+    Only awarded prices from Candidate objects (or objects explicitly defining
+    usable_calculation_price) are usable. Duck-typed objects without
+    usable_calculation_price or bare Decimals raise TypeError. Zero prices,
+    estimated prices, and secret-budget items are excluded.
     """
     usable: list[Decimal] = []
     for candidate in candidates:
-        price = getattr(candidate, "usable_calculation_price", None)
-        if price is None:
-            if getattr(candidate, "secret_budget", False):
-                continue
-            if getattr(candidate, "is_estimated", False):
-                continue
-            cand_price = getattr(candidate, "price", candidate)
-            if isinstance(cand_price, Decimal) and cand_price > Decimal("0.00"):
-                price = cand_price
+        if not hasattr(candidate, "usable_calculation_price"):
+            raise TypeError(
+                f"Candidate must define usable_calculation_price, got {type(candidate).__name__}"
+            )
+        price = candidate.usable_calculation_price
         if price is not None and price > Decimal("0.00"):
             usable.append(price)
     return usable

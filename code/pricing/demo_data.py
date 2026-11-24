@@ -19,6 +19,10 @@ class PriceCandidate:
     similarity: float
     provenance: str
 
+    @property
+    def usable_calculation_price(self) -> Decimal | None:
+        return self.price if self.price > Decimal("0.00") else None
+
 
 _PRICE_CANDIDATES: tuple[PriceCandidate, ...] = (
     # Item 1: Papel sulfite A4 branco, resma com 500 folhas (item_id=1, pacote)
