@@ -138,3 +138,87 @@ def test_get_calculation_prices_filters_out_estimated_and_secret_candidates():
         secret_budget=True,
     )
     assert get_calculation_prices([c_awarded, c_estimated, c_secret]) == [Decimal("10.00")]
+
+
+def test_fetch_awarded_price_on_demand_success():
+    from pricing.candidates import fetch_awarded_price_on_demand
+
+    mock_item = MagicMock()
+    mock_item.cnpj = "00000000000001"
+    mock_item.year = 2026
+    mock_item.purchase_sequence = 10
+    mock_item.item_number = 3
+    mock_item.awarded_unit_price = None
+
+    raw_items_record = MagicMock()
+    raw_items_record.endpoint = "/api/pncp/v1/orgaos/00000000000001/compras/2026/10/itens"
+    raw_items_record.payload = [{"numeroItem": 3, "temResultado": True}]
+    mock_item.raw_records.all.return_value = [raw_items_record]
+
+    result_raw_record = MagicMock()
+    result_raw_record.payload = [{"valorUnitarioHomologado": 45.50}]
+
+    mock_fetch = MagicMock(return_value=result_raw_record)
+
+    fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
+
+    assert mock_fetch.called
+    assert mock_item.awarded_unit_price == Decimal("45.50")
+    mock_item.save.assert_called_once()
+    mock_item.raw_records.add.assert_called_once_with(result_raw_record)
+
+
+def test_fetch_awarded_price_on_demand_failure_leaves_candidate_estimated():
+    from pricing.candidates import fetch_awarded_price_on_demand
+
+    mock_item = MagicMock()
+    mock_item.cnpj = "00000000000001"
+    mock_item.year = 2026
+    mock_item.purchase_sequence = 10
+    mock_item.item_number = 3
+    mock_item.awarded_unit_price = None
+    mock_item.estimated_unit_price = Decimal("50.00")
+    mock_item.secret_budget = False
+
+    raw_items_record = MagicMock()
+    raw_items_record.endpoint = "/api/pncp/v1/orgaos/00000000000001/compras/2026/10/itens"
+    raw_items_record.payload = [{"numeroItem": 3, "temResultado": True}]
+    mock_item.raw_records.all.return_value = [raw_items_record]
+
+    mock_fetch = MagicMock(side_effect=TimeoutError("PNCP timed out"))
+
+    # Should not raise exception
+    fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
+
+    assert mock_item.awarded_unit_price is None
+    candidate = candidate_from_public_item(mock_item)
+    assert candidate.is_estimated is True
+    assert candidate.price == Decimal("50.00")
+
+
+def test_fetch_awarded_price_on_demand_skips_when_no_result():
+    from pricing.candidates import fetch_awarded_price_on_demand
+
+    mock_item = MagicMock()
+    mock_item.item_number = 1
+    mock_item.awarded_unit_price = None
+
+    raw_items_record = MagicMock()
+    raw_items_record.endpoint = "/api/pncp/v1/orgaos/00000000000001/compras/2026/10/itens"
+    raw_items_record.payload = [{"numeroItem": 1, "temResultado": False}]
+    mock_item.raw_records.all.return_value = [raw_items_record]
+
+    mock_fetch = MagicMock()
+    fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
+    assert not mock_fetch.called
+
+
+def test_fetch_awarded_price_on_demand_skips_when_already_has_awarded_price():
+    from pricing.candidates import fetch_awarded_price_on_demand
+
+    mock_item = MagicMock()
+    mock_item.awarded_unit_price = Decimal("20.00")
+
+    mock_fetch = MagicMock()
+    fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
+    assert not mock_fetch.called
