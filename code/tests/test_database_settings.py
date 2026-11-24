@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from config.environment import load_environment
 
 CODE_DIR = Path(__file__).resolve().parent.parent
@@ -66,6 +68,16 @@ class TestDatabaseEnvironmentVariables:
         _, _, _, db_config = load_environment(fake_env)
         assert db_config["TEST_NAME"] is None
 
+    @pytest.mark.parametrize("name", ["preparatory_phase", "postgres", "template1", "my_test_db"])
+    def test_load_environment_refuses_a_test_database_name_without_the_test_prefix(self, name):
+        """Django drops the test database, so a name that is not test_* could erase a real one."""
+        fake_env = {
+            "SECRET_KEY": "any-valid-key",
+            "DATABASE_TEST_NAME": name,
+        }
+        with pytest.raises(RuntimeError, match="test_"):
+            load_environment(fake_env)
+
     def test_load_environment_database_defaults(self):
         """When database variables are unset, defaults match expected local-dev settings."""
         fake_env = {
@@ -89,6 +101,11 @@ class TestDatabaseEnvironmentVariables:
         assert db_config["PORT"] == env_vars.get("DATABASE_PORT")
         assert db_config["NAME"] == env_vars.get("DATABASE_NAME")
         assert db_config["USER"] == env_vars.get("DATABASE_USER")
+
+    def test_env_example_declares_the_test_database_name_blank(self):
+        """The example lists DATABASE_TEST_NAME, blank, so a copied .env keeps Django's default."""
+        env_vars = load_env_example_vars()
+        assert env_vars.get("DATABASE_TEST_NAME") == ""
 
 
 class TestDatabaseSettingsDjango:
