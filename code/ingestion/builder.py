@@ -2,6 +2,7 @@ import json
 import re
 from collections import defaultdict
 from collections.abc import Sequence
+from contextlib import suppress
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -9,6 +10,7 @@ from typing import Any
 from django.db import transaction
 
 from ingestion.models import PublicItem, RawRecord
+from ingestion.results import select_valid_result
 
 PUB_ENDPOINT = "/api/consulta/v1/contratacoes/publicacao"
 PURCHASE_ENDPOINT_PATTERN = re.compile(
@@ -125,20 +127,12 @@ def build_public_items() -> BuildResult:
         item_num = int(match.group("item"))
 
         awarded_price: Decimal | None = None
-        if isinstance(r.payload, list) and r.payload:
-            for res in r.payload:
-                if isinstance(res, dict):
-                    situacao = res.get("situacaoCompraItemResultadoNome")
-                    cancelado = res.get("dataCancelamento")
-                    # N5: pick valid Informado result and ignore cancelled
-                    if situacao == "Informado" and not cancelado:
-                        val = res.get("valorUnitarioHomologado")
-                        if val is not None:
-                            try:
-                                awarded_price = Decimal(str(val))
-                                break
-                            except Exception:
-                                pass
+        valid_res = select_valid_result(r.payload)
+        if valid_res:
+            val = valid_res.get("valorUnitarioHomologado")
+            if val is not None:
+                with suppress(Exception):
+                    awarded_price = Decimal(str(val))
 
         key = (cnpj, ano, seq, item_num)
         result_lookup[key] = (awarded_price, r)
