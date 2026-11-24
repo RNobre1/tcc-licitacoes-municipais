@@ -263,14 +263,14 @@ def parse_quotation_report_text(text: str, report_id: str = "") -> QuotationRepo
             raw_lines = [line.strip() for line in q_match.group(1).splitlines() if line.strip()]
             if raw_lines:
                 first_line = raw_lines[0]
-                qm = re.match(
-                    r"^\s*([0-9.,]+)\s+([A-Za-zÀ-ÿ.]+(?:\s+[A-Za-zÀ-ÿ.]+)?)\s+(.*)",
-                    first_line,
-                )
+                parts = re.split(r"\s{2,}", first_line, maxsplit=1)
+                first_col = parts[0].strip()
+                desc_first = parts[1].strip() if len(parts) > 1 else ""
+                qm = re.match(r"^([0-9.,]+)\s+(.+)$", first_col)
                 if qm:
                     quantity = _parse_decimal_br(qm.group(1))
                     unit = qm.group(2).strip()
-                    desc_parts = [qm.group(3).strip()] if qm.group(3).strip() else []
+                    desc_parts = [desc_first] if desc_first else []
                     desc_parts.extend(raw_lines[1:])
                     full_desc = " ".join(desc_parts).strip()
                 else:
