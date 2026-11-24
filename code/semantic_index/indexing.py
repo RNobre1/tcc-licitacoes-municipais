@@ -3,6 +3,7 @@ from typing import Any
 
 from qdrant_client import models
 
+from ingestion.units import normalize_unit
 from semantic_index.embedding import EmbeddingModel, collection_name_for_model
 
 
@@ -39,7 +40,7 @@ def index_public_items(
         points = []
         for it, vec in zip(batch, vectors, strict=True):
             unit_raw = getattr(it, "unit", "") or ""
-            norm_unit = unit_raw.strip().casefold()
+            norm_unit = normalize_unit(unit_raw)
 
             pub_date = getattr(it, "published_on", None)
             if hasattr(pub_date, "isoformat"):
@@ -58,12 +59,15 @@ def index_public_items(
             points.append(
                 models.PointStruct(
                     id=int(it.pk),
-                    vector=list(vec),
+                    vector=vec,
                     payload=payload,
                 )
             )
 
-        qdrant_client.upsert(collection_name=collection_name, points=points)
+        qdrant_client.upsert(
+            collection_name=collection_name,
+            points=points,
+        )
         total_indexed += len(points)
 
     return total_indexed

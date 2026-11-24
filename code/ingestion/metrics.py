@@ -3,6 +3,8 @@ from datetime import date, datetime
 from statistics import median
 from typing import Any
 
+from ingestion.units import normalize_unit
+
 
 def _is_missing(value: Any) -> bool:
     if value is None:
@@ -84,5 +86,7 @@ def distinct_units(
         val = item.get("unidadeMedida")
         if _is_missing(val) or not isinstance(val, str):
             continue
-        units.add(val.strip().casefold())
+        norm = normalize_unit(val)
+        if norm:
+            units.add(norm)
     return len(units)

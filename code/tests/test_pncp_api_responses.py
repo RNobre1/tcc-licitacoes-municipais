@@ -2,6 +2,8 @@ import json
 import re
 from pathlib import Path
 
+from ingestion.units import normalize_unit
+
 PNCP_RESPONSES_DIR = Path(__file__).parent / "api_responses" / "pncp"
 
 DOCUMENTED_PUBLICATION_KEYS = {
@@ -231,7 +233,7 @@ def test_items_metrics_edge_cases():
         (u1, u2)
         for i, u1 in enumerate(units)
         for u2 in units[i + 1 :]
-        if u1 != u2 and u1.strip().casefold() == u2.strip().casefold()
+        if u1 != u2 and normalize_unit(u1) == normalize_unit(u2)
     ]
     assert len(matching_pairs) >= 1
 

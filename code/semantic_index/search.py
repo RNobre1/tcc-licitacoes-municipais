@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from qdrant_client import models
 
+from ingestion.units import normalize_unit
 from semantic_index.embedding import EmbeddingModel, collection_name_for_model
 
 if TYPE_CHECKING:
@@ -100,7 +101,7 @@ def semantic_search(
         )
 
     if unit:
-        norm_unit = str(unit).strip().casefold()
+        norm_unit = normalize_unit(unit)
         must_conditions.append(
             models.FieldCondition(
                 key="unit",
