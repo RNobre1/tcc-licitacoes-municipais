@@ -1071,3 +1071,21 @@ def test_get_embedding_model_thread_safe_concurrent_first_calls(monkeypatch):
     assert load_count == 1
     assert len(models_loaded) == 8
     assert all(m is models_loaded[0] for m in models_loaded)
+
+def test_decide_and_screening_keys_decisions_by_requested_item_and_candidate(client):
+    """N4: Decisions are isolated per requested item so an accept on item 2 never leaks to item 3."""
+    url_decide = reverse("pricing:decide", args=[1])
+    # Decide accept for candidate 1 on item 1
+    resp = client.post(url_decide, {"decision": "accept", "item_id": "1"})
+    assert resp.status_code == 200
+
+    # Screening for item 1 sees candidate 1 as accepted
+    resp1 = client.get(reverse("pricing:screening", args=[1]))
+    assert resp1.context["decisions"].get(1) == "accept"
+    assert resp1.context["estimate"]["count"] >= 1
+
+    # Screening for item 2 sees candidate 1 as NOT decided
+    resp2 = client.get(reverse("pricing:screening", args=[2]))
+    assert 1 not in resp2.context["decisions"]
+    # Panel on item 2 must not count candidate 1
+    assert 1 not in resp2.context["estimate"]["counted_candidate_ids"]
