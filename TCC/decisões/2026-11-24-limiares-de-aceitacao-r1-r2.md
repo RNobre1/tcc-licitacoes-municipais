@@ -70,6 +70,12 @@ A investigação está em `docs/pesquisas/limiares-de-aceitacao-r1-r2.md`.
   não bater.
 - No ajuste se fixam no máximo quatro parâmetros: os dois limites de faixa do
   finalista, e o k1 e o b do BM25. O resto usa valor padrão declarado.
+- **A partição congelada**, gerada pelo comando versionado com semente 42 e
+  fração 0,40 sobre os 231 itens, tem 92 itens de ajuste, 139 de medição e o
+  resumo SHA-256
+  `2c2e7bd50913b30ad3ab1b4f336178e19a3c0514c2f4acdf2a6007d3606eb6ad`. A lista
+  de itens fica fora do repositório, com o dado de domínio. O resumo fica aqui,
+  e o arnês recusa medir se a partição não bater com ele.
 
 **R2.**
 
