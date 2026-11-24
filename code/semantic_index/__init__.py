@@ -12,16 +12,20 @@ from semantic_index.embedding import (
     collection_name_for_model,
 )
 from semantic_index.indexing import index_public_items
+from semantic_index.search import ScoredPublicItem, StructuredFilter, semantic_search
 
 __all__ = [
     "CollectionConfigurationMismatchError",
     "EmbeddingModel",
+    "ScoredPublicItem",
     "SentenceTransformerEmbeddingModel",
+    "StructuredFilter",
     "check_health",
     "collection_name_for_model",
     "create_collection",
     "get_qdrant_client",
     "index_public_items",
+    "semantic_search",
 ]
 
 
