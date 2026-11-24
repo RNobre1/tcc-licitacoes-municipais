@@ -28,7 +28,7 @@ def test_screening_page_renders_with_real_semantic_search_pipeline(monkeypatch):
         today = date.today()
         # Item within the last 12 months
         item_in_window = PublicItem.objects.create(
-            cnpj="01611858000155",
+            cnpj="00000000000007",
             year=today.year,
             purchase_sequence=42,
             item_number=1,
@@ -46,7 +46,7 @@ def test_screening_page_renders_with_real_semantic_search_pipeline(monkeypatch):
         )
         # Item outside 12-month window (> 365 days ago)
         item_expired = PublicItem.objects.create(
-            cnpj="01611858000155",
+            cnpj="00000000000007",
             year=today.year - 2,
             purchase_sequence=10,
             item_number=1,

@@ -789,7 +789,7 @@ def test_screening_renders_real_candidates_from_semantic_search(client, monkeypa
 
     pi_awarded = PublicItem(
         id=1001,
-        cnpj="01611858000155",
+        cnpj="00000000000007",
         year=2026,
         purchase_sequence=42,
         item_number=1,
@@ -804,7 +804,7 @@ def test_screening_renders_real_candidates_from_semantic_search(client, monkeypa
     )
     pi_estimated = PublicItem(
         id=1002,
-        cnpj="01611858000155",
+        cnpj="00000000000007",
         year=2026,
         purchase_sequence=42,
         item_number=2,
@@ -819,7 +819,7 @@ def test_screening_renders_real_candidates_from_semantic_search(client, monkeypa
     )
     pi_secret = PublicItem(
         id=1003,
-        cnpj="01611858000155",
+        cnpj="00000000000007",
         year=2026,
         purchase_sequence=42,
         item_number=3,
@@ -847,7 +847,7 @@ def test_screening_renders_real_candidates_from_semantic_search(client, monkeypa
     assert response.status_code == 200
     html = response.content.decode()
 
-    assert "https://pncp.gov.br/app/editais/01611858000155/2026/42" in html
+    assert "https://pncp.gov.br/app/editais/00000000000007/2026/42" in html
     assert "25,50" in html
     assert "28,00 (estimado)" in html
 
@@ -861,7 +861,7 @@ def test_screening_estimate_panel_ignores_estimated_prices(client, monkeypatch):
 
     pi_awarded = PublicItem(
         id=2001,
-        cnpj="01611858000155",
+        cnpj="00000000000007",
         year=2026,
         purchase_sequence=1,
         item_number=1,
@@ -876,7 +876,7 @@ def test_screening_estimate_panel_ignores_estimated_prices(client, monkeypatch):
     )
     pi_estimated = PublicItem(
         id=2002,
-        cnpj="01611858000155",
+        cnpj="00000000000007",
         year=2026,
         purchase_sequence=1,
         item_number=2,
@@ -915,7 +915,7 @@ def test_get_corpus_info_returns_qdrant_count_and_db_date_range():
     from pricing.views import get_corpus_info
 
     PublicItem.objects.create(
-        cnpj="01611858000155",
+        cnpj="00000000000007",
         year=2026,
         purchase_sequence=1,
         item_number=1,
@@ -930,7 +930,7 @@ def test_get_corpus_info_returns_qdrant_count_and_db_date_range():
         item_kind="product",
     )
     PublicItem.objects.create(
-        cnpj="01611858000155",
+        cnpj="00000000000007",
         year=2026,
         purchase_sequence=1,
         item_number=2,
@@ -970,7 +970,7 @@ def test_get_corpus_info_is_not_partial_when_full_window_covered():
 
     ref_date = datetime.date(2026, 11, 24)
     PublicItem.objects.create(
-        cnpj="01611858000155",
+        cnpj="00000000000007",
         year=2025,
         purchase_sequence=1,
         item_number=1,
@@ -985,7 +985,7 @@ def test_get_corpus_info_is_not_partial_when_full_window_covered():
         item_kind="product",
     )
     PublicItem.objects.create(
-        cnpj="01611858000155",
+        cnpj="00000000000007",
         year=2026,
         purchase_sequence=1,
         item_number=2,

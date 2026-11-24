@@ -11,8 +11,8 @@ from pricing.estimation import get_calculation_prices
 
 
 def test_build_provenance_url_matches_pncp_pattern():
-    url = build_provenance_url("01611858000155", 2026, 42)
-    assert url == "https://pncp.gov.br/app/editais/01611858000155/2026/42"
+    url = build_provenance_url("00000000000007", 2026, 42)
+    assert url == "https://pncp.gov.br/app/editais/00000000000007/2026/42"
 
 
 def test_candidate_with_awarded_price():
