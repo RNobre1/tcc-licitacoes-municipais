@@ -39,6 +39,7 @@
 
 <section>
     <h2>Preços candidatos</h2>
+    {% if candidates %}
     <table>
         <thead>
             <tr>
@@ -58,9 +59,12 @@
         </thead>
         <tbody>
             {% for candidate in candidates %}
-                {% include "pricing/_candidate.html" with candidate=candidate decision=decisions|lookup:candidate.id proximity=proximities|lookup:candidate.id expected_price=expected_price item_unit=item.unit estimate=estimate %}
+                {% include "pricing/_candidate.html" with candidate=candidate decision=decisions|lookup:candidate.id proximity=proximities|lookup:candidate.id expected_price=expected_price item_unit=item.unit estimate=estimate item_id=item.id %}
             {% endfor %}
         </tbody>
     </table>
+    {% else %}
+    <p>Nenhum preço candidato encontrado.</p>
+    {% endif %}
 </section>
 {% endblock %}

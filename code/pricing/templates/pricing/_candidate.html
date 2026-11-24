@@ -7,7 +7,7 @@
     <td>{{ candidate.date }}</td>
     <td>{{ candidate.source }}</td>
     <td>{{ candidate.provenance }}</td>
-    <td>{{ candidate.price }}</td>
+    <td>{% if candidate.secret_budget or candidate.price is None %}—{% elif candidate.is_estimated %}{{ candidate.price }} (estimado){% else %}{{ candidate.price }}{% endif %}</td>
     <td>{{ candidate.similarity }}</td>
     <td>{% if proximity %}{{ proximity }}{% else %}—{% endif %}</td>
     <td>
@@ -15,11 +15,19 @@
             {% if estimate %}
                 {% if candidate.id in estimate.counted_candidate_ids %}
                     Aceito
+                {% elif candidate.is_estimated %}
+                    fora do cálculo: preço estimado
+                {% elif candidate.secret_budget or candidate.price is None %}
+                    fora do cálculo: orçamento sigiloso
                 {% else %}
                     fora do cálculo: unidade diferente
                 {% endif %}
             {% elif item_unit and candidate.unit != item_unit %}
                 fora do cálculo: unidade diferente
+            {% elif candidate.is_estimated %}
+                fora do cálculo: preço estimado
+            {% elif candidate.secret_budget or candidate.price is None %}
+                fora do cálculo: orçamento sigiloso
             {% else %}
                 Aceito
             {% endif %}
@@ -31,6 +39,7 @@
         <form method="post" action="{% url 'pricing:decide' candidate.id %}" hx-post="{% url 'pricing:decide' candidate.id %}" hx-target="#candidate-{{ candidate.id }}" hx-swap="outerHTML">
             {% csrf_token %}
             <input type="hidden" name="expected_price" value="{% if expected_price is not None %}{{ expected_price|unlocalize }}{% endif %}">
+            <input type="hidden" name="item_id" value="{% if item_id %}{{ item_id }}{% elif item %}{{ item.id }}{% elif candidate.item_id %}{{ candidate.item_id }}{% endif %}">
             <button type="submit" name="decision" value="accept">Aceitar</button>
             <button type="submit" name="decision" value="reject">Descartar</button>
         </form>
