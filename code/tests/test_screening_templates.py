@@ -170,7 +170,7 @@ def test_screening_renders_candidates_in_given_order():
 
 def test_screening_renders_two_dimension_headers_separately():
     item = _make_item()
-    rendered = _render_screening(item, candidates=[])
+    rendered = _render_screening(item, candidates=[_make_candidate()])
     assert "<th>Semelhança</th>" in rendered
     assert "<th>Proximidade de valor</th>" in rendered
 
