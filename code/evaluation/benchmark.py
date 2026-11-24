@@ -255,3 +255,37 @@ def classify_easy_hard_items(
     ranked = rank_by_price_only(candidates, anchor=anchor)
     top_k_ids = set(c.id for c in ranked[:k])
     return bool(top_k_ids.intersection(ground_truth_ids))
+
+
+class PublicItemSim:
+    pass
+
+
+def compute_success_at_k(ranked_ids: Sequence[Any], ground_truth_ids: set[Any], k: int) -> float:
+    raise NotImplementedError
+
+
+def evaluate_r1_acceptance(
+    diff_mean: float,
+    ci_95_lower: float,
+    ci_95_upper: float,
+    ci_90_lower: float,
+    ci_90_upper: float,
+) -> dict[str, str]:
+    raise NotImplementedError
+
+
+def evaluate_r2_acceptance(
+    r1_result: dict[str, str],
+    sigma_025_ci: tuple[float, float, float],
+    hard_gain_ci: tuple[float, float, float],
+) -> bool:
+    raise NotImplementedError
+
+
+def filter_candidate_corpus(items: Sequence[Any], survey_date) -> list[Any]:
+    raise NotImplementedError
+
+
+def resolve_candidate_price(item: Any) -> Decimal | None:
+    raise NotImplementedError
