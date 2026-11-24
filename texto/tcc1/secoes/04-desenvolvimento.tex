@@ -103,6 +103,14 @@ secretaria não executa etapa alguma.
   \fonte{Elaborado pelo autor.}
 \end{figure}
 
+A Figura~\ref{fig:processo-bpmn-1} apresenta a primeira metade da fase
+preparatória, da identificação da necessidade pela secretaria demandante até o
+encaminhamento pelo setor de licitações. O modelo divide as ações entre os
+participantes: o sistema de apoio automatiza a extração dos itens dos documentos
+de demanda, e o servidor do setor decide sobre as descrições e conduz o
+alinhamento quando há demandas coincidentes entre secretarias, antes de o sistema
+gerar a minuta do estudo técnico preliminar.
+
 \begin{figure}[H]
   \centering
   \input{figuras/processo-licitacao-2-precos}
@@ -111,6 +119,13 @@ secretaria não executa etapa alguma.
   \label{fig:processo-bpmn-2}
   \fonte{Elaborado pelo autor.}
 \end{figure}
+
+A Figura~\ref{fig:processo-bpmn-2} apresenta a segunda metade do processo. O
+desenho mostra o desvio de fluxo quando a pesquisa de preços é dispensada por
+ata de registro de preços ou contrato vigente, e detalha as etapas da pesquisa
+quando necessária: o sistema recupera os candidatos por significado, o servidor
+faz a triagem comparativa item a item, e o sistema executa o cálculo do valor e
+a geração do mapa de cotação antes de emitir as peças finais para assinatura.
 
 \subsubsection{Onde o esforço se concentra}
 \label{subsec:onde-doi}
@@ -490,10 +505,11 @@ não sobrevive ao primeiro incremento de implementação.
   \fonte{Elaborado pelo autor.}
 \end{figure}
 
-No primeiro nível há três participantes. O operador do setor de licitações, o
-sistema de apoio, e a base pública de contratações, consultada por interface de
-programação. O desenho já decide uma coisa: o sistema não se comunica com nenhum
-sistema da prefeitura, e a única fonte externa com que fala é essa base pública.
+A Figura~\ref{fig:nivel1-contexto} apresenta o primeiro nível da arquitetura, no
+qual há três participantes: o operador do setor de licitações, o sistema de apoio
+e a base pública de contratações, consultada por interface de programação. O
+desenho já decide uma coisa: o sistema não se comunica com nenhum sistema da
+prefeitura, e a única fonte externa com que fala é essa base pública.
 Isso é escolha, não limitação. O município estudado paga por um serviço comercial
 de pesquisa de preços, mas a maior parte das prefeituras de pequeno porte não
 tem esse recurso, e é justamente onde o apoio faz mais falta.
@@ -507,9 +523,10 @@ tem esse recurso, e é justamente onde o apoio faz mais falta.
   \fonte{Elaborado pelo autor.}
 \end{figure}
 
-No segundo nível há quatro partes: a aplicação web, um serviço de ingestão, um
-banco relacional e um índice semântico. Duas separações estruturam o desenho, e
-cada uma tem motivo declarado.
+No segundo nível, detalhado na Figura~\ref{fig:nivel2-conteineres}, abrem-se os
+contêineres internos da solução em quatro partes: a aplicação web, um serviço de
+ingestão, um banco relacional e um índice semântico. Duas separações estruturam o
+desenho, e cada uma tem motivo declarado.
 
 A ingestão fica apartada da aplicação porque percorrer e indexar a base pública é
 operação de horas, que não cabe no tempo de resposta de uma requisição. Se
@@ -543,8 +560,9 @@ normal de uso deste sistema, e não uma exceção construída.
   \fonte{Elaborado pelo autor.}
 \end{figure}
 
-O caminho de um processo pelo sistema tem duas etapas condicionais, e isso
-precisa ficar explícito porque delimita o alcance do que se promete. A
+O caminho de um processo pelo sistema, esquematizado na
+Figura~\ref{fig:fluxo-processo}, tem duas etapas condicionais, e isso precisa
+ficar explícito porque delimita o alcance do que se promete. A
 consolidação só acontece quando mais de uma secretaria pede o mesmo item. E a
 pesquisa de preços é pulada quando o preço já vem de ata de registro ou contrato
 vigente, caso em que o fluxo segue direto para a emissão das peças.
