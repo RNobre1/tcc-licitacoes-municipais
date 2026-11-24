@@ -612,7 +612,7 @@ def test_screening_renders_partial_corpus_notice_when_partial():
     )
     rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
     assert "Busca realizada em corpus parcial" in rendered
-    assert "5111 itens indexados" in rendered
+    assert "5111 de" in rendered
     assert "26/10/2026 a 30/10/2026" in rendered
 
 

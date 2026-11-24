@@ -40,7 +40,13 @@
 <section>
     <h2>Preços candidatos</h2>
     {% if corpus_info and corpus_info.is_partial %}
-    <p class="notice"><small>Busca realizada em corpus parcial: {{ corpus_info.indexed_items_count }} itens indexados cobrindo o período de {{ corpus_info.start_date|date:"d/m/Y" }} a {{ corpus_info.end_date|date:"d/m/Y" }}.</small></p>
+        {% if corpus_info.qdrant_error %}
+        <p class="notice error"><small>Índice de busca semântica temporariamente indisponível.</small></p>
+        {% elif corpus_info.empty_index or corpus_info.indexed_items_count == 0 %}
+        <p class="notice warning"><small>Índice de busca semântica vazio.</small></p>
+        {% else %}
+        <p class="notice"><small>Busca realizada em corpus parcial: {{ corpus_info.indexed_items_count }} de {{ corpus_info.db_items_count }} itens do banco indexados cobrindo o período de {{ corpus_info.start_date|date:"d/m/Y" }} a {{ corpus_info.end_date|date:"d/m/Y" }}.</small></p>
+        {% endif %}
     {% endif %}
     {% if candidates %}
     <table>

@@ -85,6 +85,9 @@ class CorpusInfo:
     start_date: datetime.date | None
     end_date: datetime.date | None
     is_partial: bool
+    db_items_count: int = 0
+    qdrant_error: bool = False
+    empty_index: bool = False
 
 
 def get_corpus_info(
@@ -93,20 +96,26 @@ def get_corpus_info(
     reference_date: datetime.date | None = None,
 ) -> CorpusInfo:
     """Return corpus index metadata read from DB and Qdrant."""
+    from django.core.cache import cache
     from django.db.models import Max, Min
+    from qdrant_client import models as qmodels
 
     from ingestion.models import PublicItem
 
     window_start, window_end = get_screening_date_window(reference_date)
 
-    bounds = PublicItem.objects.aggregate(
-        min_date=Min("published_on"), max_date=Max("published_on")
-    )
-    start_date = bounds.get("min_date")
-    end_date = bounds.get("max_date")
-    db_count = PublicItem.objects.count()
+    # Cache PostgreSQL count for 5 minutes to avoid COUNT(*) on every request (N1)
+    db_count = cache.get("corpus_db_items_count")
+    if db_count is None:
+        db_count = PublicItem.objects.count()
+        cache.set("corpus_db_items_count", db_count, 300)
 
     indexed_count = 0
+    qdrant_error = False
+    empty_index = False
+    start_date = None
+    end_date = None
+
     try:
         if client is None:
             from semantic_index import get_qdrant_client
@@ -117,24 +126,74 @@ def get_corpus_info(
         from semantic_index.embedding import collection_name_for_model
 
         coll_name = collection_name_for_model(model)
-        if client.collection_exists(coll_name):
+        if not client.collection_exists(coll_name):
+            empty_index = True
+        else:
             count_res = client.count(collection_name=coll_name)
             indexed_count = getattr(count_res, "count", 0)
+            if indexed_count == 0:
+                empty_index = True
+            else:
+                # Read earliest and latest published_on from Qdrant indexed payloads (N1)
+                try:
+                    asc_points, _ = client.scroll(
+                        collection_name=coll_name,
+                        limit=1,
+                        with_payload=["published_on"],
+                        order_by=qmodels.OrderBy(
+                            key="published_on", direction=qmodels.Direction.ASC
+                        ),
+                    )
+                    desc_points, _ = client.scroll(
+                        collection_name=coll_name,
+                        limit=1,
+                        with_payload=["published_on"],
+                        order_by=qmodels.OrderBy(
+                            key="published_on", direction=qmodels.Direction.DESC
+                        ),
+                    )
+                    if asc_points and asc_points[0].payload:
+                        raw_start = asc_points[0].payload.get("published_on")
+                        if raw_start:
+                            start_date = datetime.date.fromisoformat(str(raw_start))
+                    if desc_points and desc_points[0].payload:
+                        raw_end = desc_points[0].payload.get("published_on")
+                        if raw_end:
+                            end_date = datetime.date.fromisoformat(str(raw_end))
+                except Exception:
+                    start_date = None
+                    end_date = None
     except Exception:
+        qdrant_error = True
         indexed_count = 0
 
-    if indexed_count == 0 or start_date is None or end_date is None:
-        is_partial = False
-    elif start_date > window_start or end_date < window_end or indexed_count < db_count:
+    # Fallback to DB date bounds if Qdrant didn't provide dates (e.g. mocked client without scroll or mock test)
+    if start_date is None or end_date is None:
+        bounds = PublicItem.objects.aggregate(
+            min_date=Min("published_on"), max_date=Max("published_on")
+        )
+        if start_date is None:
+            start_date = bounds.get("min_date")
+        if end_date is None:
+            end_date = bounds.get("max_date")
+    if qdrant_error or empty_index or indexed_count == 0 or start_date is None or end_date is None:
         is_partial = True
     else:
-        is_partial = False
+        # Tolerate 1 day of lag at end_date (e.g. yesterday) (N1)
+        tolerated_end = window_end - datetime.timedelta(days=1)
+        if start_date > window_start or end_date < tolerated_end or indexed_count < db_count:
+            is_partial = True
+        else:
+            is_partial = False
 
     return CorpusInfo(
         indexed_items_count=indexed_count,
         start_date=start_date,
         end_date=end_date,
         is_partial=is_partial,
+        db_items_count=db_count,
+        qdrant_error=qdrant_error,
+        empty_index=empty_index,
     )
 
 
@@ -150,7 +209,10 @@ def get_screening_candidates(
     """Fetch and rank screening candidates for an item from semantic search."""
     fn = search_fn or search_function
     date_window = get_screening_date_window()
-    raw_results = fn(query=item.description, date_window=date_window, limit=limit)
+    try:
+        raw_results = fn(query=item.description, date_window=date_window, limit=limit)
+    except Exception:
+        return []
 
     candidates: list[Any] = []
     for res in raw_results:
@@ -208,11 +270,13 @@ EMPTY_PANEL = {
 def build_estimate_panel(
     item,
     decisions: dict,
+    candidates: list[Any] | None = None,
 ) -> dict:
     if item is None:
         return EstimatePanel(EMPTY_PANEL, counted_candidate_ids=set())
 
-    candidates = get_screening_candidates(item)
+    if candidates is None:
+        candidates = get_screening_candidates(item)
 
     counted_candidate_ids: set[int] = set()
     for c in candidates:
@@ -341,7 +405,7 @@ def screening(request, item_id):
         elif not any(":" in str(other_k) for other_k in raw_decisions):
             # Backward compatibility with un-scoped decisions
             decisions[int(k)] = v
-    estimate = build_estimate_panel(item, decisions)
+    estimate = build_estimate_panel(item, decisions, candidates=candidates)
 
     proximities = {
         candidate.id: format_proximity(

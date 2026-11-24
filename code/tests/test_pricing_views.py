@@ -1034,7 +1034,7 @@ def test_screening_view_passes_corpus_info_and_renders_notice_when_partial(clien
     assert response.context["corpus_info"] == partial_info
     html = response.content.decode()
     assert "Busca realizada em corpus parcial" in html
-    assert "5111 itens indexados" in html
+    assert "5111 de" in html
     assert "26/10/2026 a 30/10/2026" in html
 
 
