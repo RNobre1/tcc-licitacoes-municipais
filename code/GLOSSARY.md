@@ -85,6 +85,31 @@ the code, not about interface text.
 | amostra | `sample` | A real, small slice of public data, used for measurement |
 | dados de demonstração | `demo_data` | Invented data for the prototype. **Not** "sample": see below |
 | índice semântico | `semantic_index` | Where descriptions are stored as vectors, for search by meaning |
+| item publicado | `PublicItem` | One item of a public purchase published in the PNCP, normalized from its raw records: description, unit, quantity, prices, date, agency, state and the PNCP key that is its provenance |
+| preço unitário estimado | `estimated_unit_price` | The unit price the buying agency estimated before the purchase. Zero when the budget is secret |
+| preço unitário homologado | `awarded_unit_price` | The unit price actually awarded. The one IN 65/2021 accepts as a reference price |
+| resultado do item | `item_result` | The PNCP record of an item's award (`/itens/{n}/resultados`), which carries the awarded price |
+| orçamento sigiloso | `secret_budget` | A purchase whose estimated value is withheld; its items come with an estimated price of zero |
+| unidade da federação (UF) | `state` | The Brazilian state where the buying agency is |
+
+### Semantic search and its evaluation
+
+| Portuguese | Identifier | Meaning |
+| --- | --- | --- |
+| busca semântica | `semantic_search` | Finding candidates by meaning, under the mandatory structured filter |
+| busca por palavra | `keyword_search` | Finding candidates by shared words. The mandatory baseline of the evaluation |
+| modelo de representação | `embedding_model` | The model that turns a description into a vector |
+| vetor | `embedding` | The vector a model produces for one description |
+| filtro estruturado | `structured_filter` | Conditions applied outside the vector: unit, state, period. Never learned, always enforced |
+| faixa de comparabilidade | `comparability_band` | The band a candidate falls in by similarity, the first key of the RF23 ranking |
+| relatório de cotação | `QuotationReport` | The report of a past price survey from the commercial price bank, with the prices the operator chose |
+| conjunto de avaliação | `evaluation_set` | The requested items of past price surveys, each with the public records the operator chose |
+| gabarito | `ground_truth` | The public records the operator chose for an item, taken as relevant |
+| espaço de busca | `corpus` | The public items a search runs over |
+| bateria | `benchmark` | Running every candidate search method against the evaluation set |
+| subconjunto de ajuste | `tuning_split` | The part of the evaluation set where thresholds and parameters may be chosen |
+| subconjunto de medição | `measurement_split` | The part of the evaluation set that is only measured, after every threshold is fixed |
+| linha de base | `baseline` | The method every other method is compared with |
 
 ## Names to avoid
 
@@ -96,3 +121,5 @@ Some translations look right and collide with something else.
 | `sample` for invented data | `sample` already means a slice of **real** public data. Mixing the two hides which numbers are measured and which are made up | `demo_data` |
 | `fixtures` for invented data | In Django, *fixtures* are files loaded into the database, which is a different mechanism | `demo_data` |
 | `process` for a procurement case | It reads as an operating-system process | `Procurement` |
+| `homologated` for the awarded price | Not an English word in this sense | `awarded_unit_price` |
+| `test_set` or `test_split` for the measured split | In this project `test` already names the code that checks code | `measurement_split` |
