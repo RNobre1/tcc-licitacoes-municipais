@@ -1,4 +1,5 @@
 import datetime
+import threading
 from collections.abc import Sequence  # noqa: F401
 from dataclasses import dataclass
 from decimal import Decimal
@@ -25,18 +26,21 @@ DEFAULT_MODEL = "intfloat/multilingual-e5-base"
 DEFAULT_REVISION = "d13f1b27baf31030b7fd040960d60d909913633f"
 
 _EMBEDDING_MODEL: Any = None
+_EMBEDDING_MODEL_LOCK = threading.Lock()
 
 
 def get_embedding_model():
     """Load the embedding model once per process, lazily, never per request."""
     global _EMBEDDING_MODEL
     if _EMBEDDING_MODEL is None:
-        from semantic_index.embedding import SentenceTransformerEmbeddingModel
+        with _EMBEDDING_MODEL_LOCK:
+            if _EMBEDDING_MODEL is None:
+                from semantic_index.embedding import SentenceTransformerEmbeddingModel
 
-        _EMBEDDING_MODEL = SentenceTransformerEmbeddingModel(
-            model_name=DEFAULT_MODEL,
-            revision=DEFAULT_REVISION,
-        )
+                _EMBEDDING_MODEL = SentenceTransformerEmbeddingModel(
+                    model_name=DEFAULT_MODEL,
+                    revision=DEFAULT_REVISION,
+                )
     return _EMBEDDING_MODEL
 
 
