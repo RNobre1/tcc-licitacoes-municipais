@@ -112,3 +112,16 @@ def candidate_from_public_item(
         secret_budget=public_item.secret_budget,
         item_id=item_id,
     )
+
+
+def fetch_awarded_price_on_demand(
+    public_item: Any,
+    timeout: float = 2.0,
+    fetch_fn: Any = None,
+) -> None:
+    """Fetch awarded price on demand when a displayed item has a result in PNCP.
+
+    Uses ingestion fetch_item_results with short timeout. If the fetch fails,
+    the candidate stays estimado and the page still renders.
+    """
+    raise NotImplementedError
