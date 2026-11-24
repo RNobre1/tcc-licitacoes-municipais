@@ -428,3 +428,20 @@ def filter_candidate_corpus(
         if start_date <= pub <= survey_date and mod in allowed_modalities:
             filtered.append(it)
     return filtered
+
+
+def select_finalist(method_tuning_metrics: dict[str, dict[str, float]]) -> str:
+    raise NotImplementedError
+
+
+class BenchmarkOrchestrator:
+    def rank_with_rf23(
+        self,
+        candidates: Sequence[Any],
+        anchor: Decimal | None = None,
+        unit: str = "UNIDADE",
+    ) -> list[Any]:
+        raise NotImplementedError
+
+    def run_benchmark(self, *args, **kwargs) -> dict[str, Any]:
+        raise NotImplementedError
