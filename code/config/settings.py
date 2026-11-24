@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "pricing",
     "ingestion",
     "semantic_index",
+    "evaluation",
 ]
 
 MIDDLEWARE = [
