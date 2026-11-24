@@ -1,5 +1,7 @@
+import email.message
 import http.server
 import inspect
+import io
 import json
 import threading
 import urllib.error
@@ -666,3 +668,55 @@ def test_fetch_purchase_raises_on_invalid_payload():
             save=False,
         )
     assert "invalid payload" in str(exc_info.value).lower()
+
+
+def test_urllib_transport_handles_429_with_retry_after_without_json_decode():
+    headers = email.message.Message()
+    headers["Retry-After"] = "45"
+    fake_error = urllib.error.HTTPError(
+        url="https://pncp.gov.br/api/test",
+        code=429,
+        msg="Too Many Requests",
+        hdrs=headers,
+        fp=io.BytesIO(b"<html><body>429 Too Many Requests</body></html>"),
+    )
+
+    with patch("urllib.request.urlopen", side_effect=fake_error):
+        status, data = urllib_transport("https://pncp.gov.br/api/test")
+        assert status == 429
+        assert isinstance(data, dict)
+        assert data.get("retry_after") == 45.0
+
+
+def test_urllib_transport_handles_429_without_retry_after_without_json_decode():
+    headers = email.message.Message()
+    fake_error = urllib.error.HTTPError(
+        url="https://pncp.gov.br/api/test",
+        code=429,
+        msg="Too Many Requests",
+        hdrs=headers,
+        fp=io.BytesIO(b"<html><body>429 Too Many Requests</body></html>"),
+    )
+
+    with patch("urllib.request.urlopen", side_effect=fake_error):
+        status, data = urllib_transport("https://pncp.gov.br/api/test")
+        assert status == 429
+        assert isinstance(data, dict)
+        assert data.get("retry_after") is None
+
+
+def test_urllib_transport_handles_non_2xx_html_body_without_raising_json_decode_error():
+    headers = email.message.Message()
+    fake_error = urllib.error.HTTPError(
+        url="https://pncp.gov.br/api/test",
+        code=502,
+        msg="Bad Gateway",
+        hdrs=headers,
+        fp=io.BytesIO(b"<html><body>502 Bad Gateway</body></html>"),
+    )
+
+    with patch("urllib.request.urlopen", side_effect=fake_error):
+        status, data = urllib_transport("https://pncp.gov.br/api/test")
+        assert status == 502
+        assert isinstance(data, dict)
+        assert "502" in str(data.get("error", ""))

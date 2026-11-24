@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import urllib.error
@@ -10,6 +11,7 @@ from django.utils import timezone
 
 from ingestion.client import PncpResponseError
 from ingestion.management.commands.fetch_pncp import (
+    RateLimiter,
     RetryingTransport,
     create_retrying_transport,
 )
@@ -595,3 +597,146 @@ def test_fetch_pncp_with_results_flag_fetches_item_results_for_items_with_tem_re
 
     # 1 pub page + 1 item page + 2 results = 4 RawRecords
     assert RawRecord.objects.count() == initial_records + 4
+
+
+def test_rate_limiter_enforces_interval():
+    current_time = 100.0
+
+    def fake_time():
+        return current_time
+
+    sleep_calls = []
+    limiter = RateLimiter(
+        requests_per_second=2.0,
+        time_func=fake_time,
+        sleep_func=sleep_calls.append,
+    )
+
+    w1 = limiter.wait()
+    assert w1 == 0.0
+    assert sleep_calls == []
+
+    w2 = limiter.wait()
+    assert w2 == 0.5
+    assert sleep_calls == [0.5]
+
+    w3 = limiter.wait()
+    assert w3 == 1.0
+    assert sleep_calls == [0.5, 1.0]
+
+    current_time = 102.0
+    w4 = limiter.wait()
+    assert w4 == 0.0
+    assert sleep_calls == [0.5, 1.0]
+
+
+def test_retrying_transport_retries_429_with_and_without_retry_after():
+    calls = []
+
+    def fake_transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        if len(calls) == 1:
+            return 429, {"error": "Too Many Requests", "retry_after": 15.0}
+        if len(calls) == 2:
+            return 429, {"error": "Too Many Requests"}
+        return 200, {"data": "ok"}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=fake_transport,
+        rate_limit_initial_wait=30.0,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test/api/endpoint", None)
+    assert status == 200
+    assert data == {"data": "ok"}
+    assert len(calls) == 3
+    assert sleep_calls == [15.0, 30.0]
+
+
+@pytest.mark.parametrize(
+    "network_error",
+    [
+        ConnectionResetError("Connection reset by peer"),
+        http.client.RemoteDisconnected("Remote end closed connection without response"),
+        http.client.IncompleteRead(b"partial"),
+    ],
+)
+def test_retrying_transport_retries_network_read_errors(network_error):
+    calls = []
+
+    def flaking_transport(url: str, params: dict | None = None):
+        calls.append(url)
+        if len(calls) == 1:
+            raise network_error
+        return 200, {"recovered": True}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=flaking_transport,
+        max_attempts=3,
+        backoff_factor=0.1,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test", None)
+    assert status == 200
+    assert data == {"recovered": True}
+    assert len(calls) == 2
+    assert sleep_calls == [0.1]
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_walk_recovers_from_429_on_publications_and_completes():
+    page_1 = _read_json("publications_page_1.json")
+    single_pub = dict(page_1)
+    single_pub["data"] = [page_1["data"][0]]
+    single_pub["totalRegistros"] = 1
+    single_pub["totalPaginas"] = 1
+    single_pub["numeroPagina"] = 1
+    single_pub["paginasRestantes"] = 0
+
+    pub_attempts = 0
+    sleep_calls = []
+
+    def mock_transport(url: str, params: dict | None = None):
+        nonlocal pub_attempts
+        if "/api/consulta/v1/contratacoes/publicacao" in url:
+            pub_attempts += 1
+            if pub_attempts == 1:
+                return 429, {"retry_after": 15.0, "error": "Too Many Requests"}
+            if pub_attempts == 2:
+                return 429, {"error": "Too Many Requests"}
+            return 200, single_pub
+        if url.endswith("/quantidade"):
+            return 200, 1
+        if url.endswith("/itens"):
+            return 200, [{"numeroItem": 1}]
+        return 404, {}
+
+    retrying_transport = create_retrying_transport(
+        base_transport=mock_transport,
+        rate_limit_initial_wait=30.0,
+        rate_limit=0.0,
+        sleep_func=sleep_calls.append,
+    )
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        uf="PA",
+        modality=6,
+        transport=retrying_transport,
+        stdout=out,
+    )
+
+    output = out.getvalue()
+    assert "Publications: 1" in output
+    assert "Item pages: 1" in output
+    assert "Items: 1" in output
+    assert "Failures: 0" in output
+    assert sleep_calls == [15.0, 30.0]
