@@ -3,6 +3,7 @@
 import re
 import subprocess
 from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,14 @@ from typing import Any
 
 class ParseError(Exception):
     """Raised when quotation report parsing encounters an invalid or unparseable layout."""
+
+
+def parse_date_br(date_str: str) -> date:
+    """Parse date from dd/mm/yyyy string."""
+    m = re.search(r"(\d{2})/(\d{2})/(\d{4})", date_str)
+    if not m:
+        raise ValueError(f"Invalid date format: {date_str}")
+    return date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
 
 
 @dataclass(frozen=True)
@@ -52,6 +61,13 @@ class QuotationReport:
     generated_at: str | None
     items: tuple[RequestedItemReport, ...] = field(default_factory=tuple)
 
+    @property
+    def survey_date(self) -> date | None:
+        """The last day of the price survey (fim do levantamento), per RN07."""
+        if not self.survey_end:
+            return None
+        return parse_date_br(self.survey_end)
+
 
 RIGHT_COL_KEYS = [
     "Data:",
@@ -66,12 +82,12 @@ RIGHT_COL_KEYS = [
     "UF:",
 ]
 
-RIGHT_RE = re.compile(r"\s{2,}(" + "|".join(re.escape(k) for k in RIGHT_COL_KEYS) + r")\s*(.*)$")
+RIGHT_RE = re.compile(r"\s+(" + "|".join(re.escape(k) for k in RIGHT_COL_KEYS) + r")\s*(.*)$")
 LEFT_COL_KEYS = ["CNPJ:", "Órgão:", "Objeto:", "Descrição:", "Fonte:"]
 
 PRICE_HEADER_RE = re.compile(
     r"^[ \t]*Preço\s*\((?P<category>[^)]+)\)\s*(?P<num>\d+):\s*"
-    r"(?P<method>[^R\n]+?)\s*R\$\s*(?P<price>[0-9.,]+)",
+    r"(?P<method>.+?)\s+R\$\s*(?P<price>[0-9.,]+)",
     re.MULTILINE,
 )
 
@@ -92,7 +108,9 @@ def extract_pdf_layout_text(pdf_path: Path) -> str:
 
 
 def _parse_decimal_br(val_str: str) -> Decimal:
-    cleaned = val_str.strip().replace(".", "").replace(",", ".")
+    cleaned = val_str.strip()
+    if "," in cleaned:
+        cleaned = cleaned.replace(".", "").replace(",", ".")
     return Decimal(cleaned)
 
 
@@ -186,13 +204,27 @@ def _parse_price_block(
     lote_item = right_fields.get("Lote/Item")
     pncp_key = _parse_pncp_key(source, identifier, lote_item)
 
+    agency = left_fields.get("Órgão", "").strip()
+    price_date = right_fields.get("Data", "").strip()
+    try:
+        unit_price = _parse_decimal_br(price_str)
+    except Exception as exc:
+        raise ParseError(f"Price {num} has invalid price string: {price_str}") from exc
+
+    if not agency:
+        raise ParseError(f"Price {num} is missing agency (Órgão)")
+    if not price_date:
+        raise ParseError(f"Price {num} is missing date (Data)")
+    if unit_price <= 0:
+        raise ParseError(f"Price {num} has non-positive price: {unit_price}")
+
     return ChosenPriceReport(
         price_number=num,
         source_category=category.strip(),
         calculation_method=method.strip(),
-        unit_price=_parse_decimal_br(price_str),
-        agency=left_fields.get("Órgão", "").strip(),
-        date=right_fields.get("Data", "").strip(),
+        unit_price=unit_price,
+        agency=agency,
+        date=price_date,
         chosen_description=left_fields.get("Descrição", "").strip(),
         source=source,
         identifier=identifier,
@@ -219,7 +251,17 @@ def parse_quotation_report_text(text: str, report_id: str = "") -> QuotationRepo
     m_gen = re.search(r"Relatório gerado no dia\s*([0-9/ :]+)", norm_text)
     generated_at = m_gen.group(1).strip() if m_gen else None
 
+    # Validate item headers count and uniqueness
+    raw_item_headers = re.findall(r"^[ \t]*Item\s+(\d+):", norm_text, re.MULTILINE)
     item_matches = list(ITEM_HEADER_RE.finditer(norm_text))
+    if len(raw_item_headers) != len(item_matches):
+        raise ParseError(
+            f"Item count mismatch: {len(raw_item_headers)} headers, extracted {len(item_matches)}"
+        )
+    item_numbers = [int(m.group(1)) for m in item_matches]
+    if len(set(item_numbers)) != len(item_numbers):
+        raise ParseError(f"Item count mismatch or duplicate item numbers found: {item_numbers}")
+
     items: list[RequestedItemReport] = []
 
     for idx, im in enumerate(item_matches):
@@ -243,7 +285,7 @@ def parse_quotation_report_text(text: str, report_id: str = "") -> QuotationRepo
         elif m_est:
             est_price = _parse_decimal_br(m_est.group(1))
         else:
-            est_price = Decimal("0.00")
+            raise ParseError(f"Item {item_num} is missing estimated price (Preço Estimado)")
 
         # Estimation method name (e.g. Média dos Preços Obtidos or Mediana dos Preços Obtidos)
         m_method = re.search(
@@ -254,34 +296,46 @@ def parse_quotation_report_text(text: str, report_id: str = "") -> QuotationRepo
         estimation_method = m_method.group(1).strip() if m_method else "Média dos Preços Obtidos"
 
         # Quantity and unit
-        quantity = Decimal("1")
-        unit = "Unidade"
-        full_desc = short_desc
-
         q_match = re.search(
             r"Quantidade\s+Descrição.*?\n(.*?)(?=\n\s*(?:Preço|Relatório|$))",
             item_header_text,
             re.DOTALL,
         )
-        if q_match:
-            raw_lines = [line.strip() for line in q_match.group(1).splitlines() if line.strip()]
-            if raw_lines:
-                first_line = raw_lines[0]
-                parts = re.split(r"\s{2,}", first_line, maxsplit=1)
-                first_col = parts[0].strip()
-                desc_first = parts[1].strip() if len(parts) > 1 else ""
-                qm = re.match(r"^([0-9.,]+)\s+(.+)$", first_col)
-                if qm:
-                    quantity = _parse_decimal_br(qm.group(1))
-                    unit = qm.group(2).strip()
-                    desc_parts = [desc_first] if desc_first else []
-                    desc_parts.extend(raw_lines[1:])
-                    full_desc = " ".join(desc_parts).strip()
-                else:
-                    full_desc = " ".join(raw_lines).strip()
+        if not q_match:
+            raise ParseError(f"Item {item_num} is missing unit or quantity block")
+
+        raw_lines = [line.strip() for line in q_match.group(1).splitlines() if line.strip()]
+        if not raw_lines:
+            raise ParseError(f"Item {item_num} has empty quantity/description section")
+
+        first_line = raw_lines[0]
+        parts = re.split(r"\s{2,}", first_line, maxsplit=1)
+        first_col = parts[0].strip()
+        desc_first = parts[1].strip() if len(parts) > 1 else ""
+        qm = re.match(r"^([0-9.,]+)\s+(.+)$", first_col)
+        if not qm:
+            raise ParseError(f"Item {item_num} missing unit or quantity in: '{first_col}'")
+
+        quantity = _parse_decimal_br(qm.group(1))
+        unit = qm.group(2).strip()
+        if not unit or quantity <= 0:
+            raise ParseError(
+                f"Item {item_num} has invalid unit or quantity: unit='{unit}', qty='{quantity}'"
+            )
+
+        desc_parts = [desc_first] if desc_first else []
+        desc_parts.extend(raw_lines[1:])
+        full_desc = " ".join(desc_parts).strip()
 
         # Parse chosen prices
         price_matches = list(PRICE_HEADER_RE.finditer(item_section))
+        raw_price_headers = re.findall(r"^[ \t]*Preço\s*\(", item_section, re.MULTILINE)
+        if len(raw_price_headers) != len(price_matches):
+            raise ParseError(
+                f"Price header count mismatch in item {item_num}: "
+                f"found {len(raw_price_headers)} headers, extracted {len(price_matches)} prices"
+            )
+
         chosen_prices: list[ChosenPriceReport] = []
 
         for p_idx, pm in enumerate(price_matches):
@@ -316,6 +370,15 @@ def parse_quotation_report_text(text: str, report_id: str = "") -> QuotationRepo
                 estimation_method=estimation_method,
                 chosen_prices=tuple(chosen_prices),
             )
+        )
+
+    # Global check on total prices extracted
+    total_raw_prices = len(re.findall(r"^[ \t]*Preço\s*\(", norm_text, re.MULTILINE))
+    total_extracted_prices = sum(len(it.chosen_prices) for it in items)
+    if total_raw_prices != total_extracted_prices:
+        raise ParseError(
+            f"Price header count mismatch across report: "
+            f"found {total_raw_prices} headers, extracted {total_extracted_prices} prices"
         )
 
     return QuotationReport(

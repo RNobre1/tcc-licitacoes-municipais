@@ -30,8 +30,8 @@ def test_parse_quotation_reports_command_writes_json():
         output_dir = Path(tmp_dir) / "output"
         input_dir.mkdir()
 
-        # create a dummy pdf file
-        dummy_pdf = input_dir / "105588_Cotacao_DEMO.pdf"
+        # create a dummy pdf file using invented prefix (N3)
+        dummy_pdf = input_dir / "SYNTHETIC_Cotacao_DEMO.pdf"
         dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
 
         patch_target = (
@@ -44,13 +44,14 @@ def test_parse_quotation_reports_command_writes_json():
                 "parse_quotation_reports",
                 input_dir=str(input_dir),
                 output_dir=str(output_dir),
+                pattern="SYNTHETIC_Cotacao_*.pdf",
             )
 
         output_files = list(output_dir.glob("*.json"))
         assert len(output_files) == 1
         data = json.loads(output_files[0].read_text(encoding="utf-8"))
 
-        assert data["report_id"] == "105588_Cotacao_DEMO"
+        assert data["report_id"] == "SYNTHETIC_Cotacao_DEMO"
         assert len(data["items"]) == 1
         assert data["items"][0]["item_number"] == 1
         assert data["items"][0]["chosen_prices"][0]["pncp_key"] == {

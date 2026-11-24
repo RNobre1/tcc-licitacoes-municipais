@@ -1,11 +1,13 @@
 """Management command to parse quotation reports into evaluation JSON files."""
 
 import json
+import os
 from dataclasses import asdict
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from evaluation.parser import extract_pdf_layout_text, parse_quotation_report_text
@@ -22,31 +24,45 @@ class Command(BaseCommand):
     help = "Parse quotation reports from PDF into JSON evaluation files."
 
     def add_arguments(self, parser):
+        default_input = os.environ.get("TCC_DOMAIN_DATA_DIR") or str(
+            Path(settings.BASE_DIR).parent / "dados-dominio"
+        )
+        default_output = os.environ.get("EVALUATION_DATA_DIR") or str(
+            Path(settings.BASE_DIR).parent / "dados-dominio" / "avaliacao"
+        )
         parser.add_argument(
             "--input-dir",
             type=str,
-            default="/Users/rnobre/Documents/UFOPA/Projetos Codigo/TCC/dados-dominio/",
+            default=default_input,
             help="Directory containing the quotation report PDF files.",
         )
         parser.add_argument(
             "--output-dir",
             type=str,
-            default="/Users/rnobre/Documents/UFOPA/Projetos Codigo/TCC/dados-dominio/avaliacao/",
+            default=default_output,
             help="Directory where parsed JSON files will be written.",
+        )
+        parser.add_argument(
+            "--pattern",
+            type=str,
+            default="105588_Cotacao_*.pdf",
+            help="Filename glob pattern for PDF reports to parse.",
         )
 
     def handle(self, *args, **options):
         input_dir = Path(options["input_dir"])
         output_dir = Path(options["output_dir"])
+        pattern = options["pattern"]
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        pdf_files = sorted(input_dir.glob("105588_Cotacao_*.pdf"))
+        pdf_files = sorted(input_dir.glob(pattern))
         self.stdout.write(f"Found {len(pdf_files)} quotation report PDF(s) in {input_dir}")
 
         total_items = 0
         total_chosen_prices = 0
         total_pncp_keys = 0
         items_with_pncp = 0
+        total_unmatched_pncp = 0
 
         for pdf_path in pdf_files:
             report_id = pdf_path.stem
@@ -66,6 +82,12 @@ class Command(BaseCommand):
             rep_pncp = sum(
                 1 for it in report.items for p in it.chosen_prices if p.pncp_key is not None
             )
+            rep_unmatched_pncp = sum(
+                1
+                for it in report.items
+                for p in it.chosen_prices
+                if "pncp.gov.br" in p.source.lower() and p.pncp_key is None
+            )
             rep_items_with_pncp = sum(
                 1 for it in report.items if any(p.pncp_key is not None for p in it.chosen_prices)
             )
@@ -73,14 +95,17 @@ class Command(BaseCommand):
             total_items += rep_items
             total_chosen_prices += rep_prices
             total_pncp_keys += rep_pncp
+            total_unmatched_pncp += rep_unmatched_pncp
             items_with_pncp += rep_items_with_pncp
 
             self.stdout.write(
                 f"  -> {report_id}: {rep_items} items, {rep_prices} chosen prices, "
-                f"{rep_pncp} with PNCP key ({rep_items_with_pncp} items with >= 1 PNCP key)"
+                f"{rep_pncp} with PNCP key, {rep_unmatched_pncp} unmatched PNCP links "
+                f"({rep_items_with_pncp} items with >= 1 PNCP key)"
             )
 
         self.stdout.write(
             f"Total: {total_items} items, {total_chosen_prices} chosen prices, "
-            f"{total_pncp_keys} with PNCP key, {items_with_pncp} items with >= 1 PNCP key"
+            f"{total_pncp_keys} with PNCP key, {total_unmatched_pncp} unmatched PNCP links, "
+            f"{items_with_pncp} items with >= 1 PNCP key"
         )
