@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from qdrant_client import models
+
 from ingestion.models import PublicItem
-from semantic_index.embedding import EmbeddingModel
+from semantic_index.embedding import EmbeddingModel, collection_name_for_model
 
 
 @dataclass(frozen=True)
@@ -42,4 +44,101 @@ def semantic_search(
     client: Any = None,
 ) -> list[ScoredPublicItem]:
     """Search PublicItems by vector similarity under mandatory structured filter."""
-    raise NotImplementedError
+    from semantic_index import get_qdrant_client
+
+    # 1. Parse structured filter
+    if isinstance(structured_filter, StructuredFilter):
+        date_window = structured_filter.date_window
+        state = structured_filter.state
+        unit = structured_filter.unit
+        item_kind = structured_filter.item_kind
+    elif isinstance(structured_filter, dict):
+        date_window = structured_filter.get("date_window")
+        state = structured_filter.get("state")
+        unit = structured_filter.get("unit")
+        item_kind = structured_filter.get("item_kind")
+    else:
+        raise ValueError(f"Invalid structured_filter: {structured_filter}")
+
+    # 2. Mandatory date window validation (RN07)
+    if (
+        not date_window
+        or not isinstance(date_window, (tuple, list))
+        or len(date_window) != 2
+        or date_window[0] is None
+        or date_window[1] is None
+    ):
+        raise ValueError("date_window is mandatory (RN07, 12-month window)")
+
+    start_date, end_date = date_window
+
+    # 3. Build Qdrant filter
+    must_conditions: list[models.Condition] = [
+        models.FieldCondition(
+            key="published_on",
+            range=models.DatetimeRange(gte=start_date, lte=end_date),
+        )
+    ]
+
+    if state:
+        must_conditions.append(
+            models.FieldCondition(
+                key="state",
+                match=models.MatchValue(value=str(state)),
+            )
+        )
+
+    if unit:
+        norm_unit = str(unit).strip().casefold()
+        must_conditions.append(
+            models.FieldCondition(
+                key="unit",
+                match=models.MatchValue(value=norm_unit),
+            )
+        )
+
+    if item_kind:
+        must_conditions.append(
+            models.FieldCondition(
+                key="item_kind",
+                match=models.MatchValue(value=str(item_kind)),
+            )
+        )
+
+    qdrant_filter = models.Filter(must=must_conditions)
+
+    # 4. Embed query
+    query_vectors = model.embed_queries([query])
+    if not query_vectors:
+        return []
+    query_vector = query_vectors[0]
+
+    # 5. Query Qdrant
+    qdrant_client = client if client is not None else get_qdrant_client()
+    collection_name = collection_name_for_model(model)
+
+    if not qdrant_client.collection_exists(collection_name):
+        return []
+
+    response = qdrant_client.query_points(
+        collection_name=collection_name,
+        query=query_vector,
+        query_filter=qdrant_filter,
+        limit=limit,
+    )
+
+    scored_points = response.points
+    if not scored_points:
+        return []
+
+    # 6. Hydrate from PostgreSQL in Qdrant's score order, preventing ghosts
+    point_ids = [int(p.id) for p in scored_points]
+    items_by_id = {item.pk: item for item in PublicItem.objects.filter(pk__in=point_ids)}
+
+    results: list[ScoredPublicItem] = []
+    for p in scored_points:
+        item = items_by_id.get(int(p.id))
+        if item is not None:
+            results.append(ScoredPublicItem(item=item, score=float(p.score)))
+
+    return results
