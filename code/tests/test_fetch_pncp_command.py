@@ -12,6 +12,7 @@ from ingestion.management.commands.fetch_pncp import (
     RetryingTransport,
     create_retrying_transport,
 )
+from django.utils import timezone
 from ingestion.models import RawRecord
 
 PNCP_RESPONSES_DIR = Path(__file__).resolve().parent / "api_responses" / "pncp"
@@ -318,7 +319,7 @@ def test_fetch_pncp_command_runs_pipeline_and_prints_summary():
     call_command(
         "fetch_pncp",
         start="2026-11-01",
-        end="2026-11-02",
+        end="2026-11-01",
         uf="PA",
         modality=6,
         transport=retrying_transport,
@@ -405,17 +406,24 @@ def test_the_command_sends_the_window_the_uf_and_the_modality():
         transport=transport,
         stdout=io.StringIO(),
     )
-    url, params = seen[0]
-    assert url == "https://example.test/api/consulta/v1/contratacoes/publicacao"
-    assert params["dataInicial"] == "20261101"
-    assert params["dataFinal"] == "20261103"
-    assert params["uf"] == "MA"
-    assert params["codigoModalidadeContratacao"] == 8
+    # S7: Walks day by day (3 days: 20261101, 20261102, 20261103)
+    assert len(seen) == 3
+    assert seen[0][0] == "https://example.test/api/consulta/v1/contratacoes/publicacao"
+    assert seen[0][1]["dataInicial"] == "20261101"
+    assert seen[0][1]["dataFinal"] == "20261101"
+    assert seen[0][1]["uf"] == "MA"
+    assert seen[0][1]["codigoModalidadeContratacao"] == 8
+
+    assert seen[1][1]["dataInicial"] == "20261102"
+    assert seen[1][1]["dataFinal"] == "20261102"
+
+    assert seen[2][1]["dataInicial"] == "20261103"
+    assert seen[2][1]["dataFinal"] == "20261103" 
 
 
 @pytest.mark.integration
 @pytest.mark.django_db
-def test_the_command_defaults_are_pa_and_pregao_eletronico():
+def test_the_command_defaults_are_national_and_three_modalities():
     seen = []
 
     def transport(url, params=None):
@@ -429,8 +437,54 @@ def test_the_command_defaults_are_pa_and_pregao_eletronico():
         transport=transport,
         stdout=io.StringIO(),
     )
-    assert seen[0]["uf"] == "PA"
-    assert seen[0]["codigoModalidadeContratacao"] == 6
+    # S7: National default: no uf filter
+    assert all("uf" not in s for s in seen)
+    # S7: Three modalities by default: 6 (pregão eletrônico), 8 (dispensa), 7 (pregão presencial)
+    assert len(seen) == 3
+    assert [s["codigoModalidadeContratacao"] for s in seen] == [6, 8, 7]
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_is_resumable_and_skips_already_stored_purchases():
+    t0 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000000/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t0,
+        payload=[{"numeroItem": 1}],
+        status_code=200,
+    )
+
+    item_calls = []
+
+    def transport(url, params=None):
+        if "/contratacoes/publicacao" in url:
+            return 200, {
+                "data": [publication(1), publication(2)],
+                "totalRegistros": 2,
+                **ENVELOPE,
+            }
+        if url.endswith("/quantidade"):
+            return 200, 1
+        if "/itens" in url:
+            item_calls.append(url)
+            return 200, [{"numeroItem": 1}]
+        return 404, {}
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        modality=6,
+        transport=transport,
+        stdout=out,
+    )
+    # Publication 1 is already in DB, so its items should NOT be fetched again
+    assert not any("/compras/2026/1/itens" in u for u in item_calls)
+    assert any("/compras/2026/2/itens" in u for u in item_calls)
+    assert "Skipped already stored: 1" in out.getvalue()
 
 
 @pytest.mark.integration
@@ -454,6 +508,7 @@ def test_one_failing_publication_does_not_stop_the_others():
         "fetch_pncp",
         start="2026-11-01",
         end="2026-11-01",
+        modality=6,
         transport=transport,
         stdout=out,
         stderr=err,
@@ -473,6 +528,7 @@ def test_a_failure_to_fetch_the_publications_is_fatal_and_saves_nothing():
             "fetch_pncp",
             start="2026-11-01",
             end="2026-11-01",
+            modality=6,
             transport=lambda url, params=None: (500, {"message": "down"}),
             stdout=io.StringIO(),
         )
