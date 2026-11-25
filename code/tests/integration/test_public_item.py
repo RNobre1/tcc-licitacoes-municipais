@@ -759,3 +759,176 @@ def test_build_public_items_command():
     )
     call_command("build_public_items")
     assert PublicItem.objects.count() == 1
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_filters_by_start_and_end_date():
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Prefeitura 1"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                },
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000002", "razaoSocial": "Prefeitura 2"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 2,
+                    "dataPublicacaoPncp": "2026-10-27T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                },
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000003", "razaoSocial": "Prefeitura 3"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 3,
+                    "dataPublicacaoPncp": "2026-10-28T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                },
+            ]
+        },
+        status_code=200,
+    )
+    for i in (1, 2, 3):
+        RawRecord.objects.create(
+            endpoint=f"/api/pncp/v1/orgaos/0000000000000{i}/compras/2026/{i}/itens",
+            params={"pagina": 1},
+            fetched_at=t1,
+            payload=[
+                {
+                    "numeroItem": 1,
+                    "descricao": f"DEMO-Item {i}",
+                    "quantidade": 1.0,
+                    "unidadeMedida": "UNIDADE",
+                    "valorUnitarioEstimado": 10.0,
+                    "temResultado": False,
+                    "orcamentoSigiloso": False,
+                    "materialOuServico": "M",
+                }
+            ],
+            status_code=200,
+        )
+
+    res = build_public_items(start="2026-10-27", end="2026-10-27")
+    assert res.built_count == 1
+    assert PublicItem.objects.count() == 1
+    item = PublicItem.objects.get()
+    assert item.agency_cnpj == "00000000000002"
+    assert item.published_on == date(2026, 10, 27)
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_command_accepts_start_and_end_options():
+    import io
+
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Prefeitura 1"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                },
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000002", "razaoSocial": "Prefeitura 2"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 2,
+                    "dataPublicacaoPncp": "2026-10-27T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                },
+            ]
+        },
+        status_code=200,
+    )
+    for i in (1, 2):
+        RawRecord.objects.create(
+            endpoint=f"/api/pncp/v1/orgaos/0000000000000{i}/compras/2026/{i}/itens",
+            params={"pagina": 1},
+            fetched_at=t1,
+            payload=[
+                {
+                    "numeroItem": 1,
+                    "descricao": f"DEMO-Item {i}",
+                    "quantidade": 1.0,
+                    "unidadeMedida": "UNIDADE",
+                    "valorUnitarioEstimado": 10.0,
+                    "temResultado": False,
+                    "orcamentoSigiloso": False,
+                    "materialOuServico": "M",
+                }
+            ],
+            status_code=200,
+        )
+
+    out = io.StringIO()
+    call_command("build_public_items", start="2026-10-26", end="2026-10-26", stdout=out)
+    assert PublicItem.objects.count() == 1
+    assert PublicItem.objects.get().agency_cnpj == "00000000000001"
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_query_count_is_batched_per_purchase(django_assert_num_queries):
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Prefeitura 1"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    items_payload = [
+        {
+            "numeroItem": i,
+            "descricao": f"DEMO-Item {i}",
+            "quantidade": 1.0,
+            "unidadeMedida": "UNIDADE",
+            "valorUnitarioEstimado": 10.0,
+            "temResultado": False,
+            "orcamentoSigiloso": False,
+            "materialOuServico": "M",
+        }
+        for i in range(1, 21)
+    ]
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000001/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=items_payload,
+        status_code=200,
+    )
+
+    # 20 items previously did ~100 queries; batched streaming should take <= 10 queries total
+    with django_assert_num_queries(8):
+        build_public_items()
+    assert PublicItem.objects.count() == 20
