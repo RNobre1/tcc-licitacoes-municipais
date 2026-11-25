@@ -156,7 +156,12 @@ def test_fetch_awarded_price_on_demand_success():
     mock_item.raw_records.all.return_value = [raw_items_record]
 
     result_raw_record = MagicMock()
-    result_raw_record.payload = [{"valorUnitarioHomologado": 45.50}]
+    result_raw_record.payload = [{
+        "numeroItem": 3,
+        "situacaoCompraItemResultadoNome": "Informado",
+        "dataCancelamento": None,
+        "valorUnitarioHomologado": 45.50,
+    }]
 
     mock_fetch = MagicMock(return_value=result_raw_record)
 
@@ -196,6 +201,34 @@ def test_fetch_awarded_price_on_demand_failure_leaves_candidate_estimated():
     assert candidate.price == Decimal("50.00")
 
 
+def test_fetch_awarded_price_on_demand_remembers_failed_fetch_for_five_minutes():
+    from django.core.cache import cache
+
+    from pricing.candidates import fetch_awarded_price_on_demand
+
+    item_pk = 98001
+    cache.delete(f"pncp_fetch_failed_{item_pk}")
+    mock_item = MagicMock()
+    mock_item.pk = item_pk
+    mock_item.cnpj = "00000000000007"
+    mock_item.year = 2026
+    mock_item.purchase_sequence = 10
+    mock_item.item_number = 3
+    mock_item.awarded_unit_price = None
+
+    raw_items_record = MagicMock()
+    raw_items_record.endpoint = "/api/pncp/v1/orgaos/00000000000007/compras/2026/10/itens"
+    raw_items_record.payload = [{"numeroItem": 3, "temResultado": True}]
+    mock_item.raw_records.all.return_value = [raw_items_record]
+    mock_fetch = MagicMock(side_effect=TimeoutError("PNCP timed out"))
+
+    fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
+    fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
+
+    assert mock_fetch.call_count == 1
+    assert cache.get(f"pncp_fetch_failed_{item_pk}") is True
+
+
 def test_fetch_awarded_price_on_demand_skips_when_no_result():
     from pricing.candidates import fetch_awarded_price_on_demand
 
@@ -223,8 +256,9 @@ def test_fetch_awarded_price_on_demand_skips_when_already_has_awarded_price():
     fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
     assert not mock_fetch.called
 
+
 def test_candidate_price_respects_secret_budget_even_when_prices_present():
-    """Mutant killer 1: Candidate.price must return None when secret_budget=True even if awarded/estimated prices exist."""
+    """Mutant killer 1: Candidate.price must return None when secret_budget=True."""
     cand = Candidate(
         id=99,
         description="Item sigiloso com preço",
@@ -274,34 +308,24 @@ def test_fetch_awarded_price_on_demand_uses_short_timeout(monkeypatch):
         return None
 
     import ingestion.client
+
     monkeypatch.setattr(ingestion.client, "fetch_item_results", fake_fetch_item_results)
 
-    mock_pi = PublicItem(
-        cnpj="00000000000001",
-        year=2026,
-        purchase_sequence=1,
-        item_number=1,
-        description="Test",
-        unit="unidade",
-        quantity=Decimal("1"),
-        agency_name="Test",
-        published_on=datetime.date.today(),
-        awarded_unit_price=None,
-        estimated_unit_price=Decimal("10.00"),
-    )
-    # Give mock_pi a raw_record with temResultado=True
-    class MockRecord:
-        endpoint = "/compras/2026/1/itens"
-        payload = [{"numeroItem": 1, "temResultado": True}]
+    mock_pi = MagicMock()
+    mock_pi.cnpj = "00000000000001"
+    mock_pi.year = 2026
+    mock_pi.purchase_sequence = 1
+    mock_pi.item_number = 1
+    mock_pi.awarded_unit_price = None
 
-    class MockRawRecords:
-        def all(self):
-            return [MockRecord()]
-
-    mock_pi.raw_records = MockRawRecords()
+    raw_rec = MagicMock()
+    raw_rec.endpoint = "/compras/2026/1/itens"
+    raw_rec.payload = [{"numeroItem": 1, "temResultado": True}]
+    mock_pi.raw_records.all.return_value = [raw_rec]
 
     fetch_awarded_price_on_demand(mock_pi)
     assert recorded_timeout == 2.0
+
 
 def test_fetch_awarded_price_on_demand_selects_valid_result_skipping_cancelled():
     """B2: A cancelled result at 99 ahead of an informed one at 10 must store 10."""

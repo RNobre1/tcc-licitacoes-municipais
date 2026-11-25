@@ -783,6 +783,48 @@ def test_get_screening_candidates_calls_search_and_ranks():
     assert mock_search.call_args.kwargs["limit"] == 20
 
 
+def test_get_screening_candidates_caps_fetches_to_the_requested_limit(monkeypatch):
+    from types import SimpleNamespace
+
+    from semantic_index.search import ScoredPublicItem
+
+    fetched_ids = []
+    search_results = [
+        ScoredPublicItem(
+            item=SimpleNamespace(
+                pk=12000 + i,
+                cnpj="00000000000007",
+                year=2026,
+                purchase_sequence=1,
+                item_number=i + 1,
+                description=f"Item {i}",
+                unit="pacote",
+                quantity=Decimal("1"),
+                agency_name="Órgão fictício",
+                published_on=datetime.date(2026, 11, 24),
+                awarded_unit_price=None,
+                estimated_unit_price=Decimal("10.00"),
+                secret_budget=False,
+            ),
+            score=0.9,
+        )
+        for i in range(25)
+    ]
+
+    def fake_fetch(public_item, **kwargs):
+        fetched_ids.append(public_item.pk)
+
+    monkeypatch.setattr(views, "fetch_awarded_price_on_demand", fake_fetch)
+    candidates = views.get_screening_candidates(
+        views.get_item(1),
+        search_fn=lambda **kwargs: search_results,
+        limit=20,
+    )
+
+    assert len(candidates) == 20
+    assert len(fetched_ids) == 20
+
+
 def test_screening_renders_real_candidates_from_semantic_search(client, monkeypatch):
     from ingestion.models import PublicItem
     from semantic_index.search import ScoredPublicItem
@@ -1204,8 +1246,9 @@ def test_screening_view_handles_qdrant_down_gracefully_without_500(client, monke
     html = response.content.decode()
     assert "Nenhum preço candidato encontrado." in html
 
+
 def test_build_estimate_panel_normalizes_units_so_case_and_spacing_variations_count():
-    """B1: Three awarded candidates whose units differ only in case or spacing all count in panel."""
+    """B1: Three awarded candidates with case/space differences count in panel."""
     from ingestion.models import PublicItem
     from pricing.candidates import candidate_from_public_item
 
@@ -1263,3 +1306,102 @@ def test_build_estimate_panel_normalizes_units_so_case_and_spacing_variations_co
     assert panel["count"] == 3
     assert panel["counted_candidate_ids"] == {7001, 7002, 7003}
     assert panel["mean"] == Decimal("20.00")
+
+
+def test_screening_view_executes_single_semantic_search_per_request(client, monkeypatch):
+    """B3: One semantic search per request. build_estimate_panel must not call search again."""
+    search_call_count = 0
+
+    def counting_search(**kwargs):
+        nonlocal search_call_count
+        search_call_count += 1
+        return []
+
+    monkeypatch.setattr(views, "search_function", counting_search)
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: views.CorpusInfo(0, None, None, is_partial=False),
+    )
+    response = client.get(reverse("pricing:screening", args=[1]))
+    assert response.status_code == 200
+    assert search_call_count == 1
+
+
+def test_decide_post_does_not_run_an_extra_semantic_search(client, monkeypatch):
+    search_call_count = 0
+
+    def counting_search(**kwargs):
+        nonlocal search_call_count
+        search_call_count += 1
+        return []
+
+    monkeypatch.setattr(views, "search_function", counting_search)
+    response = client.post(
+        reverse("pricing:decide", args=[1]),
+        {"decision": "accept", "item_id": "1"},
+    )
+
+    assert response.status_code == 200
+    assert search_call_count == 0
+
+
+def test_screening_page_with_20_hanging_fetches_renders_within_budget(client, monkeypatch):
+    """B3: Twenty blocked fetches do not hold the whole page beyond its shared budget."""
+    import threading
+    import time
+    from types import SimpleNamespace
+
+    from semantic_index.search import ScoredPublicItem
+
+    fake_items = []
+    for i in range(20):
+        pi = SimpleNamespace(
+            pk=8000 + i,
+            cnpj="00000000000001",
+            year=2026,
+            purchase_sequence=1,
+            item_number=i + 1,
+            description=f"Item {i}",
+            unit="pacote",
+            quantity=Decimal("1"),
+            agency_name="Órgão",
+            published_on=datetime.date.today(),
+            awarded_unit_price=None,
+            estimated_unit_price=Decimal("10.00"),
+            secret_budget=False,
+        )
+        fake_items.append(ScoredPublicItem(item=pi, score=0.85))
+
+    monkeypatch.setattr(views, "search_function", lambda **kw: fake_items)
+
+    release_fetches = threading.Event()
+    started_ids = []
+
+    def hanging_fetch(public_item, **kw):
+        started_ids.append(public_item.pk)
+        release_fetches.wait()
+
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: views.CorpusInfo(0, None, None, is_partial=False),
+    )
+    monkeypatch.setattr(views, "fetch_awarded_price_on_demand", hanging_fetch)
+
+    timeout_release = threading.Timer(4.5, release_fetches.set)
+    timeout_release.daemon = True
+    timeout_release.start()
+
+    started_at = time.monotonic()
+    try:
+        response = client.get(reverse("pricing:screening", args=[1]))
+        elapsed = time.monotonic() - started_at
+    finally:
+        release_fetches.set()
+        timeout_release.cancel()
+
+    assert response.status_code == 200
+    assert len(response.context["candidates"]) == 20
+    assert len(started_ids) == 20
+    assert elapsed < 4.0
