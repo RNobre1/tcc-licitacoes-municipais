@@ -24,6 +24,7 @@ class PublicItem(models.Model):
 
     description = models.TextField()
     unit = models.CharField(max_length=50)
+    unit_normalized = models.CharField(max_length=50, blank=True, default="")
     quantity = models.DecimalField(max_digits=14, decimal_places=4)
     estimated_unit_price = models.DecimalField(max_digits=14, decimal_places=4)
     awarded_unit_price = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True)

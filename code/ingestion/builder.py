@@ -11,6 +11,7 @@ from ingestion.item_kind import map_item_kind
 from ingestion.models import PublicItem, RawRecord
 from ingestion.raw_records import latest_copies
 from ingestion.results import select_valid_result
+from ingestion.units import normalize_unit
 
 PUB_ENDPOINT = "/api/consulta/v1/contratacoes/publicacao"
 PURCHASE_ENDPOINT_PATTERN = re.compile(
@@ -202,6 +203,7 @@ def build_public_items() -> BuildResult:
                     description = str(item.get("descricao") or "")
                     # N9: truncate unit to 50 chars to survive long values gracefully
                     unit = str(item.get("unidadeMedida") or "")[:50]
+                    unit_normalized = normalize_unit(unit)
                     try:
                         quantity = Decimal(str(item.get("quantidade") or 0))
                     except Exception:
@@ -232,6 +234,7 @@ def build_public_items() -> BuildResult:
                         defaults={
                             "description": description,
                             "unit": unit,
+                            "unit_normalized": unit_normalized,
                             "quantity": quantity,
                             "estimated_unit_price": estimated_price,
                             "awarded_unit_price": awarded_price,
