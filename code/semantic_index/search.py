@@ -18,13 +18,14 @@ class StructuredFilter:
     """Structured filter for semantic search.
 
     The 12-month date window is mandatory (RN07, docs/requisitos/README.md).
-    State, unit, and item_kind are optional.
+    State, unit, item_kind, and modality are optional.
     """
 
     date_window: tuple[date, date]
     state: str | None = None
     unit: str | None = None
     item_kind: str | None = None
+    modality: list[int] | None = None
 
 
 @dataclass(frozen=True)
@@ -58,13 +59,18 @@ def semantic_search(
         state = structured_filter.state
         unit = structured_filter.unit
         item_kind = structured_filter.item_kind
+        modality = structured_filter.modality
     elif isinstance(structured_filter, dict):
         date_window = structured_filter.get("date_window")
         state = structured_filter.get("state")
         unit = structured_filter.get("unit")
         item_kind = structured_filter.get("item_kind")
+        modality = structured_filter.get("modality")
     else:
         raise ValueError(f"Invalid structured_filter: {structured_filter}")
+
+    if modality is not None:
+        raise NotImplementedError("Modality filtering is not yet implemented")
 
     # 2. Mandatory date window validation (RN07)
     if (
