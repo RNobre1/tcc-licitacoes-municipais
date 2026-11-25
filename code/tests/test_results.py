@@ -1,3 +1,5 @@
+import pytest
+
 from ingestion.results import select_valid_result
 
 
@@ -76,3 +78,47 @@ def test_select_valid_result_handles_empty_or_invalid_inputs():
     assert select_valid_result(None) is None
     assert select_valid_result({}) is None
     assert select_valid_result(["not-a-dict"]) is None
+
+
+@pytest.mark.parametrize(
+    "unreadable_or_nonpositive_price",
+    [None, "not-a-price", 0, 0.0, -1, "-2.5", "NaN", "Infinity", [], {}],
+)
+def test_select_valid_result_skips_informed_results_without_usable_price(
+    unreadable_or_nonpositive_price,
+):
+    first_result = {
+        "situacaoCompraItemResultadoNome": "Informado",
+        "dataCancelamento": None,
+        "valorUnitarioHomologado": unreadable_or_nonpositive_price,
+        "id": "missing-or-invalid-price",
+    }
+    later_result = {
+        "situacaoCompraItemResultadoNome": "Informado",
+        "dataCancelamento": None,
+        "valorUnitarioHomologado": "10.50",
+        "id": "priced-result",
+    }
+
+    assert select_valid_result([first_result, later_result]) is later_result
+
+
+def test_select_valid_result_returns_none_when_no_informed_result_has_usable_price():
+    results = [
+        {
+            "situacaoCompraItemResultadoNome": "Informado",
+            "dataCancelamento": None,
+        },
+        {
+            "situacaoCompraItemResultadoNome": "Informado",
+            "dataCancelamento": None,
+            "valorUnitarioHomologado": 0,
+        },
+        {
+            "situacaoCompraItemResultadoNome": "Informado",
+            "dataCancelamento": None,
+            "valorUnitarioHomologado": "invalid",
+        },
+    ]
+
+    assert select_valid_result(results) is None
