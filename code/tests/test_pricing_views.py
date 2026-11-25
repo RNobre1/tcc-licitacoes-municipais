@@ -956,7 +956,8 @@ def test_screening_estimate_panel_ignores_estimated_prices(client, monkeypatch):
     assert estimate["counted_candidate_ids"] == {2001}
 
 
-def test_get_corpus_info_returns_qdrant_count_and_db_date_range():
+def test_get_corpus_info_returns_qdrant_count_and_indexed_date_range():
+    from django.core.cache import cache
     from ingestion.models import PublicItem
     from pricing.views import get_corpus_info
 
@@ -996,9 +997,15 @@ def test_get_corpus_info_returns_qdrant_count_and_db_date_range():
     mock_count_res = MagicMock()
     mock_count_res.count = 5111
     mock_client.count.return_value = mock_count_res
+    p_min = MagicMock()
+    p_min.payload = {"published_on": "2026-10-26"}
+    p_max = MagicMock()
+    p_max.payload = {"published_on": "2026-10-30"}
+    mock_client.scroll.side_effect = [([p_min], None), ([p_max], None)]
+    cache.delete("corpus_db_items_count")
 
     mock_model = MagicMock()
-    mock_model.name = "test_model"
+    mock_model.name = "indexed-date-range-partial-test"
     mock_model.revision = "rev1"
 
     ref_date = datetime.date(2026, 11, 24)
@@ -1011,6 +1018,7 @@ def test_get_corpus_info_returns_qdrant_count_and_db_date_range():
 
 
 def test_get_corpus_info_is_not_partial_when_full_window_covered():
+    from django.core.cache import cache
     from ingestion.models import PublicItem
     from pricing.views import get_corpus_info
 
@@ -1051,9 +1059,15 @@ def test_get_corpus_info_is_not_partial_when_full_window_covered():
     mock_count_res = MagicMock()
     mock_count_res.count = 2
     mock_client.count.return_value = mock_count_res
+    p_min = MagicMock()
+    p_min.payload = {"published_on": "2025-11-20"}
+    p_max = MagicMock()
+    p_max.payload = {"published_on": "2026-11-24"}
+    mock_client.scroll.side_effect = [([p_min], None), ([p_max], None)]
+    cache.delete("corpus_db_items_count")
 
     mock_model = MagicMock()
-    mock_model.name = "test_model"
+    mock_model.name = "indexed-date-range-full-test"
     mock_model.revision = "rev1"
 
     info = get_corpus_info(client=mock_client, model=mock_model, reference_date=ref_date)
