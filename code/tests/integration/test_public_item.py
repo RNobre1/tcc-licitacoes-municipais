@@ -932,3 +932,68 @@ def test_build_public_items_query_count_is_batched_per_purchase(django_assert_nu
     with django_assert_num_queries(9):
         build_public_items()
     assert PublicItem.objects.count() == 20
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_public_item_has_a_has_result_boolean_column():
+    field = PublicItem._meta.get_field("has_result")
+    assert field.get_internal_type() == "BooleanField"
+    assert field.default is False
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_populates_has_result_from_item_payload():
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Prefeitura Teste"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000001/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Item com resultado",
+                "quantidade": 1.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 10.0,
+                "temResultado": True,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            },
+            {
+                "numeroItem": 2,
+                "descricao": "DEMO-Item sem resultado",
+                "quantidade": 1.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 20.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            },
+        ],
+        status_code=200,
+    )
+    build_public_items()
+    item1 = PublicItem.objects.get(item_number=1)
+    item2 = PublicItem.objects.get(item_number=2)
+    assert item1.has_result is True
+    assert item2.has_result is False
