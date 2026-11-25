@@ -1,5 +1,7 @@
 """Tests for B1 leftovers, N3 required pattern, Portuguese properties removal and split force."""
 
+import json
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -63,8 +65,11 @@ def test_generate_dataset_split_refuses_overwrite_without_force():
             call_command("generate_dataset_split", eval_dir=str(eval_dir))
 
         # Overwrites with --force
-        call_command("generate_dataset_split", eval_dir=str(eval_dir), force=True)
-        assert split_file.read_text(encoding="utf-8") != "{}"
+        stdout = StringIO()
+        call_command("generate_dataset_split", eval_dir=str(eval_dir), force=True, stdout=stdout)
+        generated = json.loads(split_file.read_text(encoding="utf-8"))
+        assert generated != {}
+        assert f"SHA-256: {generated['sha256_hash']}" in stdout.getvalue()
 
 
 def test_commands_require_pattern_argument():
