@@ -167,7 +167,7 @@ def get_corpus_info(
         qdrant_error = True
         indexed_count = 0
 
-    # Fallback to DB date bounds if Qdrant didn't provide dates (e.g. mocked client without scroll or mock test)
+    # Fallback to DB date bounds if Qdrant didn't provide dates (e.g. mocked client without scroll)
     if start_date is None or end_date is None:
         bounds = PublicItem.objects.aggregate(
             min_date=Min("published_on"), max_date=Max("published_on")
@@ -280,7 +280,9 @@ def build_estimate_panel(
 
     counted_candidate_ids: set[int] = set()
     for c in candidates:
-        if decisions.get(c.id) == "accept" and c.unit == item.unit:
+        from ingestion.units import normalize_unit
+
+        if decisions.get(c.id) == "accept" and normalize_unit(c.unit) == normalize_unit(item.unit):
             if hasattr(c, "usable_calculation_price"):
                 if c.usable_calculation_price is not None:
                     counted_candidate_ids.add(c.id)

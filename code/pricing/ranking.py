@@ -9,6 +9,8 @@ import math
 from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
+from ingestion.units import normalize_unit
+
 if TYPE_CHECKING:
     from pricing.demo_data import PriceCandidate
 
@@ -26,7 +28,7 @@ def compute_proximity(price, expected_price, candidate_unit, item_unit) -> float
     if candidate_unit is None or item_unit is None:
         return None
 
-    if candidate_unit != item_unit:
+    if normalize_unit(candidate_unit) != normalize_unit(item_unit):
         return None
 
     return abs(math.log(float(price) / float(expected_price)))
@@ -42,7 +44,7 @@ def format_proximity(price, expected_price, proximity, candidate_unit, item_unit
     if item_unit is None or candidate_unit is None:
         return "—"
 
-    if item_unit != candidate_unit:
+    if normalize_unit(item_unit) != normalize_unit(candidate_unit):
         return "unidade diferente"
 
     if proximity is not None:

@@ -1,4 +1,5 @@
 {% load l10n %}
+{% load pricing_extras %}
 <tr id="candidate-{{ candidate.id }}">
     <td>{{ candidate.description }}</td>
     <td>{{ candidate.unit }}</td>
@@ -24,7 +25,7 @@
                 {% else %}
                     fora do cálculo: unidade diferente
                 {% endif %}
-            {% elif item_unit and candidate.unit != item_unit %}
+            {% elif item_unit and not candidate.unit|units_match:item_unit %}
                 fora do cálculo: unidade diferente
             {% elif candidate.is_estimated %}
                 fora do cálculo: preço estimado
