@@ -1,13 +1,6 @@
 """Procurement item kind mapping between PNCP raw values and domain values."""
 
 
-def map_item_kind(value: str | None) -> str:
-    """Map PNCP materialOuServico to domain item_kind ('product' or 'service').
-
-    Rule: 'S' is service, anything else is product.
-    """
-    if value is not None:
-        v = str(value).strip().upper()
-        if v == "S" or v.startswith("SERVI"):
-            return "service"
-    return "product"
+def map_item_kind(code: object, name: object) -> str:
+    """Map PNCP material/service fields to a domain item_kind."""
+    raise NotImplementedError("Item kind mapping is not implemented")

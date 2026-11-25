@@ -219,7 +219,8 @@ def build_public_items() -> BuildResult:
 
                     # materialOuServico -> item_kind ("product" or "service")
                     item_kind = map_item_kind(
-                        item.get("materialOuServico") or item.get("materialOuServicoNome")
+                        item.get("materialOuServico"),
+                        item.get("materialOuServicoNome"),
                     )
 
                     # Check results
