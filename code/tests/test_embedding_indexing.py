@@ -136,6 +136,7 @@ def test_index_public_items_indexes_points_with_structured_filter_payload():
         state="PA",
         published_on=date(2026, 10, 26),
         item_kind="product",
+        modality=6,
     )
     item2 = SimpleNamespace(
         pk=102,
@@ -144,6 +145,7 @@ def test_index_public_items_indexes_points_with_structured_filter_payload():
         state="MA",
         published_on=date(2026, 10, 28),
         item_kind="service",
+        modality=8,
     )
 
     count = index_public_items(model=model, items=[item1, item2], client=client)
@@ -167,6 +169,7 @@ def test_index_public_items_indexes_points_with_structured_filter_payload():
     assert p1.payload["state"] == "PA"
     assert p1.payload["published_on"] == "2026-10-26"  # ISO sortable string
     assert p1.payload["item_kind"] == "product"
+    assert p1.payload["modality"] == 6
 
     # Point 2
     p2 = points[1]
@@ -176,3 +179,4 @@ def test_index_public_items_indexes_points_with_structured_filter_payload():
     assert p2.payload["state"] == "MA"
     assert p2.payload["published_on"] == "2026-10-28"
     assert p2.payload["item_kind"] == "service"
+    assert p2.payload["modality"] == 8

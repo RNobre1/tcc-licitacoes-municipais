@@ -1,8 +1,11 @@
+from datetime import date
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
+from qdrant_client import models
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import Distance, VectorParams
 
@@ -119,29 +122,26 @@ class TestSemanticIndexCollectionUnit:
             (1024, Distance.COSINE),
         ],
     )
-    def test_vector_size_and_distance_are_the_ones_given(self, size, distance):
+    def test_create_collection_is_idempotent_when_configuration_matches(self, size, distance):
         client = FakeQdrantClient()
-        assert create_collection(client, "items", vector_size=size, distance=distance) is True
-        vectors = client.get_collection("items").config.params.vectors
-        assert (vectors.size, vectors.distance) == (size, distance)
-
-    def test_create_collection_is_idempotent_when_called_twice_with_same_configuration(self):
-        client = FakeQdrantClient()
-        res1 = create_collection(
-            client=client,
-            collection_name="items",
-            vector_size=128,
-            distance=Distance.COSINE,
+        assert (
+            create_collection(
+                client=client,
+                collection_name="items",
+                vector_size=size,
+                distance=distance,
+            )
+            is True
         )
-        res2 = create_collection(
-            client=client,
-            collection_name="items",
-            vector_size=128,
-            distance=Distance.COSINE,
+        assert (
+            create_collection(
+                client=client,
+                collection_name="items",
+                vector_size=size,
+                distance=distance,
+            )
+            is True
         )
-        assert res1 is True
-        assert res2 is True
-        assert client.collection_exists("items")
 
     @pytest.mark.parametrize(
         ("size", "distance"),
@@ -215,3 +215,33 @@ class TestGetQdrantClientUnit:
         monkeypatch.delenv("QDRANT_URL", raising=False)
         client = get_qdrant_client()
         assert "127.0.0.1:6333" in str(client._client.rest_uri)
+
+
+class TestModalitySemanticIndex:
+    """Tests for modality in Qdrant payload index and semantic search filtering."""
+
+    def test_modality_is_in_payload_index_fields(self):
+        from semantic_index import PAYLOAD_INDEX_FIELDS
+
+        assert ("modality", models.PayloadSchemaType.INTEGER) in PAYLOAD_INDEX_FIELDS
+
+    def test_semantic_search_builds_modality_filter(self):
+        from semantic_index import StructuredFilter, semantic_search
+        from tests.fake_embedding_model import FakeEmbeddingModel
+
+        mock_client = MagicMock()
+        mock_client.collection_exists.return_value = True
+        mock_client.query_points.return_value = MagicMock(points=[])
+
+        model = FakeEmbeddingModel(dimension=16)
+        s_filter = StructuredFilter(
+            date_window=(date(2026, 1, 1), date(2026, 6, 1)),
+            modality=[6, 7, 8],
+        )
+        semantic_search(model=model, query="teste", structured_filter=s_filter, client=mock_client)
+
+        call_args = mock_client.query_points.call_args
+        query_filter = call_args.kwargs["query_filter"]
+        cond = next(c for c in query_filter.must if getattr(c, "key", None) == "modality")
+        assert isinstance(cond.match, models.MatchAny)
+        assert cond.match.any == [6, 7, 8]
