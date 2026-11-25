@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from ingestion.models import PublicItem
 from ingestion.units import normalize_unit
 
 
@@ -14,6 +15,13 @@ def test_normalize_unit_handles_none_and_empty():
     assert normalize_unit(None) == ""
     assert normalize_unit("") == ""
     assert normalize_unit("   ") == ""
+
+
+def test_public_item_has_a_persisted_normalized_unit_column():
+    field = PublicItem._meta.get_field("unit_normalized")
+
+    assert field.max_length == 50
+    assert field.default == ""
 
 
 def test_guard_no_duplicate_strip_casefold_in_codebase():

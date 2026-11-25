@@ -6,6 +6,7 @@ import pytest
 from qdrant_client import models
 
 from ingestion.models import PublicItem
+from ingestion.units import normalize_unit
 from semantic_index import (
     ScoredPublicItem,
     StructuredFilter,
@@ -15,6 +16,11 @@ from semantic_index import (
     semantic_search,
 )
 from tests.fake_embedding_model import FakeEmbeddingModel
+
+
+def _create_public_item(**kwargs):
+    kwargs.setdefault("unit_normalized", normalize_unit(kwargs.get("unit")))
+    return PublicItem.objects.create(**kwargs)
 
 
 @pytest.mark.integration
@@ -131,7 +137,7 @@ def test_semantic_search_overfetches_so_dropped_ghosts_do_not_shrink_results():
 
     try:
         # Create 3 valid items
-        item1 = PublicItem.objects.create(
+        item1 = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=1,
@@ -149,7 +155,7 @@ def test_semantic_search_overfetches_so_dropped_ghosts_do_not_shrink_results():
             modality=6,
             item_kind="product",
         )
-        item2 = PublicItem.objects.create(
+        item2 = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=1,
@@ -167,7 +173,7 @@ def test_semantic_search_overfetches_so_dropped_ghosts_do_not_shrink_results():
             modality=6,
             item_kind="product",
         )
-        item3 = PublicItem.objects.create(
+        item3 = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=1,
@@ -225,7 +231,7 @@ def test_semantic_search_end_to_end_integration():
     try:
         # 1. Create PublicItem rows in the PostgreSQL test database
         # Base item matching all filters
-        item_a = PublicItem.objects.create(
+        item_a = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=1,
@@ -244,7 +250,7 @@ def test_semantic_search_end_to_end_integration():
             item_kind="product",
         )
         # Second item matching all filters
-        item_b = PublicItem.objects.create(
+        item_b = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=1,
@@ -263,7 +269,7 @@ def test_semantic_search_end_to_end_integration():
             item_kind="product",
         )
         # N1: Differs ONLY in unit ("caixa" vs "unidade")
-        item_diff_unit_only = PublicItem.objects.create(
+        item_diff_unit_only = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=1,
@@ -282,7 +288,7 @@ def test_semantic_search_end_to_end_integration():
             item_kind="product",
         )
         # N1: Differs ONLY in item_kind ("service" vs "product", with same unit "unidade")
-        item_diff_kind_only = PublicItem.objects.create(
+        item_diff_kind_only = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=1,
@@ -302,7 +308,7 @@ def test_semantic_search_end_to_end_integration():
         )
         # N1: Date window boundaries: window will be 2026-03-01 to 2026-08-31
         # start - 1 day (2026-02-28) -> excluded
-        item_start_minus_1 = PublicItem.objects.create(
+        item_start_minus_1 = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=2,
@@ -321,7 +327,7 @@ def test_semantic_search_end_to_end_integration():
             item_kind="product",
         )
         # start boundary (2026-03-01) -> included
-        item_at_start = PublicItem.objects.create(
+        item_at_start = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=2,
@@ -340,7 +346,7 @@ def test_semantic_search_end_to_end_integration():
             item_kind="product",
         )
         # end boundary (2026-08-31) -> included
-        item_at_end = PublicItem.objects.create(
+        item_at_end = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=2,
@@ -359,7 +365,7 @@ def test_semantic_search_end_to_end_integration():
             item_kind="product",
         )
         # end + 1 day (2026-09-01) -> excluded
-        item_end_plus_1 = PublicItem.objects.create(
+        item_end_plus_1 = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=2,
@@ -378,7 +384,7 @@ def test_semantic_search_end_to_end_integration():
             item_kind="product",
         )
         # Different state (MA)
-        item_diff_state = PublicItem.objects.create(
+        item_diff_state = _create_public_item(
             cnpj="00000000000002",
             year=2026,
             purchase_sequence=1,
@@ -397,7 +403,7 @@ def test_semantic_search_end_to_end_integration():
             item_kind="product",
         )
         # Ghost candidate: indexed in Qdrant but deleted from PostgreSQL
-        item_ghost = PublicItem.objects.create(
+        item_ghost = _create_public_item(
             cnpj="00000000000001",
             year=2026,
             purchase_sequence=4,

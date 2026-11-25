@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from ingestion.models import PublicItem, RawRecord
+from ingestion.units import normalize_unit
 from pricing import views
 from semantic_index import (
     ScoredPublicItem,
@@ -38,6 +39,7 @@ def test_screening_page_renders_with_real_semantic_search_pipeline(monkeypatch):
             item_number=1,
             description="Papel sulfite A4 branco, resma com 500 folhas",
             unit="pacote",
+            unit_normalized=normalize_unit("pacote"),
             quantity=Decimal("100"),
             agency_name="Prefeitura Alpha",
             published_on=today - timedelta(days=30),
@@ -56,6 +58,7 @@ def test_screening_page_renders_with_real_semantic_search_pipeline(monkeypatch):
             item_number=1,
             description="Papel sulfite A4 branco antigo",
             unit="pacote",
+            unit_normalized=normalize_unit("pacote"),
             quantity=Decimal("50"),
             agency_name="Prefeitura Beta",
             published_on=today - timedelta(days=400),

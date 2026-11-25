@@ -37,6 +37,7 @@ def test_index_public_items_command_runs_with_injected_embedding_model():
         item_number=1,
         description="DEMO-Item 1 para indexação",
         unit="UNIDADE",
+        unit_normalized="unidade",
         quantity=Decimal("10.0000"),
         estimated_unit_price=Decimal("100.0000"),
         awarded_unit_price=Decimal("95.0000"),

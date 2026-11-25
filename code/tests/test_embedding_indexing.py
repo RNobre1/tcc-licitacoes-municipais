@@ -133,6 +133,7 @@ def test_index_public_items_indexes_points_with_structured_filter_payload():
         pk=101,
         description="DEMO-Papel A4 75g",
         unit=" Caixa com 10 resmas ",
+        unit_normalized="caixa com 10 resmas",
         state="PA",
         published_on=date(2026, 10, 26),
         item_kind="product",
@@ -142,6 +143,7 @@ def test_index_public_items_indexes_points_with_structured_filter_payload():
         pk=102,
         description="DEMO-Serviço de limpeza predial",
         unit="Mês",
+        unit_normalized="mês",
         state="MA",
         published_on=date(2026, 10, 28),
         item_kind="service",
@@ -180,3 +182,23 @@ def test_index_public_items_indexes_points_with_structured_filter_payload():
     assert p2.payload["published_on"] == "2026-10-28"
     assert p2.payload["item_kind"] == "service"
     assert p2.payload["modality"] == 8
+
+
+def test_index_public_items_uses_the_stored_normalized_unit():
+    client = FakeQdrantIndexingClient()
+    model = FakeEmbeddingModel(dimension=16)
+    item = SimpleNamespace(
+        pk=103,
+        description="DEMO-Item com unidade pré-calculada",
+        unit="Raw source unit",
+        unit_normalized="stored canonical value",
+        state="PA",
+        published_on=date(2026, 10, 29),
+        item_kind="product",
+        modality=6,
+    )
+
+    assert index_public_items(model=model, items=[item], client=client) == 1
+
+    collection_name = collection_name_for_model(model)
+    assert client.points[collection_name][0].payload["unit"] == "stored canonical value"

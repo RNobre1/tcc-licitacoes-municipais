@@ -227,6 +227,7 @@ def test_build_public_items_builds_items_with_provenance_and_results():
         cnpj="00000000000000", year=2026, purchase_sequence=1, item_number=2
     )
     assert item_2.pncp_key == ("00000000000000", 2026, 1, 2)
+    assert item_2.unit_normalized == "mês"
     assert item_2.awarded_unit_price is None
     assert item_2.item_kind == "service"
     assert set(item_2.raw_records.all()) == {pub_record, item_record}
