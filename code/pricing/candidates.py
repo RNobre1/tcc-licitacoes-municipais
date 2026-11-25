@@ -128,6 +128,8 @@ def fetch_awarded_price_on_demand(
     if getattr(public_item, "awarded_unit_price", None) is not None:
         return
 
+    from django.core.cache import cache
+
     raw_records = getattr(public_item, "raw_records", None)
     if raw_records is None:
         return
@@ -151,6 +153,20 @@ def fetch_awarded_price_on_demand(
 
     if not has_result:
         return
+
+    item_pk = getattr(public_item, "pk", None)
+    cache_key = (
+        f"pncp_fetch_failed_{item_pk}"
+        if isinstance(item_pk, (int, str)) and str(item_pk).isalnum()
+        else None
+    )
+    if cache_key:
+        try:
+            if not cache.add(cache_key, True, timeout=300):
+                return
+        except Exception:
+            # A cache outage must not turn an optional lookup into a page error.
+            pass
 
     try:
         if fetch_fn is not None:
@@ -186,5 +202,5 @@ def fetch_awarded_price_on_demand(
                     if hasattr(public_item.raw_records, "add"):
                         public_item.raw_records.add(record)
     except Exception:
-        # If fetch fails, the candidate stays estimado and page still renders
-        pass
+        # If fetch fails, the candidate stays estimado and page still renders.
+        return

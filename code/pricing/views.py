@@ -1,6 +1,5 @@
 import datetime
 import threading
-from collections.abc import Sequence  # noqa: F401
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -9,10 +8,11 @@ from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
+from ingestion.units import normalize_unit
 from procurement.demo_data import get_item, get_procurement_for_item
 
 from . import demo_data
-from .candidates import candidate_from_public_item, fetch_awarded_price_on_demand
+from .candidates import Candidate, candidate_from_public_item, fetch_awarded_price_on_demand
 from .estimation import (
     calculate_mean,
     calculate_median,
@@ -24,6 +24,9 @@ from .ranking import compute_proximity, format_proximity, parse_expected_price, 
 
 DEFAULT_MODEL = "intfloat/multilingual-e5-base"
 DEFAULT_REVISION = "d13f1b27baf31030b7fd040960d60d909913633f"
+MAX_SCREENING_CANDIDATES = 20
+ON_DEMAND_FETCH_TIMEOUT_SECONDS = 2.0
+PAGE_FETCH_BUDGET_SECONDS = 3.0
 
 _EMBEDDING_MODEL: Any = None
 _EMBEDDING_MODEL_LOCK = threading.Lock()
@@ -97,8 +100,6 @@ def get_corpus_info(
 ) -> CorpusInfo:
     """Return corpus index metadata read from DB and Qdrant."""
     from django.core.cache import cache
-    from django.db.models import Max, Min
-    from qdrant_client import models as qmodels
 
     from ingestion.models import PublicItem
 
@@ -117,6 +118,8 @@ def get_corpus_info(
     end_date = None
 
     try:
+        from qdrant_client import models as qmodels
+
         if client is None:
             from semantic_index import get_qdrant_client
 
@@ -126,16 +129,19 @@ def get_corpus_info(
         from semantic_index.embedding import collection_name_for_model
 
         coll_name = collection_name_for_model(model)
-        if not client.collection_exists(coll_name):
-            empty_index = True
+        index_cache_key = f"corpus_index_info:{coll_name}"
+        cached_index_info = cache.get(index_cache_key)
+        if cached_index_info is not None:
+            indexed_count, start_date, end_date, empty_index = cached_index_info
         else:
-            count_res = client.count(collection_name=coll_name)
-            indexed_count = getattr(count_res, "count", 0)
-            if indexed_count == 0:
+            if not client.collection_exists(coll_name):
                 empty_index = True
             else:
-                # Read earliest and latest published_on from Qdrant indexed payloads (N1)
-                try:
+                count_res = client.count(collection_name=coll_name)
+                indexed_count = int(getattr(count_res, "count", 0) or 0)
+                empty_index = indexed_count == 0
+                if not empty_index:
+                    # Read the covered range from Qdrant's indexed payloads.
                     asc_points, _ = client.scroll(
                         collection_name=coll_name,
                         limit=1,
@@ -152,36 +158,36 @@ def get_corpus_info(
                             key="published_on", direction=qmodels.Direction.DESC
                         ),
                     )
-                    if asc_points and asc_points[0].payload:
-                        raw_start = asc_points[0].payload.get("published_on")
+                    if asc_points:
+                        raw_start = (asc_points[0].payload or {}).get("published_on")
                         if raw_start:
                             start_date = datetime.date.fromisoformat(str(raw_start))
-                    if desc_points and desc_points[0].payload:
-                        raw_end = desc_points[0].payload.get("published_on")
+                    if desc_points:
+                        raw_end = (desc_points[0].payload or {}).get("published_on")
                         if raw_end:
                             end_date = datetime.date.fromisoformat(str(raw_end))
-                except Exception:
-                    start_date = None
-                    end_date = None
+                    if start_date is None or end_date is None:
+                        start_date = None
+                        end_date = None
+
+            cache.set(
+                index_cache_key,
+                (indexed_count, start_date, end_date, empty_index),
+                300,
+            )
     except Exception:
         qdrant_error = True
         indexed_count = 0
+        start_date = None
+        end_date = None
+        empty_index = False
 
-    # Fallback to DB date bounds if Qdrant didn't provide dates (e.g. mocked client without scroll)
-    if start_date is None or end_date is None:
-        bounds = PublicItem.objects.aggregate(
-            min_date=Min("published_on"), max_date=Max("published_on")
-        )
-        if start_date is None:
-            start_date = bounds.get("min_date")
-        if end_date is None:
-            end_date = bounds.get("max_date")
     if qdrant_error or empty_index or indexed_count == 0 or start_date is None or end_date is None:
         is_partial = True
     else:
-        # Tolerate 1 day of lag at end_date (e.g. yesterday) (N1)
+        # One day of lag is expected because a complete daily collection ends yesterday.
         tolerated_end = window_end - datetime.timedelta(days=1)
-        if start_date > window_start or end_date < tolerated_end or indexed_count < db_count:
+        if start_date > window_start or end_date < tolerated_end or indexed_count != db_count:
             is_partial = True
         else:
             is_partial = False
@@ -209,26 +215,47 @@ def get_screening_candidates(
     """Fetch and rank screening candidates for an item from semantic search."""
     fn = search_fn or search_function
     date_window = get_screening_date_window()
+    limit = max(0, min(limit, MAX_SCREENING_CANDIDATES))
     try:
-        raw_results = fn(query=item.description, date_window=date_window, limit=limit)
+        raw_results = list(fn(query=item.description, date_window=date_window, limit=limit) or [])[
+            :limit
+        ]
     except Exception:
         return []
 
-    candidates: list[Any] = []
+    extracted = []
     for res in raw_results:
         if hasattr(res, "item") and hasattr(res, "score"):
-            public_item = res.item
-            score = res.score
-            fetch_awarded_price_on_demand(public_item)
-            candidate = candidate_from_public_item(public_item, similarity=score, item_id=item.id)
-            candidates.append(candidate)
+            extracted.append((res.item, res.score))
         elif isinstance(res, tuple) and len(res) == 2:
-            public_item, score = res
-            fetch_awarded_price_on_demand(public_item)
-            candidate = candidate_from_public_item(public_item, similarity=score, item_id=item.id)
-            candidates.append(candidate)
+            extracted.append((res[0], res[1]))
         else:
-            candidates.append(res)
+            extracted.append((res, None))
+
+    items_to_fetch = [public_item for public_item, _ in extracted if hasattr(public_item, "pk")]
+    if items_to_fetch:
+        from concurrent.futures import ThreadPoolExecutor, wait
+
+        executor = ThreadPoolExecutor(max_workers=len(items_to_fetch))
+        futures = [
+            executor.submit(
+                fetch_awarded_price_on_demand,
+                public_item,
+                timeout=ON_DEMAND_FETCH_TIMEOUT_SECONDS,
+            )
+            for public_item in items_to_fetch
+        ]
+        wait(futures, timeout=PAGE_FETCH_BUDGET_SECONDS)
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    candidates: list[Any] = []
+    for public_item, score in extracted:
+        if score is not None:
+            candidates.append(
+                candidate_from_public_item(public_item, similarity=score, item_id=item.id)
+            )
+        else:
+            candidates.append(public_item)
 
     return rank_candidates(candidates, expected_price, item.unit)
 
@@ -270,31 +297,41 @@ EMPTY_PANEL = {
 def build_estimate_panel(
     item,
     decisions: dict,
-    candidates: list[Any] | None = None,
+    candidates: list[Any],
 ) -> dict:
     if item is None:
         return EstimatePanel(EMPTY_PANEL, counted_candidate_ids=set())
 
-    if candidates is None:
-        candidates = get_screening_candidates(item)
+    calculation_candidates = []
+    for candidate in candidates:
+        if isinstance(candidate, demo_data.PriceCandidate):
+            candidate = Candidate(
+                id=candidate.id,
+                description=candidate.description,
+                unit=candidate.unit,
+                quantity=candidate.quantity,
+                agency=candidate.agency,
+                date=candidate.date,
+                source=candidate.source,
+                provenance=candidate.provenance,
+                similarity=candidate.similarity,
+                awarded_unit_price=candidate.price,
+                item_id=candidate.item_id,
+            )
+        if not isinstance(candidate, Candidate):
+            raise TypeError(f"Expected Candidate, got {type(candidate).__name__}")
+        calculation_candidates.append(candidate)
 
     counted_candidate_ids: set[int] = set()
-    for c in candidates:
-        from ingestion.units import normalize_unit
+    for c in calculation_candidates:
+        if (
+            decisions.get(c.id) == "accept"
+            and normalize_unit(c.unit) == normalize_unit(item.unit)
+            and c.usable_calculation_price is not None
+        ):
+            counted_candidate_ids.add(c.id)
 
-        if decisions.get(c.id) == "accept" and normalize_unit(c.unit) == normalize_unit(item.unit):
-            if hasattr(c, "usable_calculation_price"):
-                if c.usable_calculation_price is not None:
-                    counted_candidate_ids.add(c.id)
-            elif (
-                not getattr(c, "is_estimated", False)
-                and not getattr(c, "secret_budget", False)
-                and getattr(c, "price", None) is not None
-                and c.price > Decimal("0.00")
-            ):
-                counted_candidate_ids.add(c.id)
-
-    counted_candidates = [c for c in candidates if c.id in counted_candidate_ids]
+    counted_candidates = [c for c in calculation_candidates if c.id in counted_candidate_ids]
     prices = get_calculation_prices(counted_candidates)
 
     count = len(prices)
@@ -317,10 +354,11 @@ def build_estimate_panel(
 def decide(request, candidate_id):
     from ingestion.models import PublicItem
 
+    item_id_raw = request.POST.get("item_id")
+    requested_item_id = int(item_id_raw) if item_id_raw else None
     pi = PublicItem.objects.filter(pk=candidate_id).prefetch_related("raw_records").first()
     if pi is not None:
-        fetch_awarded_price_on_demand(pi)
-        candidate = candidate_from_public_item(pi)
+        candidate = candidate_from_public_item(pi, item_id=requested_item_id)
     else:
         candidate = demo_data.get_candidate(candidate_id)
 
@@ -331,13 +369,21 @@ def decide(request, candidate_id):
     if decision not in ["accept", "reject"]:
         return HttpResponseBadRequest(b"Invalid decision")
 
-    item_id_raw = request.POST.get("item_id")
-    item_id = int(item_id_raw) if item_id_raw else getattr(candidate, "item_id", None)
+    item_id = (
+        requested_item_id if requested_item_id is not None else getattr(candidate, "item_id", None)
+    )
+    if item_id is None:
+        return HttpResponseBadRequest(b"Requested item is required")
+
     item = get_item(item_id) if item_id else None
     item_unit = item.unit if item else None
 
+    if pi is not None:
+        fetch_awarded_price_on_demand(pi)
+        candidate = candidate_from_public_item(pi, item_id=item_id)
+
     decisions = request.session.get("screening_decisions", {})
-    dec_key = f"{item_id}:{candidate_id}" if item_id else str(candidate_id)
+    dec_key = f"{item_id}:{candidate_id}"
     decisions[dec_key] = decision
     request.session["screening_decisions"] = decisions
 
@@ -354,12 +400,25 @@ def decide(request, candidate_id):
     for k, v in decisions.items():
         if ":" in str(k):
             it_str, cand_str = str(k).split(":", 1)
-            if item_id is None or int(it_str) == item_id:
+            if int(it_str) == item_id:
                 item_decisions[int(cand_str)] = v
-        elif item_id is None:
-            item_decisions[int(k)] = v
 
-    estimate = build_estimate_panel(item, item_decisions)
+    accepted_ids = [
+        accepted_id for accepted_id, value in item_decisions.items() if value == "accept"
+    ]
+    public_items = PublicItem.objects.in_bulk(accepted_ids)
+    panel_candidates = []
+    for accepted_id in accepted_ids:
+        public_item = public_items.get(accepted_id)
+        if public_item is not None:
+            panel_candidates.append(candidate_from_public_item(public_item, item_id=item_id))
+            continue
+
+        demo_candidate = demo_data.get_candidate(accepted_id)
+        if demo_candidate is not None and demo_candidate.item_id == item_id:
+            panel_candidates.append(demo_candidate)
+
+    estimate = build_estimate_panel(item, item_decisions, candidates=panel_candidates)
 
     return render(
         request,
@@ -404,9 +463,6 @@ def screening(request, item_id):
             it_str, cand_str = str(k).split(":", 1)
             if int(it_str) == item_id:
                 decisions[int(cand_str)] = v
-        elif not any(":" in str(other_k) for other_k in raw_decisions):
-            # Backward compatibility with un-scoped decisions
-            decisions[int(k)] = v
     estimate = build_estimate_panel(item, decisions, candidates=candidates)
 
     proximities = {

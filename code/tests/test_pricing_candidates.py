@@ -156,12 +156,14 @@ def test_fetch_awarded_price_on_demand_success():
     mock_item.raw_records.all.return_value = [raw_items_record]
 
     result_raw_record = MagicMock()
-    result_raw_record.payload = [{
-        "numeroItem": 3,
-        "situacaoCompraItemResultadoNome": "Informado",
-        "dataCancelamento": None,
-        "valorUnitarioHomologado": 45.50,
-    }]
+    result_raw_record.payload = [
+        {
+            "numeroItem": 3,
+            "situacaoCompraItemResultadoNome": "Informado",
+            "dataCancelamento": None,
+            "valorUnitarioHomologado": 45.50,
+        }
+    ]
 
     mock_fetch = MagicMock(return_value=result_raw_record)
 
@@ -295,7 +297,6 @@ def test_candidate_without_price_and_not_secret_budget_is_no_price():
 
 def test_fetch_awarded_price_on_demand_uses_short_timeout(monkeypatch):
     """Mutant killer 4: fetch_awarded_price_on_demand passes timeout=2.0 (not 20.0)."""
-    from ingestion.models import PublicItem
     from pricing.candidates import fetch_awarded_price_on_demand
 
     recorded_timeout = None

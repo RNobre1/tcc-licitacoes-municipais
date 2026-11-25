@@ -3,6 +3,8 @@ from collections.abc import Sequence
 from decimal import Decimal
 from typing import Any
 
+from .candidates import Candidate
+
 
 def calculate_mean(prices: Sequence[Decimal]) -> Decimal:
     """Compute the arithmetic mean of a sequence of prices (IN 65/2021, Art. 6 caput)."""
@@ -31,19 +33,15 @@ def requires_justification(prices: Sequence[Decimal]) -> bool:
 
 
 def get_calculation_prices(candidates: Sequence[Any]) -> list[Decimal]:
-    """Return the prices usable for calculation from a sequence of candidates.
+    """Return the awarded prices usable for calculation from Candidate objects.
 
-    Only awarded prices from Candidate objects (or objects explicitly defining
-    usable_calculation_price) are usable. Duck-typed objects without
-    usable_calculation_price or bare Decimals raise TypeError. Zero prices,
+    Duck-typed objects and bare Decimals raise TypeError. Zero prices,
     estimated prices, and secret-budget items are excluded.
     """
     usable: list[Decimal] = []
     for candidate in candidates:
-        if not hasattr(candidate, "usable_calculation_price"):
-            raise TypeError(
-                f"Candidate must define usable_calculation_price, got {type(candidate).__name__}"
-            )
+        if not isinstance(candidate, Candidate):
+            raise TypeError(f"Expected Candidate, got {type(candidate).__name__}")
         price = candidate.usable_calculation_price
         if price is not None and price > Decimal("0.00"):
             usable.append(price)

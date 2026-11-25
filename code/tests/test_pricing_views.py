@@ -958,6 +958,7 @@ def test_screening_estimate_panel_ignores_estimated_prices(client, monkeypatch):
 
 def test_get_corpus_info_returns_qdrant_count_and_indexed_date_range():
     from django.core.cache import cache
+
     from ingestion.models import PublicItem
     from pricing.views import get_corpus_info
 
@@ -1019,6 +1020,7 @@ def test_get_corpus_info_returns_qdrant_count_and_indexed_date_range():
 
 def test_get_corpus_info_is_not_partial_when_full_window_covered():
     from django.core.cache import cache
+
     from ingestion.models import PublicItem
     from pricing.views import get_corpus_info
 
@@ -1273,6 +1275,7 @@ def test_get_corpus_info_reads_date_range_from_qdrant_payload(monkeypatch):
 
 def test_get_corpus_info_does_not_substitute_database_dates_for_missing_index_dates():
     from django.core.cache import cache
+
     from ingestion.models import PublicItem
     from pricing.views import get_corpus_info
 
@@ -1317,6 +1320,7 @@ def test_get_corpus_info_does_not_substitute_database_dates_for_missing_index_da
 
 def test_get_corpus_info_marks_extra_index_points_as_partial():
     from django.core.cache import cache
+
     from pricing.views import get_corpus_info
 
     cache.set("corpus_db_items_count", 10, 300)
@@ -1351,6 +1355,7 @@ def test_get_corpus_info_marks_extra_index_points_as_partial():
 
 def test_get_corpus_info_caches_both_database_and_index_counts(monkeypatch):
     from django.core.cache import cache
+
     from ingestion.models import PublicItem
     from pricing.views import get_corpus_info
 

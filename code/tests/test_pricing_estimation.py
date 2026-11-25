@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 
+from pricing.candidates import Candidate
 from pricing.estimation import (
     calculate_mean,
     calculate_median,
@@ -11,7 +12,6 @@ from pricing.estimation import (
     get_calculation_prices,
     requires_justification,
 )
-from pricing.candidates import Candidate
 
 
 def _CandidateStub(

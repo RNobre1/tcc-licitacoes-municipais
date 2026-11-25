@@ -43,9 +43,9 @@
         {% if corpus_info.qdrant_error %}
         <p class="notice error"><small>Índice de busca semântica temporariamente indisponível.</small></p>
         {% elif corpus_info.empty_index or corpus_info.indexed_items_count == 0 %}
-        <p class="notice warning"><small>Índice de busca semântica vazio.</small></p>
+        <p class="notice warning"><small>Índice de busca semântica vazio: {{ corpus_info.indexed_items_count }} de {{ corpus_info.db_items_count }} itens do banco indexados.</small></p>
         {% else %}
-        <p class="notice"><small>Busca realizada em corpus parcial: {{ corpus_info.indexed_items_count }} de {{ corpus_info.db_items_count }} itens do banco indexados cobrindo o período de {{ corpus_info.start_date|date:"d/m/Y" }} a {{ corpus_info.end_date|date:"d/m/Y" }}.</small></p>
+        <p class="notice"><small>Busca realizada em corpus parcial: {{ corpus_info.indexed_items_count }} de {{ corpus_info.db_items_count }} itens do banco indexados{% if corpus_info.start_date and corpus_info.end_date %}, cobrindo o período de {{ corpus_info.start_date|date:"d/m/Y" }} a {{ corpus_info.end_date|date:"d/m/Y" }}{% else %}; período de publicação do índice indisponível{% endif %}.</small></p>
         {% endif %}
     {% endif %}
     {% if candidates %}
