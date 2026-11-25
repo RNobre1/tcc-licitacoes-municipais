@@ -1,6 +1,5 @@
 import re
 from collections import defaultdict
-from collections.abc import Sequence
 from contextlib import suppress
 from datetime import datetime
 from decimal import Decimal
