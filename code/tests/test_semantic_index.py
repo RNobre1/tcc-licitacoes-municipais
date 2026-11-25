@@ -322,6 +322,33 @@ class TestModalitySemanticIndex:
         client.count.assert_called_once()
         client.query_points.assert_not_called()
 
+    def test_missing_modality_payload_count_is_cached_after_error(self):
+        from semantic_index import StructuredFilter, semantic_search
+        from tests.fake_embedding_model import FakeEmbeddingModel
+
+        client = self._search_client(
+            payload_schema={
+                "modality": SimpleNamespace(data_type=models.PayloadSchemaType.INTEGER)
+            },
+            missing_points=1,
+        )
+        search_filter = StructuredFilter(
+            date_window=(date(2026, 1, 1), date(2026, 6, 1)),
+            modality=[6],
+        )
+
+        for _ in range(2):
+            with pytest.raises(ValueError, match="points.*modality"):
+                semantic_search(
+                    model=FakeEmbeddingModel(dimension=16),
+                    query="teste",
+                    structured_filter=search_filter,
+                    client=client,
+                )
+
+        client.count.assert_called_once()
+        client.query_points.assert_not_called()
+
     def test_empty_modality_list_does_not_filter_or_check_collection_schema(self):
         from semantic_index import StructuredFilter, semantic_search
         from tests.fake_embedding_model import FakeEmbeddingModel
