@@ -1465,7 +1465,27 @@ def test_screening_view_notifies_when_semantic_index_is_empty(client, monkeypatc
     response = client.get(reverse("pricing:screening", args=[1]))
 
     assert response.status_code == 200
-    assert "Índice de busca semântica vazio." in response.content.decode()
+    html = response.content.decode()
+    assert "Índice de busca semântica vazio" in html
+    assert "0 de 10 itens do banco indexados" in html
+
+
+def test_partial_corpus_notice_says_when_index_dates_are_unavailable(client, monkeypatch):
+    from pricing.views import CorpusInfo
+
+    monkeypatch.setattr(views, "search_function", lambda **kwargs: [])
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: CorpusInfo(1, None, None, True, db_items_count=2),
+    )
+
+    response = client.get(reverse("pricing:screening", args=[1]))
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "1 de 2 itens do banco indexados" in html
+    assert "período de publicação do índice indisponível" in html
 
 
 def test_screening_does_not_label_a_nonsecret_item_without_price_as_secret(client, monkeypatch):
