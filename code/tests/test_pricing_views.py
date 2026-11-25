@@ -1157,6 +1157,34 @@ def test_screening_ignores_legacy_unscoped_decisions(client, monkeypatch):
     assert response.context["decisions"] == {}
 
 
+def test_decide_rejects_real_candidate_without_requested_item_id(client):
+    from ingestion.models import PublicItem
+
+    public_item = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=2026,
+        purchase_sequence=83001,
+        item_number=1,
+        description="Item público sintético",
+        unit="pacote",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("10.00"),
+        agency_name="Órgão fictício",
+        published_on=datetime.date(2026, 11, 24),
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+
+    response = client.post(
+        reverse("pricing:decide", args=[public_item.pk]),
+        {"decision": "accept"},
+    )
+
+    assert response.status_code == 400
+    assert "screening_decisions" not in client.session
+
+
 def test_screening_view_displays_twenty_candidates_not_ten(client, monkeypatch):
     """Mutant killer 2: The screening request displays the full top 20."""
     from pricing.candidates import Candidate
