@@ -42,6 +42,11 @@ class ScoredPublicItem:
         return (self.item, self.score)[index]
 
 
+def _ensure_modality_filter_supported(client: Any, collection_name: str) -> None:
+    """Reject modality filters when the collection cannot apply them safely."""
+    raise NotImplementedError("Modality collection validation is not implemented")
+
+
 def semantic_search(
     model: EmbeddingModel,
     query: str,
