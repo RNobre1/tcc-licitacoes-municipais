@@ -67,6 +67,7 @@ def test_resolve_ground_truth_command():
             call_command(
                 "resolve_ground_truth",
                 eval_dir=str(eval_dir),
+                pattern="test_report.json",
                 skip_fetch=False,
             )
 

@@ -1,56 +1,60 @@
-"""Tests to kill the 4 surviving mutants identified in review:
+"""Tests to kill the surviving mutants identified in review:
 1. Bootstrap without seed.
 2. Percentile at alpha instead of alpha/2.
 3. Finalist sorted by MRR before Recall@10.
 4. Finalist being BM25 (contrasting baseline with itself).
+5. R1 comparing the finalist with itself.
 """
+
+from datetime import date
+from random import Random as BaseRandom
 
 import pytest
 
+import evaluation.benchmark as benchmark_module
 from evaluation.benchmark import (
+    BM25SearchMethod,
+    BenchmarkOrchestrator,
     bootstrap_paired_difference,
     select_finalist,
 )
 
 
-def test_mutant_bootstrap_seed_determinism_and_variation():
-    # 1. Bootstrap must use seed: same seed gives identical bounds, different seeds vary
+def test_mutant_bootstrap_seed_determinism_and_variation(monkeypatch):
+    # 1. Bootstrap must pass the configured seed to its random generator.
     scores_a = [0.8, 0.6, 0.9, 0.4, 0.7, 0.5, 0.85, 0.65]
     scores_b = [0.5, 0.5, 0.6, 0.3, 0.4, 0.5, 0.60, 0.50]
+
+    seeds = []
+
+    class RecordingRandom:
+        def __init__(self, seed):
+            seeds.append(seed)
+            self.delegate = BaseRandom(seed)
+
+        def randrange(self, stop):
+            return self.delegate.randrange(stop)
+
+    monkeypatch.setattr(benchmark_module.random, "Random", RecordingRandom)
 
     res1 = bootstrap_paired_difference(scores_a, scores_b, seed=42, n_resamples=500)
     res2 = bootstrap_paired_difference(scores_a, scores_b, seed=42, n_resamples=500)
     res3 = bootstrap_paired_difference(scores_a, scores_b, seed=999, n_resamples=500)
 
-    # Deterministic with same seed
     assert res1 == res2
-    # Seed actually changes the resamples
     assert res1[1] != res3[1] or res1[2] != res3[2]
+    assert seeds == [42, 42, 999]
 
 
 def test_mutant_bootstrap_alpha_percentiles_two_sided():
     # 2. Must use alpha/2 and (1 - alpha/2) for two-sided (1 - alpha) CI
-    # If alpha=0.10 is used directly instead of alpha/2=0.05,
-    # lower_idx would be 100 instead of 50 (in 1000 resamples),
-    # and upper_idx would be 900 instead of 950.
-    scores_a = [float(i) for i in range(100)]
-    scores_b = [0.0] * 100
-
-    # With n_resamples=1000 and alpha=0.10:
-    # 5th percentile index is 50, 10th percentile index is 100.
+    # With 20 resamples and alpha=0.10, the correct indices are 1 and 19;
+    # using alpha directly would choose 2 and 18.
     _, ci_lower_90, ci_upper_90 = bootstrap_paired_difference(
-        scores_a, scores_b, alpha=0.10, n_resamples=1000, seed=42
+        [0.1, 0.2, 0.3, 0.4, 0.5], [0.0] * 5, alpha=0.10, n_resamples=20, seed=2
     )
-    # The 90% CI (alpha=0.10) must be strictly wider than an 80% CI (alpha=0.20)
-    _, ci_lower_80, ci_upper_80 = bootstrap_paired_difference(
-        scores_a, scores_b, alpha=0.20, n_resamples=1000, seed=42
-    )
-
-    # Two-sided 90% CI must be wider than 80% CI:
-    # lower_90 (5th pct) < lower_80 (10th pct)
-    assert ci_lower_90 < ci_lower_80
-    # upper_90 (95th pct) > upper_80 (90th pct)
-    assert ci_upper_90 > ci_upper_80
+    assert ci_lower_90 == 0.2
+    assert ci_upper_90 == 0.5
 
 
 def test_mutant_finalist_sorted_by_recall_before_mrr():
@@ -76,3 +80,79 @@ def test_mutant_finalist_cannot_be_bm25_and_r1_cannot_contrast_with_itself():
     # If only BM25 is present, selecting finalist must fail
     with pytest.raises(ValueError, match="baseline"):
         select_finalist({"bm25": {"recall_at_10": 0.90, "mrr_at_20": 0.50}})
+
+
+def test_orchestrator_finalist_uses_recall_before_mrr():
+    # 5. End-to-end selection must use Recall@10 first, even when another method
+    # has the higher MRR@20 on tuning.
+    class RankingMethod:
+        def __init__(self, name, preferred_rank):
+            self.name = name
+            self.preferred_rank = preferred_rank
+
+        def rank(self, query, candidates):
+            query_index = int(query.removeprefix("query-"))
+            relevant = next(
+                candidate
+                for candidate in candidates
+                if f"query-{query_index}" in candidate["description"]
+            )
+            distractors = [candidate for candidate in candidates if candidate is not relevant]
+            relevant_rank = self.preferred_rank(query_index)
+            ranked = distractors[: relevant_rank - 1] + [relevant]
+            ranked.extend(distractors[relevant_rank - 1 :])
+            return [(candidate, 1.0 if candidate is relevant else 0.0) for candidate in ranked]
+
+    high_recall = RankingMethod(
+        "high_recall", lambda item_index: 10 if item_index < 8 else 11
+    )
+    high_mrr = RankingMethod("high_mrr", lambda item_index: 1 if item_index < 7 else 11)
+
+    items = [
+        {
+            "item_id": f"item-{index}",
+            "description": f"query-{index}",
+            "ground_truth": {index},
+            "chosen_prices": [10.0],
+            "unit": "UNIDADE",
+            "survey_date": date(2026, 6, 1),
+        }
+        for index in range(10)
+    ]
+    corpus = [
+        {
+            "id": index,
+            "description": f"candidate query-{index}",
+            "price": 10.0,
+            "unit": "UNIDADE",
+            "published_on": date(2026, 5, 1),
+            "modality": 6,
+        }
+        for index in range(10)
+    ]
+    corpus.append(
+        {
+            "id": 99,
+            "description": "unrelated distractor",
+            "price": 10.0,
+            "unit": "UNIDADE",
+            "published_on": date(2026, 5, 1),
+            "modality": 6,
+        }
+    )
+
+    results = BenchmarkOrchestrator(n_noise_draws=1, n_bootstrap_resamples=5).run_benchmark(
+        items=items,
+        corpus=corpus,
+        split_name="tuning",
+        candidate_methods=[high_recall, high_mrr],
+        baseline_method=BM25SearchMethod(),
+    )
+
+    assert results["methods"]["high_recall"]["metrics"]["recall_at_10"] == 0.8
+    assert results["methods"]["high_mrr"]["metrics"]["recall_at_10"] == 0.7
+    assert (
+        results["methods"]["high_mrr"]["metrics"]["mrr_at_20"]
+        > results["methods"]["high_recall"]["metrics"]["mrr_at_20"]
+    )
+    assert results["finalist"] == "high_recall"

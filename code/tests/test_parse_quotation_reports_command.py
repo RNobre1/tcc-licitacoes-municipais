@@ -10,6 +10,7 @@ from django.core.management import call_command
 SYNTHETIC_TEXT = """
                         PREFEITURA FICTÍCIA DE DEMO
   Relatório de Cotação: COTAÇÃO DEMO
+  Pesquisa realizada entre 01/06/2026 10:00:00 e 15/06/2026 18:00:00
 
   Item 1: ITEM DEMO
       Preço Estimado: R$ 10,00 (un)  Média dos Preços Obtidos: R$ 10,00
