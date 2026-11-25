@@ -180,6 +180,13 @@ class TestSemanticIndexCollectionUnit:
             create_collection(client, "items", vector_size=128, distance=Distance.COSINE)
         assert not client.collection_exists("items")
 
+    def test_payload_index_creation_errors_are_not_suppressed(self):
+        client = FakeQdrantClient()
+        client.create_payload_index = MagicMock(side_effect=RuntimeError("index unavailable"))
+
+        with pytest.raises(RuntimeError, match="index unavailable"):
+            create_collection(client, "items", vector_size=128, distance=Distance.COSINE)
+
     def test_losing_a_creation_race_with_the_same_configuration_is_success(self):
         assert create_collection(RacingClient(), "items", 128, Distance.COSINE) is True
 
@@ -220,6 +227,15 @@ class TestGetQdrantClientUnit:
 class TestModalitySemanticIndex:
     """Tests for modality in Qdrant payload index and semantic search filtering."""
 
+    @staticmethod
+    def _search_client(payload_schema=None, missing_points=0):
+        client = MagicMock()
+        client.collection_exists.return_value = True
+        client.get_collection.return_value = SimpleNamespace(payload_schema=payload_schema or {})
+        client.count.return_value = SimpleNamespace(count=missing_points)
+        client.query_points.return_value = SimpleNamespace(points=[])
+        return client
+
     def test_modality_is_in_payload_index_fields(self):
         from semantic_index import PAYLOAD_INDEX_FIELDS
 
@@ -229,14 +245,14 @@ class TestModalitySemanticIndex:
         from semantic_index import StructuredFilter, semantic_search
         from tests.fake_embedding_model import FakeEmbeddingModel
 
-        mock_client = MagicMock()
-        mock_client.collection_exists.return_value = True
-        mock_client.query_points.return_value = MagicMock(points=[])
+        mock_client = self._search_client(
+            payload_schema={"modality": SimpleNamespace(data_type=models.PayloadSchemaType.INTEGER)}
+        )
 
         model = FakeEmbeddingModel(dimension=16)
         s_filter = StructuredFilter(
             date_window=(date(2026, 1, 1), date(2026, 6, 1)),
-            modality=[6, 7, 8],
+            modality=["6", "7", "8"],  # type: ignore[list-item]
         )
         semantic_search(model=model, query="teste", structured_filter=s_filter, client=mock_client)
 
@@ -245,3 +261,98 @@ class TestModalitySemanticIndex:
         cond = next(c for c in query_filter.must if getattr(c, "key", None) == "modality")
         assert isinstance(cond.match, models.MatchAny)
         assert cond.match.any == [6, 7, 8]
+        assert mock_client.count.call_count == 1
+        count_filter = mock_client.count.call_args.kwargs["count_filter"]
+        empty_condition = count_filter.must[0]
+        assert isinstance(empty_condition, models.IsEmptyCondition)
+        assert empty_condition.is_empty.key == "modality"
+
+        semantic_search(model=model, query="teste", structured_filter=s_filter, client=mock_client)
+        assert mock_client.count.call_count == 1
+
+    def test_semantic_search_rejects_a_collection_without_modality_index(self):
+        from semantic_index import StructuredFilter, semantic_search
+        from tests.fake_embedding_model import FakeEmbeddingModel
+
+        client = self._search_client(
+            payload_schema={
+                "published_on": SimpleNamespace(data_type=models.PayloadSchemaType.DATETIME),
+                "state": SimpleNamespace(data_type=models.PayloadSchemaType.KEYWORD),
+                "unit": SimpleNamespace(data_type=models.PayloadSchemaType.KEYWORD),
+                "item_kind": SimpleNamespace(data_type=models.PayloadSchemaType.KEYWORD),
+            }
+        )
+
+        with pytest.raises(ValueError, match="modality.*payload index"):
+            semantic_search(
+                model=FakeEmbeddingModel(dimension=16),
+                query="teste",
+                structured_filter=StructuredFilter(
+                    date_window=(date(2026, 1, 1), date(2026, 6, 1)),
+                    modality=[6],
+                ),
+                client=client,
+            )
+
+        client.count.assert_not_called()
+        client.query_points.assert_not_called()
+
+    def test_semantic_search_rejects_points_missing_modality(self):
+        from semantic_index import StructuredFilter, semantic_search
+        from tests.fake_embedding_model import FakeEmbeddingModel
+
+        client = self._search_client(
+            payload_schema={
+                "modality": SimpleNamespace(data_type=models.PayloadSchemaType.INTEGER)
+            },
+            missing_points=1,
+        )
+
+        with pytest.raises(ValueError, match="points.*modality"):
+            semantic_search(
+                model=FakeEmbeddingModel(dimension=16),
+                query="teste",
+                structured_filter=StructuredFilter(
+                    date_window=(date(2026, 1, 1), date(2026, 6, 1)),
+                    modality=[6],
+                ),
+                client=client,
+            )
+
+        client.count.assert_called_once()
+        client.query_points.assert_not_called()
+
+    def test_empty_modality_list_does_not_filter_or_check_collection_schema(self):
+        from semantic_index import StructuredFilter, semantic_search
+        from tests.fake_embedding_model import FakeEmbeddingModel
+
+        client = self._search_client(payload_schema={})
+        semantic_search(
+            model=FakeEmbeddingModel(dimension=16),
+            query="teste",
+            structured_filter=StructuredFilter(
+                date_window=(date(2026, 1, 1), date(2026, 6, 1)),
+                modality=[],
+            ),
+            client=client,
+        )
+
+        query_filter = client.query_points.call_args.kwargs["query_filter"]
+        assert all(getattr(condition, "key", None) != "modality" for condition in query_filter.must)
+        client.get_collection.assert_not_called()
+        client.count.assert_not_called()
+
+    def test_semantic_search_rejects_invalid_modality_codes(self):
+        from semantic_index import StructuredFilter, semantic_search
+        from tests.fake_embedding_model import FakeEmbeddingModel
+
+        with pytest.raises(ValueError, match="modality codes"):
+            semantic_search(
+                model=FakeEmbeddingModel(dimension=16),
+                query="teste",
+                structured_filter=StructuredFilter(
+                    date_window=(date(2026, 1, 1), date(2026, 6, 1)),
+                    modality=["not-a-code"],  # type: ignore[list-item]
+                ),
+                client=self._search_client(),
+            )

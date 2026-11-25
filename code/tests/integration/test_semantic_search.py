@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from qdrant_client import models
 
 from ingestion.models import PublicItem
 from semantic_index import (
@@ -65,6 +66,59 @@ def test_semantic_search_raises_on_missing_collection():
             structured_filter=StructuredFilter(date_window=(date(2026, 1, 1), date(2026, 6, 1))),
             client=client,
         )
+
+
+@pytest.mark.integration
+def test_semantic_search_rejects_old_collection_without_modality_payload():
+    client = get_qdrant_client()
+    model = FakeEmbeddingModel(name="old-collection-model", revision=f"old_{uuid4().hex[:8]}")
+    collection_name = collection_name_for_model(model)
+
+    try:
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=models.VectorParams(size=16, distance=models.Distance.COSINE),
+        )
+        for field_name, field_schema in [
+            ("published_on", models.PayloadSchemaType.DATETIME),
+            ("state", models.PayloadSchemaType.KEYWORD),
+            ("unit", models.PayloadSchemaType.KEYWORD),
+            ("item_kind", models.PayloadSchemaType.KEYWORD),
+        ]:
+            client.create_payload_index(
+                collection_name=collection_name,
+                field_name=field_name,
+                field_schema=field_schema,
+            )
+        client.upsert(
+            collection_name=collection_name,
+            points=[
+                models.PointStruct(
+                    id=1,
+                    vector=[0.0] * 16,
+                    payload={
+                        "published_on": "2026-04-01",
+                        "state": "PA",
+                        "unit": "unidade",
+                        "item_kind": "product",
+                    },
+                )
+            ],
+        )
+
+        with pytest.raises(ValueError, match="modality.*payload index"):
+            semantic_search(
+                model=model,
+                query="cadeira",
+                structured_filter=StructuredFilter(
+                    date_window=(date(2026, 1, 1), date(2026, 6, 1)),
+                    modality=[6],
+                ),
+                client=client,
+            )
+    finally:
+        if client.collection_exists(collection_name):
+            client.delete_collection(collection_name)
 
 
 @pytest.mark.integration
