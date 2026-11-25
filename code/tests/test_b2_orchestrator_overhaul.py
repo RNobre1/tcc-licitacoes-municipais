@@ -346,6 +346,52 @@ def test_measurement_refuses_without_finalist_or_when_finalist_is_bm25():
         orch.run_benchmark(items=items, corpus=corpus, split_name="measurement", candidate_methods=[model], baseline_method=bm25, finalist="bm25")
 
 
+def test_measurement_validates_pinned_finalist_before_running_methods():
+    class RankSpy:
+        def __init__(self, name):
+            self.name = name
+            self.called = False
+
+        def rank(self, query, candidates):
+            self.called = True
+            return []
+
+    candidate = RankSpy("semantic")
+    baseline = RankSpy("bm25")
+    items = [
+        {
+            "item_id": "measurement_item",
+            "description": "Papel sulfite",
+            "ground_truth": {1},
+            "chosen_prices": [Decimal("10")],
+            "unit": "UNIDADE",
+            "survey_date": date(2026, 6, 1),
+        }
+    ]
+    corpus = [
+        {
+            "id": 1,
+            "description": "Papel sulfite",
+            "price": Decimal("10"),
+            "unit": "UNIDADE",
+            "published_on": date(2026, 5, 1),
+            "modality": 6,
+        }
+    ]
+
+    with pytest.raises(ValueError, match="Finalist must be provided for measurement"):
+        BenchmarkOrchestrator().run_benchmark(
+            items=items,
+            corpus=corpus,
+            split_name="measurement",
+            candidate_methods=[candidate],
+            baseline_method=baseline,
+        )
+
+    assert not candidate.called
+    assert not baseline.called
+
+
 def test_c_q_applied_per_item():
     # B2c: filter_candidate_corpus applied per item based on survey_date.
     items = [
@@ -371,7 +417,7 @@ def test_c_q_applied_per_item():
         PublicItemSim(id=1, description="Papel A4 dentro da janela", price=Decimal("10.0"), published_on=date(2026, 1, 15), modality=6),
         PublicItemSim(id=2, description="Papel A4 publicado depois da pesquisa", price=Decimal("10.0"), published_on=date(2026, 6, 2), modality=6),
         PublicItemSim(id=3, description="Papel A4 modalidade invalida", price=Decimal("10.0"), published_on=date(2026, 1, 15), modality=99),
-        PublicItemSim(id=4, description="Papel A4 antes da janela", price=Decimal("10.0"), published_on=date(2025, 5, 30), modality=6),
+        PublicItemSim(id=4, description="Papel A4 antes das duas janelas", price=Decimal("10.0"), published_on=date(2025, 1, 30), modality=6),
         PublicItemSim(id=5, description="Papel A4 após a pesquisa de it2", price=Decimal("10.0"), published_on=date(2026, 3, 1), modality=7, state="AM"),
         PublicItemSim(id=6, description="Papel A4 modalidade 8", price=Decimal("10.0"), published_on=date(2026, 1, 15), modality=8, state="SP"),
     ]
