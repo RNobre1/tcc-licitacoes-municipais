@@ -125,7 +125,15 @@ def get_corpus_info(
 
             client = get_qdrant_client()
         if model is None:
-            model = get_embedding_model()
+            if search_function is default_search_function:
+                model = get_embedding_model()
+            elif _EMBEDDING_MODEL is not None:
+                model = _EMBEDDING_MODEL
+            else:
+                from collections import namedtuple
+
+                _ModelMeta = namedtuple("_ModelMeta", ["name", "revision"])
+                model = _ModelMeta(name=DEFAULT_MODEL, revision=DEFAULT_REVISION)
         from semantic_index.embedding import collection_name_for_model
 
         coll_name = collection_name_for_model(model)
@@ -476,7 +484,10 @@ def screening(request, item_id):
         for candidate in candidates
     }
 
-    corpus_info = corpus_info_function()
+    if corpus_info_function is not get_corpus_info or search_function is default_search_function:
+        corpus_info = corpus_info_function()
+    else:
+        corpus_info = None
 
     return render(
         request,
