@@ -430,16 +430,27 @@ def filter_candidate_corpus(
     return filtered
 
 
-def select_finalist(method_tuning_metrics: dict[str, dict[str, float]]) -> str:
-    """Select the finalist method based on highest Recall@10, ties broken by MRR@20."""
+def select_finalist(
+    method_tuning_metrics: dict[str, dict[str, float]],
+    baseline_name: str = "bm25",
+) -> str:
+    """Select the finalist method based on highest Recall@10, ties broken by MRR@20.
+
+    BM25 is the baseline and cannot be chosen as a finalist candidate.
+    """
     if not method_tuning_metrics:
         raise ValueError("Cannot select finalist from empty metrics")
-    sorted_methods = sorted(method_tuning_metrics.keys())
+    eligible = {k: v for k, v in method_tuning_metrics.items() if k != baseline_name}
+    if not eligible:
+        raise ValueError(
+            f"No eligible candidate methods to select finalist ({baseline_name} is baseline)"
+        )
+    sorted_methods = sorted(eligible.keys())
     return max(
         sorted_methods,
         key=lambda m: (
-            method_tuning_metrics[m].get("recall_at_10", 0.0),
-            method_tuning_metrics[m].get("mrr_at_20", 0.0),
+            eligible[m].get("recall_at_10", 0.0),
+            eligible[m].get("mrr_at_20", 0.0),
         ),
     )
 
