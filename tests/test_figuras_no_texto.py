@@ -127,6 +127,8 @@ def verificar_figuras(
 def test_ha_arquivos_de_secoes():
     """Contraprova: se a varredura estiver vazia, o teste passaria no vácuo."""
     assert ARQUIVOS, "nenhum arquivo .tex encontrado em secoes ou capitulos — a varredura é vazia"
+    assert any(a.parent.name == "secoes" for a in ARQUIVOS), "a varredura não alcança secoes/"
+    assert any(a.parent.name == "capitulos" for a in ARQUIVOS), "a varredura não alcança capitulos/"
 
 
 def test_guarda_acusa_cada_violacao_em_tex_sintetico(tmp_path: Path):
@@ -182,13 +184,14 @@ Texto corrido comentando a figura para fechar com explicação substantiva e ade
 
 \subsubsection{Subsubseção com tabela ou comentário}
 \ref{fig:com-comentario} e \ref{fig:com-tabela} e \ref{fig:no-fim-do-arquivo}
+e \ref{fig:so-macros} e \ref{fig:antes-de-subsubsecao}
 
 \begin{figure}[H]
   \centering
   \caption{Figura seguida apenas por comentário}
   \label{fig:com-comentario}
 \end{figure}
-% Apenas comentário após a figura, sem texto corrido.
+% Comentário com palavras de sobra para passar do limiar de oito, mas que não é prosa.
 
 \begin{figure}[H]
   \centering
@@ -197,8 +200,25 @@ Texto corrido comentando a figura para fechar com explicação substantiva e ade
 \end{figure}
 
 \begin{table}[H]
-  \caption{Tabela logo após figura}
+  \caption{Tabela logo após a figura, com legenda de muitas palavras para passar do limiar de prosa}
 \end{table}
+
+\begin{figure}[H]
+  \centering
+  \caption{Figura seguida só de macros de layout}
+  \label{fig:so-macros}
+\end{figure}
+\noindent\hfill\clearpage\newpage\par\medskip\smallskip\bigskip\raggedright\centering\vspace{1em}\input{secoes/parte-um-da-segunda-etapa-do-capitulo}
+
+\begin{figure}[H]
+  \centering
+  \caption{Figura antes de uma subsubseção}
+  \label{fig:antes-de-subsubsecao}
+\end{figure}
+
+\subsubsection{Subsubseção seguinte}
+Texto corrido logo depois do cabeçalho, com palavras de sobra para passar do limiar,
+mas que já pertence a outra subsubseção e não comenta a figura anterior.
 
 \section{Última Seção}
 
@@ -241,6 +261,16 @@ Texto corrido comentando a figura para fechar com explicação substantiva e ade
 
     # 6. Figura seguida apenas por tabela
     assert any("fig:com-tabela" in v for v in violacoes)
+
+    # 6b. Figura seguida só de macros de layout, cujos nomes e argumentos não são prosa
+    assert any("fig:so-macros" in v for v in violacoes)
+
+    # 6c. Figura antes de uma subsubseção: a prosa depois do cabeçalho não conta
+    assert any(
+        "figura 'fig:antes-de-subsubsecao' é o último elemento da sua seção antes de "
+        "'\\subsubsection{Subsubseção seguinte}'" in v
+        for v in violacoes
+    )
 
     # 7. Figura no fim do arquivo
     assert any(
