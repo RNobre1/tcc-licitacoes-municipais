@@ -1,6 +1,5 @@
 """Semantic index client, collection management, and embedding models for Qdrant."""
 
-import contextlib
 import os
 from typing import Any
 
@@ -79,12 +78,11 @@ def _ensure_payload_indexes(client: Any, collection_name: str) -> None:
     if not hasattr(client, "create_payload_index"):
         return
     for field_name, field_schema in PAYLOAD_INDEX_FIELDS:
-        with contextlib.suppress(Exception):
-            client.create_payload_index(
-                collection_name=collection_name,
-                field_name=field_name,
-                field_schema=field_schema,
-            )
+        client.create_payload_index(
+            collection_name=collection_name,
+            field_name=field_name,
+            field_schema=field_schema,
+        )
 
 
 def create_collection(
