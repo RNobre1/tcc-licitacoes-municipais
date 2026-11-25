@@ -174,9 +174,11 @@ def fetch_awarded_price_on_demand(
             )
 
         if record and isinstance(record.payload, list) and record.payload:
-            first_res = record.payload[0]
-            if isinstance(first_res, dict):
-                val = first_res.get("valorUnitarioHomologado")
+            from ingestion.results import select_valid_result
+
+            valid_res = select_valid_result(record.payload)
+            if valid_res and isinstance(valid_res, dict):
+                val = valid_res.get("valorUnitarioHomologado")
                 if val is not None:
                     public_item.awarded_unit_price = Decimal(str(val))
                     if hasattr(public_item, "save"):
