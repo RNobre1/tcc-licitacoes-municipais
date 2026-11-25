@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 
+from ingestion.units import normalize_unit
 from pricing.demo_data import (
     _PRICE_CANDIDATES,
     PriceCandidate,
@@ -132,7 +133,7 @@ def test_candidate_text_fields_are_filled_in():
     assert len(all_candidates) > 0
     for c in all_candidates:
         assert c.description.strip()
-        assert c.unit.strip()
+        assert normalize_unit(c.unit)
         assert c.agency.strip()
         assert c.source.strip()
         assert c.provenance.strip()
@@ -174,7 +175,7 @@ def test_hard_case_incompatible_unit_is_present():
     for c in _all_candidates():
         it = item[c.item_id]
         if (
-            c.unit != it.unit
+            normalize_unit(c.unit) != normalize_unit(it.unit)
             and not _is_service(c.description)
             and len(_tokens(c.description) & _tokens(it.description)) >= 3
         ):
@@ -198,7 +199,8 @@ def test_hard_case_outlier_price_among_comparable_candidates():
         comparable = [
             c
             for c in candidates_for(item.id)
-            if c.unit == item.unit and not _is_service(c.description)
+            if normalize_unit(c.unit) == normalize_unit(item.unit)
+            and not _is_service(c.description)
         ]
         for c in comparable:
             others = [o.price for o in comparable if o is not c]
