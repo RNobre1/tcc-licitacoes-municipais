@@ -45,7 +45,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--pattern",
             type=str,
-            default="105588_Cotacao_*.pdf",
+            required=True,
             help="Filename glob pattern for PDF reports to parse.",
         )
 

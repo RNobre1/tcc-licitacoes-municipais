@@ -27,18 +27,6 @@ class ResolvedGroundTruthItem:
     secret_budget: bool | None = None
     failure_cause: str | None = None
 
-    @property
-    def ano(self) -> int:
-        return self.year
-
-    @property
-    def sequencial(self) -> int:
-        return self.purchase_sequence
-
-    @property
-    def numero_item(self) -> int:
-        return self.item_number
-
 
 def resolve_purchase_items(
     cnpj: str,

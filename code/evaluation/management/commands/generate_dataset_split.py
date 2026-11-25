@@ -36,6 +36,11 @@ class Command(BaseCommand):
             default=42,
             help="Random seed for reproducible stratification (default: 42).",
         )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Force overwrite if split file already exists.",
+        )
 
     def handle(self, *args, **options):
         eval_dir = Path(options["eval_dir"])
@@ -84,6 +89,12 @@ class Command(BaseCommand):
         }
 
         out_file = eval_dir / "dataset_split.json"
+        if out_file.exists() and not options.get("force"):
+            from django.core.management.base import CommandError
+
+            raise CommandError(
+                f"Split file already exists at {out_file}. Use --force to overwrite."
+            )
         out_file.write_text(json.dumps(out_data, indent=2), encoding="utf-8")
 
         self.stdout.write(

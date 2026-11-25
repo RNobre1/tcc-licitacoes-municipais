@@ -241,6 +241,7 @@ def test_parser_fails_on_item_header_count_mismatch_or_duplicates():
 def test_parser_handles_method_with_r():
     # Header where method has 'R' like "Menor Preço"
     sample = """
+  Pesquisa realizada entre 01/06/2026 10:00:00 e 15/06/2026 18:00:00
   Item 1: DEMO-ITEM
 
       Preço Estimado: R$ 10,00 (un)
@@ -264,6 +265,7 @@ Fonte: https://pncp.gov.br/app/editais/11111111000111/2026/100
 
 def test_parser_handles_columns_with_single_space():
     sample = """
+  Pesquisa realizada entre 01/06/2026 10:00:00 e 15/06/2026 18:00:00
   Item 1: DEMO-ITEM
 
       Preço Estimado: R$ 10,00 (un)
@@ -287,6 +289,7 @@ Fonte: https://pncp.gov.br/app/editais/11111111000111/2026/100
 def test_parser_unit_multi_word_regression_n4():
     # Unit with multiple words and stuck description
     sample = """
+  Pesquisa realizada entre 01/06/2026 10:00:00 e 15/06/2026 18:00:00
   Item 1: DEMO-ITEM
 
       Preço Estimado: R$ 10,00 (un)

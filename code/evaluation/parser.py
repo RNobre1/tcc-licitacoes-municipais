@@ -245,8 +245,10 @@ def parse_quotation_report_text(text: str, report_id: str = "") -> QuotationRepo
     title = m_title.group(1).strip() if m_title else ""
 
     m_survey = re.search(r"Pesquisa realizada entre\s*([0-9/ :]+)\s*e\s*([0-9/ :]+)", norm_text)
-    survey_start = m_survey.group(1).strip() if m_survey else None
-    survey_end = m_survey.group(2).strip() if m_survey else None
+    if not m_survey:
+        raise ParseError("Quotation report is missing 'Pesquisa realizada entre' section")
+    survey_start = m_survey.group(1).strip()
+    survey_end = m_survey.group(2).strip()
 
     m_gen = re.search(r"Relatório gerado no dia\s*([0-9/ :]+)", norm_text)
     generated_at = m_gen.group(1).strip() if m_gen else None
@@ -310,8 +312,14 @@ def parse_quotation_report_text(text: str, report_id: str = "") -> QuotationRepo
 
         first_line = raw_lines[0]
         parts = re.split(r"\s{2,}", first_line, maxsplit=1)
+        if len(parts) < 2:
+            msg = (
+                f"Item {item_num} missing unit or quantity or "
+                f"not separated by column boundary: '{first_line}'"
+            )
+            raise ParseError(msg)
         first_col = parts[0].strip()
-        desc_first = parts[1].strip() if len(parts) > 1 else ""
+        desc_first = parts[1].strip()
         qm = re.match(r"^([0-9.,]+)\s+(.+)$", first_col)
         if not qm:
             raise ParseError(f"Item {item_num} missing unit or quantity in: '{first_col}'")

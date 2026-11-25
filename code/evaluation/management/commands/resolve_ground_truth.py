@@ -40,7 +40,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--pattern",
             type=str,
-            default="105588_Cotacao_*.json",
+            required=True,
             help="Filename glob pattern for report JSON files.",
         )
         parser.add_argument(
