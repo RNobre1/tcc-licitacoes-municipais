@@ -2,6 +2,7 @@
 
 import json
 import os
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -11,10 +12,15 @@ from django.core.management.base import BaseCommand, CommandError
 
 from evaluation.benchmark import (
     BenchmarkOrchestrator,
+    BM25SearchMethod,
+    FakeDeterministicEmbeddingModel,
+    PublicItemSim,
+    SemanticSearchMethod,
     check_thresholds_note_guard,
     create_dataset_split,
     verify_split_hash,
 )
+from evaluation.parser import parse_date_br
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -51,6 +57,12 @@ class Command(BaseCommand):
             help="Evaluation directory containing JSON files.",
         )
         parser.add_argument(
+            "--finalist",
+            type=str,
+            default=None,
+            help="Pinned finalist method name from tuning run (required for measurement).",
+        )
+        parser.add_argument(
             "--output",
             type=str,
             default=None,
@@ -61,13 +73,34 @@ class Command(BaseCommand):
             action="store_true",
             help="Run benchmark over synthetic demo data.",
         )
+        parser.add_argument(
+            "--allow-real-data",
+            "--go-real",
+            dest="allow_real_data",
+            action="store_true",
+            help="Explicitly permit real benchmark execution.",
+        )
+        parser.add_argument(
+            "-n",
+            "--top-n",
+            dest="top_n",
+            type=int,
+            default=20,
+            help=(
+                "Depth of screening page: number of top candidates per method to "
+                "reorder with anchor (default: 20)."
+            ),
+        )
 
     def handle(self, *args, **options):
         split_name = options["split"]
         eval_dir = Path(options["eval_dir"])
         thresholds_note = options["thresholds_note"]
         output_path = options.get("output")
+        finalist = options.get("finalist")
         synthetic = options["synthetic"]
+        allow_real_data = options.get("allow_real_data", False)
+        top_n = options.get("top_n", 20)
 
         # Enforce code guard for measurement split
         if split_name == "measurement":
@@ -75,6 +108,8 @@ class Command(BaseCommand):
                 raise CommandError(
                     "Thresholds note must be provided via --thresholds-note for measurement split"
                 )
+            if not finalist:
+                raise CommandError("Finalist must be provided via --finalist for measurement split")
             try:
                 check_thresholds_note_guard(Path(thresholds_note))
             except ValueError as exc:
@@ -82,44 +117,68 @@ class Command(BaseCommand):
             self.stdout.write(f"Guard passed: verified thresholds note at {thresholds_note}")
 
         if synthetic:
-            self._handle_synthetic(split_name, output_path)
+            self._handle_synthetic(split_name, output_path, finalist, top_n=top_n)
         else:
-            self._handle_real(split_name, eval_dir, output_path, thresholds_note)
+            self._handle_real(
+                split_name,
+                eval_dir,
+                output_path,
+                thresholds_note,
+                finalist,
+                allow_real_data=allow_real_data,
+                top_n=top_n,
+            )
 
-    def _handle_synthetic(self, split_name: str, output_path: str | None):
+    def _handle_synthetic(
+        self,
+        split_name: str,
+        output_path: str | None,
+        finalist: str | None,
+        top_n: int = 20,
+    ):
         self.stdout.write(f"Running benchmark on synthetic data ({split_name} split)...")
 
         synthetic_corpus = [
-            {
-                "id": 1,
-                "description": "Papel Sulfite A4 75g",
-                "price": Decimal("25.0"),
-                "unit": "UNIDADE",
-            },
-            {
-                "id": 2,
-                "description": "Caneta Esferográfica Azul 1.0mm",
-                "price": Decimal("1.5"),
-                "unit": "UNIDADE",
-            },
-            {
-                "id": 3,
-                "description": "Papel A4 Reciclado 500 folhas",
-                "price": Decimal("22.0"),
-                "unit": "UNIDADE",
-            },
-            {
-                "id": 4,
-                "description": "Lápis Preto Grafite HB",
-                "price": Decimal("0.8"),
-                "unit": "UNIDADE",
-            },
-            {
-                "id": 5,
-                "description": "Borracha Branca Escolar",
-                "price": Decimal("1.0"),
-                "unit": "UNIDADE",
-            },
+            PublicItemSim(
+                id=1,
+                description="Papel Sulfite A4 75g",
+                price=Decimal("25.0"),
+                unit="UNIDADE",
+                published_on=date(2026, 5, 1),
+                modality=6,
+            ),
+            PublicItemSim(
+                id=2,
+                description="Caneta Esferográfica Azul 1.0mm",
+                price=Decimal("1.5"),
+                unit="UNIDADE",
+                published_on=date(2026, 5, 1),
+                modality=6,
+            ),
+            PublicItemSim(
+                id=3,
+                description="Papel A4 Reciclado 500 folhas",
+                price=Decimal("22.0"),
+                unit="UNIDADE",
+                published_on=date(2026, 5, 1),
+                modality=6,
+            ),
+            PublicItemSim(
+                id=4,
+                description="Lápis Preto Grafite HB",
+                price=Decimal("0.8"),
+                unit="UNIDADE",
+                published_on=date(2026, 5, 1),
+                modality=6,
+            ),
+            PublicItemSim(
+                id=5,
+                description="Borracha Branca Escolar",
+                price=Decimal("1.0"),
+                unit="UNIDADE",
+                published_on=date(2026, 5, 1),
+                modality=6,
+            ),
         ]
 
         synthetic_items = [
@@ -131,6 +190,7 @@ class Command(BaseCommand):
                 "ground_truth": {1, 3},
                 "chosen_prices": [Decimal("25.0")],
                 "unit": "UNIDADE",
+                "survey_date": date(2026, 6, 1),
             },
             {
                 "item_id": "syn_2",
@@ -140,6 +200,7 @@ class Command(BaseCommand):
                 "ground_truth": {2},
                 "chosen_prices": [Decimal("1.5")],
                 "unit": "UNIDADE",
+                "survey_date": date(2026, 6, 1),
             },
         ]
 
@@ -148,13 +209,22 @@ class Command(BaseCommand):
             set(split.tuning_items) if split_name == "tuning" else set(split.measurement_items)
         )
 
-        orch = BenchmarkOrchestrator(n_noise_draws=200, n_bootstrap_resamples=10000, seed=42)
+        bm25 = BM25SearchMethod(name="bm25")
+        semantic = SemanticSearchMethod(model=FakeDeterministicEmbeddingModel(), name="semantic")
+
+        orch = BenchmarkOrchestrator(
+            n_noise_draws=200, n_bootstrap_resamples=10000, seed=42, top_n=top_n
+        )
         results = orch.run_benchmark(
             items=synthetic_items,
             corpus=synthetic_corpus,
             split_name=split_name,
             active_item_ids=active_ids,
+            finalist=finalist,
+            candidate_methods=[semantic],
+            baseline_method=bm25,
             synthetic=True,
+            top_n=top_n,
         )
         results["split_hash"] = split.sha256_hash
 
@@ -172,32 +242,201 @@ class Command(BaseCommand):
         eval_dir: Path,
         output_path: str | None,
         thresholds_note: str | None,
+        finalist: str | None,
+        allow_real_data: bool,
+        top_n: int = 20,
     ):
-        eval_dir.mkdir(parents=True, exist_ok=True)
+        if not allow_real_data:
+            raise CommandError(
+                "Real benchmark execution requires explicit --allow-real-data approval."
+            )
+        if split_name not in ("tuning", "measurement"):
+            raise CommandError("Real benchmark supports only tuning or measurement split.")
+
         split_file = eval_dir / "dataset_split.json"
         if not split_file.exists():
-            raise CommandError(
-                f"Split file {split_file} does not exist. "
-                "Split must be generated via generate_dataset_split before running benchmark."
-            )
+            raise CommandError("The frozen dataset split file is missing.")
 
-        split_data = json.loads(split_file.read_text(encoding="utf-8"))
-        if not verify_split_hash(
-            split_data["tuning_items"],
-            split_data["measurement_items"],
-            split_data["sha256_hash"],
-        ):
+        try:
+            split_data = json.loads(split_file.read_text(encoding="utf-8"))
+            tuning_items = split_data["tuning_items"]
+            measurement_items = split_data["measurement_items"]
+            split_hash = split_data["sha256_hash"]
+        except (KeyError, TypeError, json.JSONDecodeError) as exc:
+            raise CommandError("The frozen dataset split file is invalid.") from exc
+
+        if not verify_split_hash(tuning_items, measurement_items, split_hash):
             raise CommandError("Dataset split file failed SHA-256 verification!")
 
-        if split_name == "measurement" and thresholds_note:
-            try:
-                check_thresholds_note_guard(
-                    Path(thresholds_note), split_hash=split_data["sha256_hash"]
-                )
-            except ValueError as exc:
-                raise CommandError(str(exc)) from exc
+        default_thresholds_note = (
+            Path(settings.BASE_DIR).parent
+            / "TCC"
+            / "decisões"
+            / "2026-11-24-limiares-de-aceitacao-r1-r2.md"
+        )
+        note_path = Path(thresholds_note) if thresholds_note else default_thresholds_note
+        try:
+            check_thresholds_note_guard(note_path, split_hash=split_hash)
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
 
+        ground_truth_path = eval_dir / "ground_truth_resolved.json"
+        if not ground_truth_path.is_file():
+            raise CommandError("The resolved ground-truth file is missing.")
+        try:
+            ground_truth_data = json.loads(ground_truth_path.read_text(encoding="utf-8"))
+            resolved_items = ground_truth_data["resolved_items"]
+        except (KeyError, TypeError, json.JSONDecodeError) as exc:
+            raise CommandError("The resolved ground-truth file is invalid.") from exc
+
+        target_items = tuning_items if split_name == "tuning" else measurement_items
+        active_item_ids = {str(item_id) for item_id in target_items}
+        if not active_item_ids:
+            raise CommandError(f"The frozen {split_name} split contains no items.")
+
+        parsed_items: dict[str, tuple[dict[str, Any], date]] = {}
+        report_files = sorted(
+            path
+            for path in eval_dir.glob("*.json")
+            if path.name not in {"dataset_split.json", "ground_truth_resolved.json"}
+            and not path.name.startswith("benchmark_")
+        )
+        for report_file in report_files:
+            try:
+                report_data = json.loads(report_file.read_text(encoding="utf-8"))
+                report_id = str(report_data.get("report_id") or report_file.stem)
+                survey_date = parse_date_br(report_data["survey_end"])
+                report_items = report_data["items"]
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise CommandError(
+                    "A parsed quotation report is invalid or has no survey date."
+                ) from exc
+
+            for report_item in report_items:
+                try:
+                    item_number = int(report_item["item_number"])
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise CommandError(
+                        "A parsed quotation report contains an invalid item number."
+                    ) from exc
+                item_id = f"{report_id}_{item_number}"
+                if item_id in active_item_ids:
+                    parsed_items[item_id] = (report_item, survey_date)
+
+        missing_parsed_items = active_item_ids.difference(parsed_items)
+        if missing_parsed_items:
+            raise CommandError(
+                f"{len(missing_parsed_items)} tuning item(s) are missing from parsed reports."
+            )
+
+        ground_truth_keys_by_item: dict[str, set[tuple[str, int, int, int]]] = {}
+        for reference, resolved_item in resolved_items.items():
+            if not resolved_item.get("found"):
+                continue
+            report_id, separator, suffix = reference.rpartition("_it")
+            if not separator or "_p" not in suffix:
+                raise CommandError("The resolved ground-truth file has a malformed item reference.")
+            item_number_text = suffix.split("_p", 1)[0]
+            try:
+                item_number = int(item_number_text)
+                pncp_key = (
+                    str(resolved_item["cnpj"]),
+                    int(resolved_item["year"]),
+                    int(resolved_item["purchase_sequence"]),
+                    int(resolved_item["item_number"]),
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise CommandError(
+                    "The resolved ground-truth file has an invalid PNCP key."
+                ) from exc
+            item_id = f"{report_id}_{item_number}"
+            if item_id in active_item_ids:
+                ground_truth_keys_by_item.setdefault(item_id, set()).add(pncp_key)
+
+        missing_ground_truth = active_item_ids.difference(ground_truth_keys_by_item)
+        if missing_ground_truth:
+            raise CommandError(
+                f"{len(missing_ground_truth)} tuning item(s) have no resolved relevant records."
+            )
+
+        from django.db.models import Q
+
+        from ingestion.models import PublicItem
+
+        all_ground_truth_keys = set().union(*ground_truth_keys_by_item.values())
+        key_query = Q(pk__in=[])
+        for cnpj, year, purchase_sequence, item_number in all_ground_truth_keys:
+            key_query |= Q(
+                cnpj=cnpj,
+                year=year,
+                purchase_sequence=purchase_sequence,
+                item_number=item_number,
+            )
+        public_items_by_key = {
+            (item.cnpj, item.year, item.purchase_sequence, item.item_number): item.pk
+            for item in PublicItem.objects.filter(key_query).only(
+                "pk", "cnpj", "year", "purchase_sequence", "item_number"
+            )
+        }
+        missing_public_items = {
+            key
+            for keys in ground_truth_keys_by_item.values()
+            for key in keys
+            if key not in public_items_by_key
+        }
+        if missing_public_items:
+            raise CommandError(
+                f"{len(missing_public_items)} resolved relevant record(s) are absent "
+                "from PublicItem."
+            )
+
+        benchmark_items = []
+        for item_id in sorted(active_item_ids):
+            report_item, survey_date = parsed_items[item_id]
+            ground_truth_ids = {
+                public_items_by_key[key] for key in ground_truth_keys_by_item[item_id]
+            }
+            chosen_prices = [
+                Decimal(str(price["unit_price"])) for price in report_item.get("chosen_prices", [])
+            ]
+            if not chosen_prices:
+                raise CommandError("A tuning item has no chosen price for the R2 anchor.")
+            benchmark_items.append(
+                {
+                    "item_id": item_id,
+                    "description": str(report_item.get("description", "")),
+                    "unit": str(report_item.get("unit", "UNIDADE")),
+                    "survey_date": survey_date,
+                    "chosen_prices": chosen_prices,
+                    "ground_truth": ground_truth_ids,
+                }
+            )
+
+        from pricing.views import get_embedding_model
+
+        semantic_method = SemanticSearchMethod(model=get_embedding_model(), name="semantic")
+        orchestrator = BenchmarkOrchestrator(
+            n_noise_draws=200, n_bootstrap_resamples=10000, seed=42, top_n=top_n
+        )
+        results = orchestrator.run_benchmark(
+            items=benchmark_items,
+            corpus=PublicItem.objects.all(),
+            split_name=split_name,
+            active_item_ids=active_item_ids,
+            finalist=finalist,
+            candidate_methods=[semantic_method],
+            baseline_method=BM25SearchMethod(name="bm25"),
+            synthetic=False,
+            top_n=top_n,
+        )
+        results["split_hash"] = split_hash
+
+        out_file = (
+            Path(output_path) if output_path else eval_dir / f"benchmark_{split_name}_results.json"
+        )
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+        out_file.write_text(json.dumps(results, indent=2, cls=DecimalEncoder), encoding="utf-8")
         self.stdout.write(
-            f"Dataset split verified (SHA-256: {split_data['sha256_hash'][:16]}...). "
-            "Corpus benchmark awaits E5 indexing completion."
+            f"Real tuning benchmark completed for {results['items_count']} items; "
+            f"split SHA-256: {split_hash}. Results written to {out_file.name}."
         )
