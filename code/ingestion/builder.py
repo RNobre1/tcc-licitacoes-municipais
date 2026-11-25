@@ -37,9 +37,6 @@ class BuildResult(int):
         return obj
 
 
-_deduplicate_raw_records = latest_copies
-
-
 def build_public_items() -> BuildResult:
     """Build or update PublicItem records from latest RawRecords idempotently."""
     # 1. Deduplicate publication records and index by (cnpj, ano, seq)
