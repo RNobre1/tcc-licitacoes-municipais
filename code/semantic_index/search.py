@@ -69,9 +69,6 @@ def semantic_search(
     else:
         raise ValueError(f"Invalid structured_filter: {structured_filter}")
 
-    if modality is not None:
-        raise NotImplementedError("Modality filtering is not yet implemented")
-
     # 2. Mandatory date window validation (RN07)
     if (
         not date_window
@@ -120,6 +117,14 @@ def semantic_search(
             models.FieldCondition(
                 key="item_kind",
                 match=models.MatchValue(value=str(item_kind)),
+            )
+        )
+
+    if modality:
+        must_conditions.append(
+            models.FieldCondition(
+                key="modality",
+                match=models.MatchAny(any=modality),
             )
         )
 

@@ -55,6 +55,7 @@ def index_public_items(
                 "state": getattr(it, "state", ""),
                 "published_on": pub_date_str,
                 "item_kind": getattr(it, "item_kind", ""),
+                "modality": int(getattr(it, "modality", 0) or 0),
             }
             points.append(
                 models.PointStruct(

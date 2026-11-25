@@ -18,6 +18,7 @@ from semantic_index.search import ScoredPublicItem, StructuredFilter, semantic_s
 __all__ = [
     "CollectionConfigurationMismatchError",
     "EmbeddingModel",
+    "PAYLOAD_INDEX_FIELDS",
     "ScoredPublicItem",
     "SentenceTransformerEmbeddingModel",
     "StructuredFilter",
@@ -34,6 +35,7 @@ PAYLOAD_INDEX_FIELDS = [
     ("state", models.PayloadSchemaType.KEYWORD),
     ("unit", models.PayloadSchemaType.KEYWORD),
     ("item_kind", models.PayloadSchemaType.KEYWORD),
+    ("modality", models.PayloadSchemaType.INTEGER),
 ]
 
 
