@@ -13,8 +13,8 @@ import pytest
 
 import evaluation.benchmark as benchmark_module
 from evaluation.benchmark import (
-    BM25SearchMethod,
     BenchmarkOrchestrator,
+    BM25SearchMethod,
     bootstrap_paired_difference,
     select_finalist,
 )
@@ -103,9 +103,7 @@ def test_orchestrator_finalist_uses_recall_before_mrr():
             ranked.extend(distractors[relevant_rank - 1 :])
             return [(candidate, 1.0 if candidate is relevant else 0.0) for candidate in ranked]
 
-    high_recall = RankingMethod(
-        "high_recall", lambda item_index: 10 if item_index < 8 else 11
-    )
+    high_recall = RankingMethod("high_recall", lambda item_index: 10 if item_index < 8 else 11)
     high_mrr = RankingMethod("high_mrr", lambda item_index: 1 if item_index < 7 else 11)
 
     items = [

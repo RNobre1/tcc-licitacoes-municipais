@@ -30,8 +30,22 @@ def test_sentinel_method_cannot_reach_ground_truth():
     # An oracle method would put doc 999 at rank 1.
     # Real methods (BM25, Semantic) MUST put doc 1 at rank 1.
     corpus = [
-        {"id": 1, "description": "Papel Sulfite A4 75g", "price": Decimal("25.0"), "unit": "UNIDADE", "published_on": date(2026, 5, 1), "modality": 6},
-        {"id": 999, "description": "Caneta Azul 1.0mm", "price": Decimal("1.5"), "unit": "UNIDADE", "published_on": date(2026, 5, 1), "modality": 6},
+        {
+            "id": 1,
+            "description": "Papel Sulfite A4 75g",
+            "price": Decimal("25.0"),
+            "unit": "UNIDADE",
+            "published_on": date(2026, 5, 1),
+            "modality": 6,
+        },
+        {
+            "id": 999,
+            "description": "Caneta Azul 1.0mm",
+            "price": Decimal("1.5"),
+            "unit": "UNIDADE",
+            "published_on": date(2026, 5, 1),
+            "modality": 6,
+        },
     ]
 
     item = {
@@ -172,9 +186,7 @@ def test_semantic_method_uses_embedding_search_and_filters_modality_in_database(
 
     monkeypatch.setattr("semantic_index.search.semantic_search", fake_semantic_search)
 
-    ranked = SemanticSearchMethod(model=model).rank(
-        "Papel sulfite", [allowed, disallowed]
-    )
+    ranked = SemanticSearchMethod(model=model).rank("Papel sulfite", [allowed, disallowed])
 
     assert ranked == [(allowed, 0.80)]
     assert len(calls) == 1
@@ -191,8 +203,25 @@ def test_orchestrator_refuses_without_candidate_methods():
     orch = BenchmarkOrchestrator(seed=42)
     with pytest.raises(ValueError, match="candidate search method"):
         orch.run_benchmark(
-            items=[{"item_id": "1", "description": "test", "ground_truth": {1}, "chosen_prices": [Decimal("10.0")], "survey_date": date(2026, 6, 1)}],
-            corpus=[{"id": 1, "description": "test", "price": Decimal("10.0"), "unit": "UNIDADE", "published_on": date(2026, 5, 1), "modality": 6}],
+            items=[
+                {
+                    "item_id": "1",
+                    "description": "test",
+                    "ground_truth": {1},
+                    "chosen_prices": [Decimal("10.0")],
+                    "survey_date": date(2026, 6, 1),
+                }
+            ],
+            corpus=[
+                {
+                    "id": 1,
+                    "description": "test",
+                    "price": Decimal("10.0"),
+                    "unit": "UNIDADE",
+                    "published_on": date(2026, 5, 1),
+                    "modality": 6,
+                }
+            ],
             split_name="tuning",
             candidate_methods=[],
         )
@@ -222,8 +251,22 @@ def test_finalist_pinned_across_tuning_and_measurement():
         }
     ]
     corpus = [
-        {"id": 1, "description": "Papel Sulfite A4 75g", "price": Decimal("25.0"), "unit": "UNIDADE", "published_on": date(2026, 5, 1), "modality": 6},
-        {"id": 2, "description": "Caneta Esferográfica Azul 1.0mm", "price": Decimal("1.5"), "unit": "UNIDADE", "published_on": date(2026, 5, 1), "modality": 6},
+        {
+            "id": 1,
+            "description": "Papel Sulfite A4 75g",
+            "price": Decimal("25.0"),
+            "unit": "UNIDADE",
+            "published_on": date(2026, 5, 1),
+            "modality": 6,
+        },
+        {
+            "id": 2,
+            "description": "Caneta Esferográfica Azul 1.0mm",
+            "price": Decimal("1.5"),
+            "unit": "UNIDADE",
+            "published_on": date(2026, 5, 1),
+            "modality": 6,
+        },
     ]
 
     class PhraseRanker:
@@ -233,7 +276,10 @@ def test_finalist_pinned_across_tuning_and_measurement():
 
         def rank(self, query, candidates):
             scored = [
-                (candidate, float(self.preferred_phrase.lower() in candidate["description"].lower()))
+                (
+                    candidate,
+                    float(self.preferred_phrase.lower() in candidate["description"].lower()),
+                )
                 for candidate in candidates
             ]
             return sorted(scored, key=lambda pair: (-pair[1], pair[0]["id"]))
@@ -334,16 +380,47 @@ def test_measurement_refuses_without_finalist_or_when_finalist_is_bm25():
     model = SemanticSearchMethod(model=FakeDeterministicEmbeddingModel(), name="model_sem")
     bm25 = BM25SearchMethod()
 
-    items = [{"item_id": "m1", "description": "test", "ground_truth": {1}, "chosen_prices": [Decimal("10.0")], "survey_date": date(2026, 6, 1)}]
-    corpus = [{"id": 1, "description": "test", "price": Decimal("10.0"), "unit": "UNIDADE", "published_on": date(2026, 5, 1), "modality": 6}]
+    items = [
+        {
+            "item_id": "m1",
+            "description": "test",
+            "ground_truth": {1},
+            "chosen_prices": [Decimal("10.0")],
+            "survey_date": date(2026, 6, 1),
+        }
+    ]
+    corpus = [
+        {
+            "id": 1,
+            "description": "test",
+            "price": Decimal("10.0"),
+            "unit": "UNIDADE",
+            "published_on": date(2026, 5, 1),
+            "modality": 6,
+        }
+    ]
 
     # Missing finalist on measurement
     with pytest.raises(ValueError, match="Finalist must be provided for measurement"):
-        orch.run_benchmark(items=items, corpus=corpus, split_name="measurement", candidate_methods=[model], baseline_method=bm25, finalist=None)
+        orch.run_benchmark(
+            items=items,
+            corpus=corpus,
+            split_name="measurement",
+            candidate_methods=[model],
+            baseline_method=bm25,
+            finalist=None,
+        )
 
     # Finalist cannot be bm25
     with pytest.raises(ValueError, match="Finalist cannot be the baseline method"):
-        orch.run_benchmark(items=items, corpus=corpus, split_name="measurement", candidate_methods=[model], baseline_method=bm25, finalist="bm25")
+        orch.run_benchmark(
+            items=items,
+            corpus=corpus,
+            split_name="measurement",
+            candidate_methods=[model],
+            baseline_method=bm25,
+            finalist="bm25",
+        )
 
 
 def test_measurement_validates_pinned_finalist_before_running_methods():
@@ -414,12 +491,50 @@ def test_c_q_applied_per_item():
     ]
 
     corpus = [
-        PublicItemSim(id=1, description="Papel A4 dentro da janela", price=Decimal("10.0"), published_on=date(2026, 1, 15), modality=6),
-        PublicItemSim(id=2, description="Papel A4 publicado depois da pesquisa", price=Decimal("10.0"), published_on=date(2026, 6, 2), modality=6),
-        PublicItemSim(id=3, description="Papel A4 modalidade invalida", price=Decimal("10.0"), published_on=date(2026, 1, 15), modality=99),
-        PublicItemSim(id=4, description="Papel A4 antes das duas janelas", price=Decimal("10.0"), published_on=date(2025, 1, 30), modality=6),
-        PublicItemSim(id=5, description="Papel A4 após a pesquisa de it2", price=Decimal("10.0"), published_on=date(2026, 3, 1), modality=7, state="AM"),
-        PublicItemSim(id=6, description="Papel A4 modalidade 8", price=Decimal("10.0"), published_on=date(2026, 1, 15), modality=8, state="SP"),
+        PublicItemSim(
+            id=1,
+            description="Papel A4 dentro da janela",
+            price=Decimal("10.0"),
+            published_on=date(2026, 1, 15),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=2,
+            description="Papel A4 publicado depois da pesquisa",
+            price=Decimal("10.0"),
+            published_on=date(2026, 6, 2),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=3,
+            description="Papel A4 modalidade invalida",
+            price=Decimal("10.0"),
+            published_on=date(2026, 1, 15),
+            modality=99,
+        ),
+        PublicItemSim(
+            id=4,
+            description="Papel A4 antes das duas janelas",
+            price=Decimal("10.0"),
+            published_on=date(2025, 1, 30),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=5,
+            description="Papel A4 após a pesquisa de it2",
+            price=Decimal("10.0"),
+            published_on=date(2026, 3, 1),
+            modality=7,
+            state="AM",
+        ),
+        PublicItemSim(
+            id=6,
+            description="Papel A4 modalidade 8",
+            price=Decimal("10.0"),
+            published_on=date(2026, 1, 15),
+            modality=8,
+            state="SP",
+        ),
     ]
 
     bm25 = BM25SearchMethod()
@@ -447,46 +562,46 @@ def test_c_q_applied_per_item():
     assert set(ranked_sem_it2) == {1, 6}
 
 
-def test_c_q_corpus_provider_is_called_per_item():
-    items = [
-        {
-            "item_id": "early",
-            "description": "Papel A4",
-            "ground_truth": {1},
-            "chosen_prices": [Decimal("10.0")],
-            "unit": "UNIDADE",
-            "survey_date": date(2026, 2, 1),
-        },
-        {
-            "item_id": "late",
-            "description": "Papel A4",
-            "ground_truth": {1},
-            "chosen_prices": [Decimal("10.0")],
-            "unit": "UNIDADE",
-            "survey_date": date(2026, 6, 1),
-        },
-    ]
-    all_candidates = [
-        PublicItemSim(
-            id=1,
-            description="Papel A4",
-            price=Decimal("10.0"),
-            published_on=date(2026, 1, 1),
-            modality=6,
-        ),
-        PublicItemSim(
-            id=2,
-            description="Papel A4",
-            price=Decimal("10.0"),
-            published_on=date(2026, 3, 1),
-            modality=7,
-        ),
-    ]
-    requested_dates = []
+@pytest.mark.django_db
+def test_queryset_candidate_corpus_is_filtered_per_item():
+    from ingestion.models import PublicItem
 
-    def corpus_provider(survey_date):
-        requested_dates.append(survey_date)
-        return all_candidates
+    early_candidate = PublicItem.objects.create(
+        cnpj="11111111000111",
+        year=2026,
+        purchase_sequence=100,
+        item_number=1,
+        description="Papel A4",
+        unit="UNIDADE",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("10"),
+        awarded_unit_price=None,
+        secret_budget=False,
+        published_on=date(2026, 1, 1),
+        agency_name="Prefeitura Fictícia",
+        agency_cnpj="11111111000111",
+        state="PA",
+        modality=6,
+        item_kind="product",
+    )
+    later_candidate = PublicItem.objects.create(
+        cnpj="22222222000122",
+        year=2026,
+        purchase_sequence=200,
+        item_number=1,
+        description="Papel A4",
+        unit="UNIDADE",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("10"),
+        awarded_unit_price=None,
+        secret_budget=False,
+        published_on=date(2026, 3, 1),
+        agency_name="Prefeitura Fictícia",
+        agency_cnpj="22222222000122",
+        state="AM",
+        modality=7,
+        item_kind="product",
+    )
 
     class CandidateMethod:
         name = "candidate"
@@ -494,14 +609,123 @@ def test_c_q_corpus_provider_is_called_per_item():
         def rank(self, query, candidates):
             return [(candidate, 1.0) for candidate in candidates]
 
+    items = [
+        {
+            "item_id": "early",
+            "description": "Papel A4",
+            "ground_truth": {early_candidate.pk},
+            "chosen_prices": [Decimal("10")],
+            "unit": "UNIDADE",
+            "survey_date": date(2026, 2, 1),
+        },
+        {
+            "item_id": "late",
+            "description": "Papel A4",
+            "ground_truth": {early_candidate.pk},
+            "chosen_prices": [Decimal("10")],
+            "unit": "UNIDADE",
+            "survey_date": date(2026, 6, 1),
+        },
+    ]
     results = BenchmarkOrchestrator(n_noise_draws=1, n_bootstrap_resamples=5).run_benchmark(
         items=items,
-        corpus=corpus_provider,
+        corpus=PublicItem.objects.all(),
         split_name="tuning",
         candidate_methods=[CandidateMethod()],
         baseline_method=BM25SearchMethod(),
     )
 
-    assert requested_dates == [date(2026, 2, 1), date(2026, 6, 1)]
-    assert results["ranked_ids_by_method"]["candidate"]["early"] == [1]
-    assert results["ranked_ids_by_method"]["candidate"]["late"] == [1, 2]
+    assert set(results["ranked_ids_by_method"]["candidate"]["early"]) == {early_candidate.pk}
+    assert set(results["ranked_ids_by_method"]["candidate"]["late"]) == {
+        early_candidate.pk,
+        later_candidate.pk,
+    }
+
+
+def test_top_n_screening_depth_and_price_only_ranks_whole_cq():
+    # B2c: Each method returns its top N from C(q). N is a parameter, default 20.
+    # RF23 reorders those N with the anchor.
+    # The price-only baseline ranks the whole C(q) by |ln(p/anchor)|.
+    # Record N in the output.
+    corpus = [
+        PublicItemSim(
+            id=1,
+            description="Papel sulfite 1",
+            price=Decimal("100.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=2,
+            description="Papel sulfite 2",
+            price=Decimal("90.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=3,
+            description="Papel sulfite 3",
+            price=Decimal("80.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=4,
+            description="Papel sulfite 4",
+            price=Decimal("70.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=99,
+            description="Caneta com preco identico a ancora",
+            price=Decimal("25.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+    ]
+
+    item = {
+        "item_id": "item_test",
+        "description": "Papel sulfite",
+        "ground_truth": {99},
+        "chosen_prices": [Decimal("25.0")],
+        "unit": "UNIDADE",
+        "survey_date": date(2026, 6, 1),
+    }
+
+    class ExplicitScoringMethod:
+        name = "explicit_method"
+
+        def rank(self, query, candidates):
+            # Assigns score 0.9, 0.8, 0.7, 0.6 to items 1..4, and 0.1 to item 99
+            scores = {1: 0.9, 2: 0.8, 3: 0.7, 4: 0.6, 99: 0.1}
+            return sorted(
+                [(c, scores.get(c.id, 0.0)) for c in candidates],
+                key=lambda x: x[1],
+                reverse=True,
+            )
+
+    orch = BenchmarkOrchestrator(n_noise_draws=1, n_bootstrap_resamples=5, seed=42)
+    results = orch.run_benchmark(
+        items=[item],
+        corpus=corpus,
+        split_name="tuning",
+        candidate_methods=[ExplicitScoringMethod()],
+        baseline_method=BM25SearchMethod(),
+        top_n=3,
+    )
+
+    # Top N=3 recorded in output
+    assert results["top_n"] == 3
+    assert results["constants"]["top_n"] == 3
+
+    # Explicit method returned top 3 (ids 1, 2, 3)
+    ranked_method_ids = results["ranked_ids_by_method"]["explicit_method"]["item_test"]
+    assert ranked_method_ids == [1, 2, 3]
+
+    # In R2, RF23 reordered only the top 3 candidates (1, 2, 3); id 99 was never passed to RF23
+    # But price-only baseline ranked the WHOLE C(q) (including id 99), and found id 99 at rank 1!
+    # Because id 99 is ground truth and was ranked 1st by price-only,
+    # easy_items_count == 1
+    assert results["r2"]["easy_items_count"] == 1

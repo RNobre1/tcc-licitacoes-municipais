@@ -1,5 +1,3 @@
-"""Tests for run_benchmark management command and benchmark orchestrator."""
-
 import json
 from datetime import date
 from decimal import Decimal
@@ -19,53 +17,98 @@ from evaluation.benchmark import (
 
 
 def test_select_finalist_rule():
-    # Finalist rule: highest Recall@10 on tuning_split, ties broken by MRR@20
     metrics = {
-        "model_a": {"recall_at_10": 0.60, "mrr_at_20": 0.30},
-        "model_b": {"recall_at_10": 0.75, "mrr_at_20": 0.20},
-        "model_c": {"recall_at_10": 0.75, "mrr_at_20": 0.40},
+        "bm25": {"recall_at_10": 0.85, "mrr_at_20": 0.50},
+        "semantic_1": {"recall_at_10": 0.80, "mrr_at_20": 0.60},
+        "semantic_2": {"recall_at_10": 0.85, "mrr_at_20": 0.70},
     }
-    # model_c wins tiebreak over model_b on MRR@20
-    assert select_finalist(metrics) == "model_c"
+    # BM25 is baseline and excluded from finalist selection;
+    # semantic_2 wins over semantic_1 due to higher Recall@10 (0.85 vs 0.80)
+    assert select_finalist(metrics) == "semantic_2"
 
 
 def test_run_benchmark_refuses_measurement_without_thresholds_note():
-    # N10: Must raise CommandError instead of ValueError
-    with TemporaryDirectory() as tmp_dir:
-        eval_dir = Path(tmp_dir) / "avaliacao"
-        eval_dir.mkdir()
-
-        with pytest.raises(CommandError, match="Thresholds note must be provided"):
-            call_command(
-                "run_benchmark",
-                split="measurement",
-                eval_dir=str(eval_dir),
-            )
-
-
-def test_real_benchmark_requires_explicit_go(tmp_path):
-    eval_dir = tmp_path / "real-data-must-not-be-opened"
-    with pytest.raises(CommandError, match="--go-real"):
-        call_command("run_benchmark", split="tuning", eval_dir=str(eval_dir))
-    assert not eval_dir.exists()
-
-
-def test_real_handler_refuses_measurement_split_before_reading_data(monkeypatch, tmp_path):
-    eval_dir = tmp_path / "evaluation"
-    monkeypatch.setattr(
-        "evaluation.management.commands.run_benchmark.check_thresholds_note_guard",
-        lambda note_path: "synthetic accepted note",
-    )
-    with pytest.raises(CommandError, match="only the tuning split"):
+    # Code guard: measurement split MUST refuse without --thresholds-note
+    with pytest.raises(CommandError, match="--thresholds-note"):
         call_command(
             "run_benchmark",
             split="measurement",
-            thresholds_note=str(tmp_path / "thresholds.md"),
+            finalist="semantic",
+            synthetic=True,
+        )
+
+
+def test_real_benchmark_requires_explicit_go(tmp_path):
+    eval_dir = tmp_path / "evaluation"
+    eval_dir.mkdir()
+    # Refuses real execution without --allow-real-data
+    with pytest.raises(CommandError, match="--allow-real-data"):
+        call_command("run_benchmark", split="tuning", eval_dir=str(eval_dir))
+
+
+def test_real_handler_refuses_measurement_without_thresholds_note(tmp_path):
+    eval_dir = tmp_path / "evaluation"
+    eval_dir.mkdir()
+    with pytest.raises(CommandError, match="--thresholds-note"):
+        call_command(
+            "run_benchmark",
+            split="measurement",
             finalist="semantic",
             eval_dir=str(eval_dir),
-            go_real=True,
+            allow_real_data=True,
         )
-    assert not eval_dir.exists()
+
+
+def test_real_handler_rejects_self_consistent_split_with_unfrozen_hash(monkeypatch, tmp_path):
+    import re
+
+    from django.conf import settings
+
+    from evaluation.benchmark import create_dataset_split
+
+    repo_root = Path(__file__).resolve().parents[2]
+    decision_path = repo_root / "TCC" / "decisões" / "2026-11-24-limiares-de-aceitacao-r1-r2.md"
+    frozen_hash_match = re.search(
+        r"resumo SHA-256\s+`([0-9a-f]{64})`",
+        decision_path.read_text(encoding="utf-8"),
+    )
+    assert frozen_hash_match is not None
+
+    split = create_dataset_split(
+        [{"item_id": "changed_item", "report_id": "synthetic", "item_kind": "product"}],
+        tuning_fraction=1.0,
+        seed=99,
+    )
+    assert split.sha256_hash != frozen_hash_match.group(1)
+
+    project_root = tmp_path / "synthetic-repository"
+    eval_dir = tmp_path / "evaluation"
+    eval_dir.mkdir()
+    decision_copy = project_root / "TCC" / "decisões" / decision_path.name
+    decision_copy.parent.mkdir(parents=True)
+    decision_copy.write_text(
+        f"---\nstatus: aceita\n---\nresumo SHA-256 `{frozen_hash_match.group(1)}`\n",
+        encoding="utf-8",
+    )
+    (eval_dir / "dataset_split.json").write_text(
+        json.dumps(
+            {
+                "tuning_items": list(split.tuning_items),
+                "measurement_items": list(split.measurement_items),
+                "sha256_hash": split.sha256_hash,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings, "BASE_DIR", project_root / "code")
+
+    with pytest.raises(CommandError, match="was not found recorded"):
+        call_command(
+            "run_benchmark",
+            split="tuning",
+            eval_dir=str(eval_dir),
+            allow_real_data=True,
+        )
 
 
 @pytest.mark.django_db
@@ -77,7 +120,13 @@ def test_real_handler_runs_synthetic_fixture_only_on_frozen_tuning_split(monkeyp
     eval_dir = tmp_path / "evaluation"
     eval_dir.mkdir()
     split = create_dataset_split(
-        [{"item_id": "synthetic_report_1", "report_id": "synthetic_report", "item_kind": "product"}],
+        [
+            {
+                "item_id": "synthetic_report_1",
+                "report_id": "synthetic_report",
+                "item_kind": "product",
+            }
+        ],
         tuning_fraction=1.0,
         seed=42,
     )
@@ -169,7 +218,7 @@ def test_real_handler_runs_synthetic_fixture_only_on_frozen_tuning_split(monkeyp
         split="tuning",
         eval_dir=str(eval_dir),
         output=str(output_path),
-        go_real=True,
+        allow_real_data=True,
     )
 
     results = json.loads(output_path.read_text(encoding="utf-8"))
@@ -217,10 +266,12 @@ def test_run_benchmark_synthetic_full_orchestration(monkeypatch):
         ]:
             assert metric in bm25_metrics
 
-        # Constants recorded
+        # Constants recorded, including screening depth top_n
         assert data["constants"]["n_noise_draws"] == 200
         assert data["constants"]["n_bootstrap_resamples"] == 10000
         assert "seed" in data["constants"]
+        assert data["constants"]["top_n"] == 20
+        assert data["top_n"] == 20
 
         # R2 metrics and G(sigma)
         assert "r2" in data
