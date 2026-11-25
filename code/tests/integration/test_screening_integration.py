@@ -97,7 +97,7 @@ def test_screening_page_renders_with_real_semantic_search_pipeline(monkeypatch):
 
         # Partial corpus note is rendered end-to-end
         assert "Busca realizada em corpus parcial" in html
-        assert "2 itens indexados" in html
+        assert "2 de 2 itens do banco indexados" in html
     finally:
         if client.collection_exists(coll_name):
             client.delete_collection(coll_name)

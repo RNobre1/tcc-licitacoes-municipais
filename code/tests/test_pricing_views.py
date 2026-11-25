@@ -945,7 +945,7 @@ def test_screening_estimate_panel_ignores_estimated_prices(client, monkeypatch):
     monkeypatch.setattr(views, "search_function", _fake_search)
 
     session = client.session
-    session["screening_decisions"] = {"2001": "accept", "2002": "accept"}
+    session["screening_decisions"] = {"1:2001": "accept", "1:2002": "accept"}
     session.save()
 
     response = client.get(reverse("pricing:screening", args=[1]))
@@ -1693,3 +1693,22 @@ def test_screening_page_with_20_hanging_fetches_renders_within_budget(client, mo
     assert len(response.context["candidates"]) == 20
     assert len(started_ids) == 20
     assert elapsed < 4.0
+
+
+def test_screening_view_does_not_call_embedding_model_loader_when_search_function_is_injected(
+    client, monkeypatch
+):
+    """View must never call get_embedding_model when search_function is injected."""
+    loader_called = False
+
+    def fake_loader():
+        nonlocal loader_called
+        loader_called = True
+        raise AssertionError("get_embedding_model called while fake search in use")
+
+    monkeypatch.setattr(views, "get_embedding_model", fake_loader)
+    monkeypatch.setattr(views, "search_function", lambda **kwargs: [])
+
+    response = client.get(reverse("pricing:screening", args=[1]))
+    assert response.status_code == 200
+    assert not loader_called

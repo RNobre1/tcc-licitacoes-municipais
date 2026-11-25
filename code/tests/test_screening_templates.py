@@ -677,7 +677,7 @@ def test_screening_renders_empty_index_notice_when_indexed_is_zero_and_no_error(
         empty_index=True,
     )
     rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
-    assert "Índice de busca semântica vazio." in rendered
+    assert "Índice de busca semântica vazio" in rendered
 
 
 def test_screening_renders_both_counts_and_indexed_date_range():
