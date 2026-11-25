@@ -81,6 +81,53 @@ def test_public_item_secret_budget_and_usable_price():
 
 @pytest.mark.integration
 @pytest.mark.django_db
+def test_build_public_items_uses_service_name_even_when_code_is_material():
+    t1 = timezone.now()
+    cnpj = "00000000000001"
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": cnpj, "razaoSocial": "Prefeitura Fictícia"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    RawRecord.objects.create(
+        endpoint=f"/api/pncp/v1/orgaos/{cnpj}/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Serviço de apoio",
+                "quantidade": 1.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 20.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+                "materialOuServicoNome": "Material de serviço",
+            }
+        ],
+        status_code=200,
+    )
+
+    assert build_public_items() == 1
+    assert PublicItem.objects.get().item_kind == "service"
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
 def test_build_public_items_builds_items_with_provenance_and_results():
     t1 = timezone.now()
 
