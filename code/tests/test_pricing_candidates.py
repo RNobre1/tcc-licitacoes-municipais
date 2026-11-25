@@ -302,3 +302,43 @@ def test_fetch_awarded_price_on_demand_uses_short_timeout(monkeypatch):
 
     fetch_awarded_price_on_demand(mock_pi)
     assert recorded_timeout == 2.0
+
+def test_fetch_awarded_price_on_demand_selects_valid_result_skipping_cancelled():
+    """B2: A cancelled result at 99 ahead of an informed one at 10 must store 10."""
+    from pricing.candidates import fetch_awarded_price_on_demand
+
+    mock_item = MagicMock()
+    mock_item.cnpj = "00000000000001"
+    mock_item.year = 2026
+    mock_item.purchase_sequence = 1
+    mock_item.item_number = 1
+    mock_item.awarded_unit_price = None
+
+    raw_rec = MagicMock()
+    raw_rec.endpoint = "/compras/2026/1/itens"
+    raw_rec.payload = [{"numeroItem": 1, "temResultado": True}]
+    mock_item.raw_records.all.return_value = [raw_rec]
+
+    cancelled_then_informed = [
+        {
+            "numeroItem": 1,
+            "situacaoCompraItemResultadoNome": "Informado",
+            "dataCancelamento": "2026-05-01T10:00:00",
+            "valorUnitarioHomologado": 99.00,
+        },
+        {
+            "numeroItem": 1,
+            "situacaoCompraItemResultadoNome": "Informado",
+            "dataCancelamento": None,
+            "valorUnitarioHomologado": 10.00,
+        },
+    ]
+
+    class FakeRecord:
+        payload = cancelled_then_informed
+
+    def fake_fetch(**kwargs):
+        return FakeRecord()
+
+    fetch_awarded_price_on_demand(mock_item, fetch_fn=fake_fetch)
+    assert mock_item.awarded_unit_price == Decimal("10")
