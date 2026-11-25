@@ -391,6 +391,7 @@ def resolve_candidate_price(
 @dataclass(frozen=True)
 class PublicItemSim:
     id: Any
+    description: str = ""
     published_on: Any = None
     modality: int | None = None
     state: str = ""
@@ -398,10 +399,7 @@ class PublicItemSim:
     estimated_unit_price: Decimal | None = None
     secret_budget: bool = False
     unit: str = "UNIDADE"
-
-    @property
-    def price(self) -> Decimal | None:
-        return resolve_candidate_price(self)
+    price: Decimal | None = None
 
 
 def filter_candidate_corpus(
@@ -731,3 +729,28 @@ class BenchmarkOrchestrator:
                 "easy_items_count": easy_items_count,
             },
         }
+
+
+class FakeDeterministicEmbeddingModel:
+    name: str = "fake-embed"
+    revision: str = "v1"
+    dimension: int = 8
+    def embed_queries(self, queries: Sequence[str]) -> list[list[float]]:
+        raise NotImplementedError
+    def embed_passages(self, passages: Sequence[str]) -> list[list[float]]:
+        raise NotImplementedError
+
+
+class BM25SearchMethod:
+    def __init__(self, name: str = "bm25", k1: float = 1.5, b: float = 0.75):
+        self.name = name
+    def rank(self, query: str, candidates: Sequence[Any], limit: int = 20) -> list[tuple[Any, float]]:
+        raise NotImplementedError
+
+
+class SemanticSearchMethod:
+    def __init__(self, model: Any, name: str = "semantic"):
+        self.name = name
+        self.model = model
+    def rank(self, query: str, candidates: Sequence[Any], limit: int = 20) -> list[tuple[Any, float]]:
+        raise NotImplementedError
