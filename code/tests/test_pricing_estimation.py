@@ -1,5 +1,5 @@
 from collections.abc import Sequence  # noqa: F401
-from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -11,37 +11,25 @@ from pricing.estimation import (
     get_calculation_prices,
     requires_justification,
 )
+from pricing.candidates import Candidate
 
 
-@dataclass
-class _CandidateStub:
-    awarded_unit_price: Decimal | None = None
-    estimated_unit_price: Decimal | None = None
-    secret_budget: bool = False
-    price: Decimal | None = None
-
-    @property
-    def is_estimated(self) -> bool:
-        if self.secret_budget:
-            return False
-        return (self.awarded_unit_price is None or self.awarded_unit_price <= 0) and (
-            self.estimated_unit_price is not None and self.estimated_unit_price > 0
-        )
-
-    @property
-    def usable_calculation_price(self) -> Decimal | None:
-        if self.secret_budget or self.is_estimated:
-            return None
-        if self.awarded_unit_price is not None and self.awarded_unit_price > Decimal("0.00"):
-            return self.awarded_unit_price
-        if (
-            not self.is_estimated
-            and not self.secret_budget
-            and self.price is not None
-            and self.price > Decimal("0.00")
-        ):
-            return self.price
-        return None
+def _CandidateStub(
+    awarded_unit_price: Decimal | None = None,
+    estimated_unit_price: Decimal | None = None,
+    secret_budget: bool = False,
+) -> Candidate:
+    return Candidate(
+        id=1,
+        description="Candidato sintético",
+        unit="unidade",
+        quantity=Decimal("1"),
+        agency="Órgão fictício",
+        date=date(2026, 1, 1),
+        awarded_unit_price=awarded_unit_price,
+        estimated_unit_price=estimated_unit_price,
+        secret_budget=secret_budget,
+    )
 
 
 class TestCalculationFunctionsCaput:
@@ -271,14 +259,20 @@ class TestGetCalculationPrices:
         assert calculate_median(prices) == Decimal("20.00")
         assert calculate_min(prices) == Decimal("10.00")
 
-    def test_get_calculation_prices_rejects_duck_typed_or_bare_decimal(self):
-        """N2: get_calculation_prices requires usable_calculation_price attribute."""
+    def test_get_calculation_prices_rejects_non_candidate_objects(self):
+        """N2: Only Candidate instances may contribute a calculation price."""
 
         class DuckCandidate:
             price = Decimal("99.00")
 
-        with pytest.raises(TypeError, match="Candidate.*usable_calculation_price"):
+        class DuckCandidateWithPriceContract:
+            usable_calculation_price = Decimal("88.00")
+
+        with pytest.raises(TypeError, match="Candidate"):
             get_calculation_prices([DuckCandidate()])
 
-        with pytest.raises(TypeError, match="Candidate.*usable_calculation_price"):
+        with pytest.raises(TypeError, match="Candidate"):
+            get_calculation_prices([DuckCandidateWithPriceContract()])
+
+        with pytest.raises(TypeError, match="Candidate"):
             get_calculation_prices([Decimal("50.00")])

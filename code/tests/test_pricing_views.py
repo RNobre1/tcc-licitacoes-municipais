@@ -37,6 +37,10 @@ def _estimate(client, item_id):
     return client.get(reverse("pricing:screening", args=[item_id])).context["estimate"]
 
 
+def _demo_estimate(item, decisions):
+    return build_estimate_panel(item, decisions, candidates=demo_data.candidates_for(item.id))
+
+
 @pytest.fixture(autouse=True)
 def _inject_fake_search_for_views(monkeypatch):
     def _fake_search(query, date_window, limit=20):
@@ -436,7 +440,7 @@ def test_an_ignored_expected_price_leaves_the_order_without_a_price(client):
 def test_build_estimate_panel_with_zero_accepted_prices_returns_none_values():
     item = get_item(1)
     assert item is not None
-    panel = build_estimate_panel(item, {})
+    panel = _demo_estimate(item, {})
     assert panel == {
         "mean": None,
         "median": None,
@@ -450,7 +454,7 @@ def test_build_estimate_panel_with_one_accepted_price_requires_justification():
     item = get_item(1)
     assert item is not None
     # Candidate 1: price 26.50, unit "pacote"
-    panel = build_estimate_panel(item, {1: "accept"})
+    panel = _demo_estimate(item, {1: "accept"})
     assert panel == {
         "mean": Decimal("26.50"),
         "median": Decimal("26.50"),
@@ -464,7 +468,7 @@ def test_build_estimate_panel_with_two_accepted_prices_requires_justification():
     item = get_item(1)
     assert item is not None
     # Candidates 1 (26.50) and 2 (27.90)
-    panel = build_estimate_panel(item, {1: "accept", 2: "accept"})
+    panel = _demo_estimate(item, {1: "accept", 2: "accept"})
     assert panel == {
         "mean": Decimal("27.20"),
         "median": Decimal("27.20"),
@@ -478,7 +482,7 @@ def test_build_estimate_panel_with_three_accepted_prices_does_not_require_justif
     item = get_item(1)
     assert item is not None
     # Candidates 1 (26.50), 2 (27.90), and 3 (29.00)
-    panel = build_estimate_panel(item, {1: "accept", 2: "accept", 3: "accept"})
+    panel = _demo_estimate(item, {1: "accept", 2: "accept", 3: "accept"})
     assert panel == {
         "mean": Decimal("27.80"),
         "median": Decimal("27.90"),
@@ -492,7 +496,7 @@ def test_build_estimate_panel_rn13_excludes_unit_mismatch_and_does_not_count_the
     item = get_item(1)
     assert item is not None
     # Candidate 4 belongs to item 1, but has unit "unidade" whereas item 1 is "pacote"
-    panel_only_mismatch = build_estimate_panel(item, {4: "accept"})
+    panel_only_mismatch = _demo_estimate(item, {4: "accept"})
     assert panel_only_mismatch == {
         "mean": None,
         "median": None,
@@ -501,7 +505,7 @@ def test_build_estimate_panel_rn13_excludes_unit_mismatch_and_does_not_count_the
         "requires_justification": False,
     }
 
-    panel_with_valid = build_estimate_panel(item, {1: "accept", 4: "accept"})
+    panel_with_valid = _demo_estimate(item, {1: "accept", 4: "accept"})
     assert panel_with_valid == {
         "mean": Decimal("26.50"),
         "median": Decimal("26.50"),
@@ -516,7 +520,7 @@ def test_build_estimate_panel_preserves_exact_decimal_without_rounding():
     # 4.90 + 4.60 = 9.50 / 2 = 4.75
     item6 = get_item(6)
     assert item6 is not None
-    panel = build_estimate_panel(item6, {23: "accept", 24: "accept"})
+    panel = _demo_estimate(item6, {23: "accept", 24: "accept"})
     assert panel["mean"] == Decimal("4.75")
     assert isinstance(panel["mean"], Decimal)
     assert panel["median"] == Decimal("4.75")
@@ -709,8 +713,8 @@ def test_the_page_has_no_justification_notice_with_three_accepted_prices(client)
 def test_the_row_label_follows_the_builder_and_not_a_rule_of_its_own(client, monkeypatch):
     real = views.build_estimate_panel
 
-    def builder_that_counts_nothing(item, decisions):
-        panel = real(item, decisions)
+    def builder_that_counts_nothing(item, decisions, candidates):
+        panel = real(item, decisions, candidates=candidates)
         panel.counted_candidate_ids = set()
         return panel
 
@@ -1068,6 +1072,7 @@ def test_screening_view_passes_corpus_info_and_renders_notice_when_partial(clien
         start_date=datetime.date(2026, 10, 26),
         end_date=datetime.date(2026, 10, 30),
         is_partial=True,
+        db_items_count=6000,
     )
     monkeypatch.setattr(views, "corpus_info_function", lambda: partial_info)
 
@@ -1076,7 +1081,7 @@ def test_screening_view_passes_corpus_info_and_renders_notice_when_partial(clien
     assert response.context["corpus_info"] == partial_info
     html = response.content.decode()
     assert "Busca realizada em corpus parcial" in html
-    assert "5111 de" in html
+    assert "5111 de 6000" in html
     assert "26/10/2026 a 30/10/2026" in html
 
 
@@ -1136,18 +1141,59 @@ def test_decide_and_screening_keys_decisions_by_requested_item_and_candidate(cli
     assert 1 not in resp2.context["estimate"]["counted_candidate_ids"]
 
 
-def test_screening_view_limit_is_strictly_20(monkeypatch):
-    """Mutant killer 2: Screening view requests limit=20 candidates, not 10."""
+def test_screening_ignores_legacy_unscoped_decisions(client, monkeypatch):
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: views.CorpusInfo(0, None, None, is_partial=False),
+    )
+    session = client.session
+    session["screening_decisions"] = {"1": "accept"}
+    session.save()
+
+    response = client.get(reverse("pricing:screening", args=[2]))
+
+    assert response.status_code == 200
+    assert response.context["decisions"] == {}
+
+
+def test_screening_view_displays_twenty_candidates_not_ten(client, monkeypatch):
+    """Mutant killer 2: The screening request displays the full top 20."""
+    from pricing.candidates import Candidate
+
     recorded_limit = None
+    fake_candidates = [
+        Candidate(
+            id=20000 + i,
+            description=f"Candidato {i}",
+            unit="pacote",
+            quantity=Decimal("1"),
+            agency="Órgão fictício",
+            date=datetime.date(2026, 11, 24),
+            awarded_unit_price=Decimal("10.00"),
+            similarity=0.9,
+            item_id=1,
+        )
+        for i in range(20)
+    ]
 
     def fake_search(**kwargs):
         nonlocal recorded_limit
         recorded_limit = kwargs.get("limit")
-        return []
+        return fake_candidates[:recorded_limit]
 
     monkeypatch.setattr(views, "search_function", fake_search)
-    views.get_screening_candidates(views.get_item(1))
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: views.CorpusInfo(0, None, None, is_partial=False),
+    )
+    response = client.get(reverse("pricing:screening", args=[1]))
+
     assert recorded_limit == 20
+    assert response.status_code == 200
+    assert len(response.context["candidates"]) == 20
+    assert response.context["candidates"][-1].id == 20019
 
 
 def test_get_corpus_info_reads_date_range_from_qdrant_payload(monkeypatch):
@@ -1171,7 +1217,7 @@ def test_get_corpus_info_reads_date_range_from_qdrant_payload(monkeypatch):
     ]
 
     mock_model = MagicMock()
-    mock_model.name = "test"
+    mock_model.name = "date-range-payload-test"
     mock_model.revision = "rev1"
 
     info = get_corpus_info(
@@ -1181,6 +1227,130 @@ def test_get_corpus_info_reads_date_range_from_qdrant_payload(monkeypatch):
     assert info.end_date == datetime.date(2026, 10, 30)
     assert info.indexed_items_count == 3
     assert info.is_partial is True
+
+
+def test_get_corpus_info_does_not_substitute_database_dates_for_missing_index_dates():
+    from django.core.cache import cache
+    from ingestion.models import PublicItem
+    from pricing.views import get_corpus_info
+
+    PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=2026,
+        purchase_sequence=82001,
+        item_number=1,
+        description="Item sintético sem data no payload do índice",
+        unit="unidade",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("10.00"),
+        agency_name="Órgão fictício",
+        published_on=datetime.date(2026, 11, 23),
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+    cache.delete("corpus_db_items_count")
+
+    mock_client = MagicMock()
+    mock_client.collection_exists.return_value = True
+    mock_count = MagicMock()
+    mock_count.count = 1
+    mock_client.count.return_value = mock_count
+    mock_client.scroll.return_value = ([], None)
+
+    mock_model = MagicMock()
+    mock_model.name = "missing-index-dates-test"
+    mock_model.revision = "rev1"
+
+    info = get_corpus_info(
+        client=mock_client,
+        model=mock_model,
+        reference_date=datetime.date(2026, 11, 24),
+    )
+
+    assert info.start_date is None
+    assert info.end_date is None
+    assert info.is_partial is True
+
+
+def test_get_corpus_info_marks_extra_index_points_as_partial():
+    from django.core.cache import cache
+    from pricing.views import get_corpus_info
+
+    cache.set("corpus_db_items_count", 10, 300)
+    mock_client = MagicMock()
+    mock_client.collection_exists.return_value = True
+    mock_count = MagicMock()
+    mock_count.count = 14
+    mock_client.count.return_value = mock_count
+
+    start_date = datetime.date(2025, 11, 24)
+    yesterday = datetime.date(2026, 11, 23)
+    p_min = MagicMock()
+    p_min.payload = {"published_on": start_date.isoformat()}
+    p_max = MagicMock()
+    p_max.payload = {"published_on": yesterday.isoformat()}
+    mock_client.scroll.side_effect = [([p_min], None), ([p_max], None)]
+
+    mock_model = MagicMock()
+    mock_model.name = "extra-index-points-test"
+    mock_model.revision = "rev1"
+
+    info = get_corpus_info(
+        client=mock_client,
+        model=mock_model,
+        reference_date=datetime.date(2026, 11, 24),
+    )
+
+    assert info.indexed_items_count == 14
+    assert info.db_items_count == 10
+    assert info.is_partial is True
+
+
+def test_get_corpus_info_caches_both_database_and_index_counts(monkeypatch):
+    from django.core.cache import cache
+    from ingestion.models import PublicItem
+    from pricing.views import get_corpus_info
+
+    cache.delete("corpus_db_items_count")
+    public_item_manager = PublicItem.objects
+    original_count = public_item_manager.count
+    db_count_calls = 0
+
+    def counted_db_count():
+        nonlocal db_count_calls
+        db_count_calls += 1
+        return original_count()
+
+    monkeypatch.setattr(public_item_manager, "count", counted_db_count)
+
+    mock_client = MagicMock()
+    mock_client.collection_exists.return_value = True
+    mock_count = MagicMock()
+    mock_count.count = 1
+    mock_client.count.return_value = mock_count
+    p_min = MagicMock()
+    p_min.payload = {"published_on": "2026-10-26"}
+    p_max = MagicMock()
+    p_max.payload = {"published_on": "2026-11-23"}
+    mock_client.scroll.side_effect = [([p_min], None), ([p_max], None)]
+
+    mock_model = MagicMock()
+    mock_model.name = "cached-corpus-counts-test"
+    mock_model.revision = "rev1"
+    parameters = {
+        "client": mock_client,
+        "model": mock_model,
+        "reference_date": datetime.date(2026, 11, 24),
+    }
+
+    first = get_corpus_info(**parameters)
+    second = get_corpus_info(**parameters)
+
+    assert first == second
+    assert db_count_calls == 1
+    assert mock_client.count.call_count == 1
+    assert mock_client.scroll.call_count == 2
 
 
 def test_get_corpus_info_handles_qdrant_exception_without_500():
@@ -1222,7 +1392,7 @@ def test_get_corpus_info_tolerates_one_day_of_lag():
     ]
 
     mock_model = MagicMock()
-    mock_model.name = "test"
+    mock_model.name = "one-day-lag-test"
     mock_model.revision = "rev1"
 
     # Monkeypatch cached DB count to match 10
@@ -1235,16 +1405,67 @@ def test_get_corpus_info_tolerates_one_day_of_lag():
 
 
 def test_screening_view_handles_qdrant_down_gracefully_without_500(client, monkeypatch):
-    """N7: If search_function raises, view does not 500, but renders error notice."""
+    """N7: Qdrant failures render a Portuguese notice and never return HTTP 500."""
+    from pricing.views import CorpusInfo
 
     def failing_search(**kwargs):
         raise RuntimeError("Qdrant down")
 
     monkeypatch.setattr(views, "search_function", failing_search)
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: CorpusInfo(0, None, None, True, qdrant_error=True),
+    )
     response = client.get(reverse("pricing:screening", args=[1]))
     assert response.status_code == 200
     html = response.content.decode()
     assert "Nenhum preço candidato encontrado." in html
+    assert "Índice de busca semântica temporariamente indisponível." in html
+
+
+def test_screening_view_notifies_when_semantic_index_is_empty(client, monkeypatch):
+    from pricing.views import CorpusInfo
+
+    monkeypatch.setattr(views, "search_function", lambda **kwargs: [])
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: CorpusInfo(0, None, None, True, db_items_count=10, empty_index=True),
+    )
+
+    response = client.get(reverse("pricing:screening", args=[1]))
+
+    assert response.status_code == 200
+    assert "Índice de busca semântica vazio." in response.content.decode()
+
+
+def test_screening_does_not_label_a_nonsecret_item_without_price_as_secret(client, monkeypatch):
+    from pricing.candidates import Candidate
+
+    candidate = Candidate(
+        id=99001,
+        description="Item sintético sem preço",
+        unit="pacote",
+        quantity=Decimal("1"),
+        agency="Órgão fictício",
+        date=datetime.date(2026, 11, 24),
+    )
+    monkeypatch.setattr(views, "search_function", lambda **kwargs: [candidate])
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: views.CorpusInfo(0, None, None, is_partial=False),
+    )
+    session = client.session
+    session["screening_decisions"] = {"1:99001": "accept"}
+    session.save()
+
+    response = client.get(reverse("pricing:screening", args=[1]))
+    row = _row(response.content.decode(), candidate.id)
+
+    assert "fora do cálculo: sem preço" in row
+    assert "orçamento sigiloso" not in row
 
 
 def test_build_estimate_panel_normalizes_units_so_case_and_spacing_variations_count():
