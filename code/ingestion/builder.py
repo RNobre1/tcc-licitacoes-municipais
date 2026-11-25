@@ -1,7 +1,8 @@
 import re
 from collections import defaultdict
 from contextlib import suppress
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -23,6 +24,10 @@ ITEM_ENDPOINT_PATTERN = re.compile(
 RESULT_ENDPOINT_PATTERN = re.compile(
     r"^/api/pncp/v1/orgaos/(?P<cnpj>\d+)/compras/(?P<ano>\d+)/(?P<seq>\d+)/itens/(?P<item>\d+)/resultados$"
 )
+PURCHASE_KEY_PATTERN = re.compile(
+    r"^/api/pncp/v1/orgaos/(?P<cnpj>\d+)/compras/(?P<ano>\d+)/(?P<seq>\d+)/itens(?:/(?P<item>\d+)/resultados)?$"
+)
+RAW_ITEM_PREFIX = "/api/pncp/v1/orgaos/"
 
 
 class BuildResult(int):
@@ -38,18 +43,49 @@ class BuildResult(int):
         return obj
 
 
-def build_public_items() -> BuildResult:
-    """Build or update PublicItem records from latest RawRecords idempotently."""
-    # 1. Deduplicate publication records and index by (cnpj, ano, seq)
-    pub_records = latest_copies(
-        list(RawRecord.objects.filter(endpoint__startswith=PUB_ENDPOINT).iterator(chunk_size=1000))
-    )
+@dataclass(slots=True)
+class _PubMetadata:
+    published_on: date
+    agency_name: str
+    agency_cnpj: str
+    state: str
+    modality: int
+    raw_record_id: int
+    fetched_at: datetime
 
-    pub_lookup: dict[tuple[str, int, int], tuple[dict[str, Any], RawRecord]] = {}
-    for r in pub_records:
-        if not isinstance(r.payload, dict):
+
+def _parse_date(val: date | str | None) -> date | None:
+    if val is None or isinstance(val, date):
+        return val
+    val_str = str(val).strip()
+    if not val_str:
+        return None
+    if len(val_str) == 8 and val_str.isdigit():
+        return datetime.strptime(val_str, "%Y%m%d").date()
+    return date.fromisoformat(val_str[:10])
+
+
+def build_public_items(
+    start: date | str | None = None,
+    end: date | str | None = None,
+) -> BuildResult:
+    """Build or update PublicItem records from latest RawRecords idempotently in streaming mode."""
+    start_date = _parse_date(start)
+    end_date = _parse_date(end)
+    has_date_filter = start_date is not None or end_date is not None
+
+    pub_lookup: dict[tuple[str, int, int], _PubMetadata] = {}
+
+    # 1. Deduplicate publication records and index by (cnpj, ano, seq)
+    pub_qs = (
+        RawRecord.objects.filter(endpoint__startswith=PUB_ENDPOINT)
+        .values_list("id", "fetched_at", "payload")
+        .iterator(chunk_size=500)
+    )
+    for rec_id, fetched_at, payload in pub_qs:
+        if not isinstance(payload, dict):
             continue
-        data = r.payload.get("data", [])
+        data = payload.get("data", [])
         if not isinstance(data, list):
             continue
         for pub in data:
@@ -58,208 +94,272 @@ def build_public_items() -> BuildResult:
             cnpj = pub.get("orgaoEntidade", {}).get("cnpj")
             ano = pub.get("anoCompra")
             seq = pub.get("sequencialCompra")
-            if cnpj and ano is not None and seq is not None:
-                key = (str(cnpj), int(ano), int(seq))
-                if key not in pub_lookup:
-                    pub_lookup[key] = (pub, r)
-                else:
-                    _, existing_rec = pub_lookup[key]
-                    if (r.fetched_at, r.id or 0) > (existing_rec.fetched_at, existing_rec.id or 0):
-                        pub_lookup[key] = (pub, r)
+            if not cnpj or ano is None or seq is None:
+                continue
+            key = (str(cnpj), int(ano), int(seq))
+            pub_date_str = pub.get("dataPublicacaoPncp")
+            if not pub_date_str:
+                continue
+            try:
+                pub_date = datetime.fromisoformat(str(pub_date_str)[:10]).date()
+            except Exception:
+                continue
+
+            if start_date and pub_date < start_date:
+                continue
+            if end_date and pub_date > end_date:
+                continue
+
+            agency_name = pub.get("orgaoEntidade", {}).get("razaoSocial", "") or ""
+            agency_cnpj = str(cnpj)
+            state = pub.get("unidadeOrgao", {}).get("ufSigla", "") or ""
+            try:
+                modality = int(pub.get("modalidadeId", 0) or 0)
+            except Exception:
+                modality = 0
+
+            prev = pub_lookup.get(key)
+            if prev is None or (fetched_at, rec_id) > (prev.fetched_at, prev.raw_record_id):
+                pub_lookup[key] = _PubMetadata(
+                    pub_date, agency_name, agency_cnpj, state, modality, rec_id, fetched_at
+                )
 
     # 1b. Support single purchase endpoint records: /orgaos/{cnpj}/compras/{ano}/{seq}
-    single_purchase_raw = [
-        r
-        for r in RawRecord.objects.filter(endpoint__startswith="/api/consulta/v1/orgaos/").iterator(
-            chunk_size=1000
-        )
-        if PURCHASE_ENDPOINT_PATTERN.match(r.endpoint)
-    ]
-    for r in latest_copies(single_purchase_raw):
-        if not isinstance(r.payload, dict):
-            continue
-        m = PURCHASE_ENDPOINT_PATTERN.match(r.endpoint)
+    single_pub_qs = (
+        RawRecord.objects.filter(endpoint__startswith="/api/consulta/v1/orgaos/")
+        .values_list("id", "endpoint", "fetched_at", "payload")
+        .iterator(chunk_size=500)
+    )
+    for rec_id, endpoint, fetched_at, payload in single_pub_qs:
+        m = PURCHASE_ENDPOINT_PATTERN.match(endpoint)
         if not m:
             continue
-        cnpj = m.group("cnpj")
-        ano = int(m.group("ano"))
-        seq = int(m.group("seq"))
-        key = (str(cnpj), ano, seq)
-        if key not in pub_lookup:
-            pub_lookup[key] = (r.payload, r)
-        else:
-            _, existing_rec = pub_lookup[key]
-            if (r.fetched_at, r.id or 0) > (existing_rec.fetched_at, existing_rec.id or 0):
-                pub_lookup[key] = (r.payload, r)
-
-    # 2. Deduplicate results records and index by (cnpj, ano, seq, numero_item)
-    all_result_raw = [
-        r
-        for r in RawRecord.objects.filter(endpoint__startswith="/api/pncp/v1/orgaos/").iterator(
-            chunk_size=1000
-        )
-        if RESULT_ENDPOINT_PATTERN.match(r.endpoint)
-    ]
-    res_records = latest_copies(all_result_raw)
-
-    result_lookup: dict[tuple[str, int, int, int], tuple[Decimal | None, RawRecord]] = {}
-    for r in res_records:
-        match = RESULT_ENDPOINT_PATTERN.match(r.endpoint)
-        if not match:
+        if not isinstance(payload, dict):
             continue
-        cnpj = match.group("cnpj")
-        ano = int(match.group("ano"))
-        seq = int(match.group("seq"))
-        item_num = int(match.group("item"))
+        key = (str(m.group("cnpj")), int(m.group("ano")), int(m.group("seq")))
+        pub_date_str = payload.get("dataPublicacaoPncp")
+        if not pub_date_str:
+            continue
+        try:
+            pub_date = datetime.fromisoformat(str(pub_date_str)[:10]).date()
+        except Exception:
+            continue
 
-        awarded_price: Decimal | None = None
-        valid_res = select_valid_result(r.payload)
-        if valid_res:
-            val = valid_res.get("valorUnitarioHomologado")
-            if val is not None:
-                with suppress(Exception):
-                    awarded_price = Decimal(str(val))
+        if start_date and pub_date < start_date:
+            continue
+        if end_date and pub_date > end_date:
+            continue
 
-        key = (cnpj, ano, seq, item_num)
-        result_lookup[key] = (awarded_price, r)
+        agency_name = payload.get("orgaoEntidade", {}).get("razaoSocial", "") or ""
+        agency_cnpj = str(key[0])
+        state = payload.get("unidadeOrgao", {}).get("ufSigla", "") or ""
+        try:
+            modality = int(payload.get("modalidadeId", 0) or 0)
+        except Exception:
+            modality = 0
 
-    # 3. Deduplicate item page records and group by purchase
-    all_item_raw = [
-        r
-        for r in RawRecord.objects.filter(endpoint__startswith="/api/pncp/v1/orgaos/").iterator(
-            chunk_size=1000
-        )
-        if ITEM_ENDPOINT_PATTERN.match(r.endpoint)
-    ]
-    item_records = latest_copies(all_item_raw)
-
-    records_by_purchase: dict[tuple[str, int, int], list[RawRecord]] = defaultdict(list)
-    for r in item_records:
-        match = ITEM_ENDPOINT_PATTERN.match(r.endpoint)
-        if match:
-            cnpj = match.group("cnpj")
-            ano = int(match.group("ano"))
-            seq = int(match.group("seq"))
-            records_by_purchase[(cnpj, ano, seq)].append(r)
+        prev = pub_lookup.get(key)
+        if prev is None or (fetched_at, rec_id) > (prev.fetched_at, prev.raw_record_id):
+            pub_lookup[key] = _PubMetadata(
+                pub_date, agency_name, agency_cnpj, state, modality, rec_id, fetched_at
+            )
 
     built_count = 0
     skipped_without_publication = 0
 
-    with transaction.atomic():
-        for (cnpj, ano, seq), p_records in records_by_purchase.items():
-            pub_data, pub_rec = pub_lookup.get((cnpj, ano, seq), (None, None))
+    def _process_single_purchase(
+        purchase_key: tuple[str, int, int],
+        p_item_records: list[RawRecord],
+        p_result_records: list[tuple[int, RawRecord]],
+    ):
+        nonlocal built_count, skipped_without_publication
 
-            # B1: An item with no publication metadata is NEVER built
-            if not pub_data or not isinstance(pub_data, dict):
-                total_skipped = sum(
-                    len(r.payload) for r in p_records if isinstance(r.payload, list)
-                )
-                skipped_without_publication += total_skipped
+        pub = pub_lookup.get(purchase_key)
+        if pub is None:
+            if has_date_filter:
+                return
+            deduped_items = latest_copies(p_item_records)
+            total_skipped = sum(
+                len(r.payload) for r in deduped_items if isinstance(r.payload, list)
+            )
+            skipped_without_publication += total_skipped
+            return
+
+        cnpj, ano, seq = purchase_key
+        deduped_item_records = latest_copies(p_item_records)
+
+        results_by_item: dict[int, list[RawRecord]] = defaultdict(list)
+        for item_num, res_rec in p_result_records:
+            results_by_item[item_num].append(res_rec)
+
+        result_lookup: dict[int, tuple[Decimal | None, RawRecord]] = {}
+        for item_num, recs in results_by_item.items():
+            deduped_res = latest_copies(recs)
+            if not deduped_res:
                 continue
+            res_rec = deduped_res[0]
+            valid_res = select_valid_result(res_rec.payload)
+            awarded_price = None
+            if valid_res:
+                val = valid_res.get("valorUnitarioHomologado")
+                if val is not None:
+                    with suppress(Exception):
+                        awarded_price = Decimal(str(val))
+            result_lookup[item_num] = (awarded_price, res_rec)
 
-            pub_date_str = pub_data.get("dataPublicacaoPncp")
-            if not pub_date_str:
-                total_skipped = sum(
-                    len(r.payload) for r in p_records if isinstance(r.payload, list)
-                )
-                skipped_without_publication += total_skipped
+        parsed_items: dict[int, tuple[dict[str, Any], list[int]]] = {}
+        for r in deduped_item_records:
+            if not isinstance(r.payload, list):
                 continue
-
-            try:
-                published_on_date = datetime.fromisoformat(str(pub_date_str)[:10]).date()
-            except Exception:
-                total_skipped = sum(
-                    len(r.payload) for r in p_records if isinstance(r.payload, list)
-                )
-                skipped_without_publication += total_skipped
-                continue
-
-            agency_name = pub_data.get("orgaoEntidade", {}).get("razaoSocial", "")
-            state = pub_data.get("unidadeOrgao", {}).get("ufSigla", "")
-            try:
-                modality = int(pub_data.get("modalidadeId", 0))
-            except Exception:
-                modality = 0
-
-            current_purchase_item_numbers: set[int] = set()
-
-            for r in p_records:
-                if not isinstance(r.payload, list):
+            for item in r.payload:
+                if not isinstance(item, dict):
+                    continue
+                num_raw = item.get("numeroItem")
+                if num_raw is None:
+                    continue
+                try:
+                    num_item = int(num_raw)
+                except Exception:
                     continue
 
-                for item in r.payload:
-                    if not isinstance(item, dict):
-                        continue
-                    num_item_raw = item.get("numeroItem")
-                    if num_item_raw is None:
-                        continue
-                    try:
-                        num_item = int(num_item_raw)
-                    except Exception:
-                        continue
+                description = str(item.get("descricao") or "")
+                unit = str(item.get("unidadeMedida") or "")[:50]
+                unit_normalized = normalize_unit(unit)
+                try:
+                    quantity = Decimal(str(item.get("quantidade") or 0))
+                except Exception:
+                    quantity = Decimal("0.0000")
+                try:
+                    estimated_price = Decimal(str(item.get("valorUnitarioEstimado") or 0))
+                except Exception:
+                    estimated_price = Decimal("0.0000")
+                secret_budget = bool(item.get("orcamentoSigiloso", False))
+                item_kind = map_item_kind(
+                    item.get("materialOuServico"),
+                    item.get("materialOuServicoNome"),
+                )
 
-                    current_purchase_item_numbers.add(num_item)
+                awarded_price, res_rec = result_lookup.get(num_item, (None, None))
+                provenance_ids = [r.id, pub.raw_record_id]
+                if res_rec is not None and res_rec.id:
+                    provenance_ids.append(res_rec.id)
 
-                    description = str(item.get("descricao") or "")
-                    # N9: truncate unit to 50 chars to survive long values gracefully
-                    unit = str(item.get("unidadeMedida") or "")[:50]
-                    unit_normalized = normalize_unit(unit)
-                    try:
-                        quantity = Decimal(str(item.get("quantidade") or 0))
-                    except Exception:
-                        quantity = Decimal("0.0000")
+                defaults = {
+                    "description": description,
+                    "unit": unit,
+                    "unit_normalized": unit_normalized,
+                    "quantity": quantity,
+                    "estimated_unit_price": estimated_price,
+                    "awarded_unit_price": awarded_price,
+                    "secret_budget": secret_budget,
+                    "published_on": pub.published_on,
+                    "agency_name": pub.agency_name,
+                    "agency_cnpj": pub.agency_cnpj,
+                    "state": pub.state,
+                    "modality": pub.modality,
+                    "item_kind": item_kind,
+                }
+                parsed_items[num_item] = (defaults, provenance_ids)
 
-                    try:
-                        estimated_price = Decimal(str(item.get("valorUnitarioEstimado") or 0))
-                    except Exception:
-                        estimated_price = Decimal("0.0000")
+        if not parsed_items:
+            PublicItem.objects.filter(cnpj=cnpj, year=ano, purchase_sequence=seq).delete()
+            return
 
-                    secret_budget = bool(item.get("orcamentoSigiloso", False))
+        with transaction.atomic():
+            existing = {
+                it.item_number: it
+                for it in PublicItem.objects.filter(cnpj=cnpj, year=ano, purchase_sequence=seq)
+            }
+            to_create: list[PublicItem] = []
+            to_update: list[PublicItem] = []
 
-                    # materialOuServico -> item_kind ("product" or "service")
-                    item_kind = map_item_kind(
-                        item.get("materialOuServico"),
-                        item.get("materialOuServicoNome"),
+            for num_item, (defaults, _) in parsed_items.items():
+                if num_item in existing:
+                    it = existing[num_item]
+                    for field, val in defaults.items():
+                        setattr(it, field, val)
+                    to_update.append(it)
+                else:
+                    to_create.append(
+                        PublicItem(
+                            cnpj=cnpj,
+                            year=ano,
+                            purchase_sequence=seq,
+                            item_number=num_item,
+                            **defaults,
+                        )
                     )
 
-                    # Check results
-                    res_key = (cnpj, ano, seq, num_item)
-                    awarded_price, res_rec = result_lookup.get(res_key, (None, None))
+            if to_create:
+                PublicItem.objects.bulk_create(to_create)
+            if to_update:
+                PublicItem.objects.bulk_update(
+                    to_update,
+                    fields=[
+                        "description",
+                        "unit",
+                        "unit_normalized",
+                        "quantity",
+                        "estimated_unit_price",
+                        "awarded_unit_price",
+                        "secret_budget",
+                        "published_on",
+                        "agency_name",
+                        "agency_cnpj",
+                        "state",
+                        "modality",
+                        "item_kind",
+                    ],
+                )
 
-                    public_item, _ = PublicItem.objects.update_or_create(
-                        cnpj=cnpj,
-                        year=ano,
-                        purchase_sequence=seq,
-                        item_number=num_item,
-                        defaults={
-                            "description": description,
-                            "unit": unit,
-                            "unit_normalized": unit_normalized,
-                            "quantity": quantity,
-                            "estimated_unit_price": estimated_price,
-                            "awarded_unit_price": awarded_price,
-                            "secret_budget": secret_budget,
-                            "published_on": published_on_date,
-                            "agency_name": agency_name,
-                            "agency_cnpj": cnpj,
-                            "state": state,
-                            "modality": modality,
-                            "item_kind": item_kind,
-                        },
-                    )
+            Through = PublicItem.raw_records.through
+            all_items = to_create + to_update
+            all_pks = [it.pk for it in all_items]
+            Through.objects.filter(publicitem_id__in=all_pks).delete()
 
-                    provenance = [r]
-                    if pub_rec is not None:
-                        provenance.append(pub_rec)
-                    if res_rec is not None:
-                        provenance.append(res_rec)
+            through_rows = []
+            for it in all_items:
+                _, prov_ids = parsed_items[it.item_number]
+                for raw_id in prov_ids:
+                    through_rows.append(Through(publicitem_id=it.pk, rawrecord_id=raw_id))
+            if through_rows:
+                Through.objects.bulk_create(through_rows)
 
-                    public_item.raw_records.set(provenance)
-                    built_count += 1
+            stale_pks = [it.pk for num, it in existing.items() if num not in parsed_items]
+            if stale_pks:
+                PublicItem.objects.filter(pk__in=stale_pks).delete()
 
-            # N2: Drop stale items that are no longer present in the newest pages of this purchase
-            PublicItem.objects.filter(cnpj=cnpj, year=ano, purchase_sequence=seq).exclude(
-                item_number__in=current_purchase_item_numbers
-            ).delete()
+        built_count += len(parsed_items)
+
+    records_qs = (
+        RawRecord.objects.filter(endpoint__startswith=RAW_ITEM_PREFIX)
+        .order_by("endpoint")
+        .iterator(chunk_size=1000)
+    )
+
+    current_key: tuple[str, int, int] | None = None
+    current_item_records: list[RawRecord] = []
+    current_result_records: list[tuple[int, RawRecord]] = []
+
+    for r in records_qs:
+        m = PURCHASE_KEY_PATTERN.match(r.endpoint)
+        if not m:
+            continue
+        purchase_key = (str(m.group("cnpj")), int(m.group("ano")), int(m.group("seq")))
+        if purchase_key != current_key:
+            if current_key is not None:
+                _process_single_purchase(current_key, current_item_records, current_result_records)
+                current_item_records.clear()
+                current_result_records.clear()
+            current_key = purchase_key
+
+        item_str = m.group("item")
+        if item_str is None:
+            current_item_records.append(r)
+        else:
+            current_result_records.append((int(item_str), r))
+
+    if current_key is not None:
+        _process_single_purchase(current_key, current_item_records, current_result_records)
 
     return BuildResult(built_count, skipped_without_publication)

@@ -929,6 +929,6 @@ def test_build_public_items_query_count_is_batched_per_purchase(django_assert_nu
     )
 
     # 20 items previously did ~100 queries; batched streaming should take <= 10 queries total
-    with django_assert_num_queries(8):
+    with django_assert_num_queries(9):
         build_public_items()
     assert PublicItem.objects.count() == 20

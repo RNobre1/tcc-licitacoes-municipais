@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from qdrant_client import models
@@ -8,12 +8,15 @@ from semantic_index.embedding import EmbeddingModel, collection_name_for_model
 
 def index_public_items(
     model: EmbeddingModel,
-    items: Sequence[Any],
+    items: Sequence[Any] | Iterable[Any],
     client: Any = None,
     batch_size: int = 256,
 ) -> int:
     """Index public items into a Qdrant collection named for the given model and revision."""
-    if not items:
+    iterator = items.iterator(chunk_size=batch_size) if hasattr(items, "iterator") else iter(items)
+    try:
+        first_item = next(iterator)
+    except StopIteration:
         return 0
 
     from semantic_index import create_collection, get_qdrant_client
@@ -28,16 +31,15 @@ def index_public_items(
         distance=models.Distance.COSINE,
     )
 
-    item_list = list(items)
     total_indexed = 0
+    batch = [first_item]
 
-    for i in range(0, len(item_list), batch_size):
-        batch = item_list[i : i + batch_size]
-        descriptions = [getattr(it, "description", "") for it in batch]
+    def _flush_batch(current_batch: list[Any]) -> int:
+        descriptions = [getattr(it, "description", "") for it in current_batch]
         vectors = model.embed_passages(descriptions)
 
         points = []
-        for it, vec in zip(batch, vectors, strict=True):
+        for it, vec in zip(current_batch, vectors, strict=True):
             normalized_unit = getattr(it, "unit_normalized", "") or ""
 
             pub_date = getattr(it, "published_on", None)
@@ -67,6 +69,16 @@ def index_public_items(
             collection_name=collection_name,
             points=points,
         )
-        total_indexed += len(points)
+        return len(points)
+
+    for it in iterator:
+        batch.append(it)
+        if len(batch) >= batch_size:
+            total_indexed += _flush_batch(batch)
+            batch.clear()
+
+    if batch:
+        total_indexed += _flush_batch(batch)
+        batch.clear()
 
     return total_indexed
