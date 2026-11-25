@@ -1,4 +1,3 @@
-import json
 import re
 from collections import defaultdict
 from collections.abc import Sequence
@@ -11,6 +10,7 @@ from django.db import transaction
 
 from ingestion.item_kind import map_item_kind
 from ingestion.models import PublicItem, RawRecord
+from ingestion.raw_records import latest_copies
 from ingestion.results import select_valid_result
 
 PUB_ENDPOINT = "/api/consulta/v1/contratacoes/publicacao"
@@ -38,25 +38,13 @@ class BuildResult(int):
         return obj
 
 
-def _deduplicate_raw_records(records: Sequence[RawRecord]) -> list[RawRecord]:
-    """Keep the newest RawRecord for each (endpoint, canonical_params)."""
-    latest: dict[tuple[str, str], RawRecord] = {}
-    for r in records:
-        params_key = json.dumps(r.params, sort_keys=True) if r.params is not None else ""
-        key = (r.endpoint, params_key)
-        if key not in latest:
-            latest[key] = r
-        else:
-            prev = latest[key]
-            if (r.fetched_at, r.id or 0) > (prev.fetched_at, prev.id or 0):
-                latest[key] = r
-    return list(latest.values())
+_deduplicate_raw_records = latest_copies
 
 
 def build_public_items() -> BuildResult:
     """Build or update PublicItem records from latest RawRecords idempotently."""
     # 1. Deduplicate publication records and index by (cnpj, ano, seq)
-    pub_records = _deduplicate_raw_records(
+    pub_records = latest_copies(
         list(RawRecord.objects.filter(endpoint__startswith=PUB_ENDPOINT).iterator(chunk_size=1000))
     )
 
@@ -90,7 +78,7 @@ def build_public_items() -> BuildResult:
         )
         if PURCHASE_ENDPOINT_PATTERN.match(r.endpoint)
     ]
-    for r in _deduplicate_raw_records(single_purchase_raw):
+    for r in latest_copies(single_purchase_raw):
         if not isinstance(r.payload, dict):
             continue
         m = PURCHASE_ENDPOINT_PATTERN.match(r.endpoint)
@@ -115,7 +103,7 @@ def build_public_items() -> BuildResult:
         )
         if RESULT_ENDPOINT_PATTERN.match(r.endpoint)
     ]
-    res_records = _deduplicate_raw_records(all_result_raw)
+    res_records = latest_copies(all_result_raw)
 
     result_lookup: dict[tuple[str, int, int, int], tuple[Decimal | None, RawRecord]] = {}
     for r in res_records:
@@ -146,7 +134,7 @@ def build_public_items() -> BuildResult:
         )
         if ITEM_ENDPOINT_PATTERN.match(r.endpoint)
     ]
-    item_records = _deduplicate_raw_records(all_item_raw)
+    item_records = latest_copies(all_item_raw)
 
     records_by_purchase: dict[tuple[str, int, int], list[RawRecord]] = defaultdict(list)
     for r in item_records:
