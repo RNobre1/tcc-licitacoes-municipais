@@ -5,6 +5,8 @@ def test_map_item_kind_service_for_s():
     assert map_item_kind("S") == "service"
     assert map_item_kind("s") == "service"
     assert map_item_kind(" S ") == "service"
+    assert map_item_kind("Serviço") == "service"
+    assert map_item_kind("SERVICO") == "service"
 
 
 def test_map_item_kind_product_for_anything_else():

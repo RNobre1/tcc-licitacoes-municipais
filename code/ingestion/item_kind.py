@@ -6,4 +6,8 @@ def map_item_kind(value: str | None) -> str:
 
     Rule: 'S' is service, anything else is product.
     """
-    raise NotImplementedError
+    if value is not None:
+        v = str(value).strip().upper()
+        if v == "S" or v.startswith("SERVI"):
+            return "service"
+    return "product"

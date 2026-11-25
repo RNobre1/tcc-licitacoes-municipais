@@ -9,6 +9,7 @@ from typing import Any
 
 from django.db import transaction
 
+from ingestion.item_kind import map_item_kind
 from ingestion.models import PublicItem, RawRecord
 from ingestion.results import select_valid_result
 
@@ -230,12 +231,9 @@ def build_public_items() -> BuildResult:
                     secret_budget = bool(item.get("orcamentoSigiloso", False))
 
                     # materialOuServico -> item_kind ("product" or "service")
-                    mat_serv = str(item.get("materialOuServico") or "").upper()
-                    mat_serv_nome = str(item.get("materialOuServicoNome") or "").lower()
-                    if mat_serv == "S" or "serviço" in mat_serv_nome:
-                        item_kind = "service"
-                    else:
-                        item_kind = "product"
+                    item_kind = map_item_kind(
+                        item.get("materialOuServico") or item.get("materialOuServicoNome")
+                    )
 
                     # Check results
                     res_key = (cnpj, ano, seq, num_item)
