@@ -35,3 +35,48 @@ def test_latest_copies_differentiates_params_and_endpoints():
 
     deduped = latest_copies([r1, r2, r3])
     assert len(deduped) == 3
+
+
+def test_latest_copies_uses_id_to_break_fetched_at_ties():
+    fetched_at = datetime(2026, 11, 1, 12, 0, 0, tzinfo=UTC)
+    older_id = RawRecord(
+        id=10,
+        endpoint="/api/test",
+        params={"page": 1},
+        fetched_at=fetched_at,
+        payload={"version": "lower id"},
+    )
+    newer_id = RawRecord(
+        id=11,
+        endpoint="/api/test",
+        params={"page": 1},
+        fetched_at=fetched_at,
+        payload={"version": "higher id"},
+    )
+
+    assert [record.id for record in latest_copies([older_id, newer_id])] == [11]
+    assert [record.id for record in latest_copies([newer_id, older_id])] == [11]
+
+
+def test_latest_copies_canonicalizes_nested_param_key_order():
+    fetched_at_older = datetime(2026, 11, 1, 10, 0, 0, tzinfo=UTC)
+    fetched_at_newer = datetime(2026, 11, 1, 12, 0, 0, tzinfo=UTC)
+    older = RawRecord(
+        id=20,
+        endpoint="/api/test",
+        params={"page": 1, "filters": {"state": "PA", "year": 2026}},
+        fetched_at=fetched_at_older,
+        payload={"version": "older"},
+    )
+    newer = RawRecord(
+        id=21,
+        endpoint="/api/test",
+        params={"filters": {"year": 2026, "state": "PA"}, "page": 1},
+        fetched_at=fetched_at_newer,
+        payload={"version": "newer"},
+    )
+
+    deduplicated = latest_copies([older, newer])
+
+    assert len(deduplicated) == 1
+    assert deduplicated[0].id == 21
