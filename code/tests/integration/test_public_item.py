@@ -1,8 +1,11 @@
+import io
+import json
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.utils import timezone
 
 from ingestion.builder import build_public_items
@@ -830,8 +833,6 @@ def test_build_public_items_filters_by_start_and_end_date():
 @pytest.mark.integration
 @pytest.mark.django_db
 def test_build_public_items_command_accepts_start_and_end_options():
-    import io
-
     t1 = timezone.now()
     RawRecord.objects.create(
         endpoint="/api/consulta/v1/contratacoes/publicacao",
@@ -1339,3 +1340,164 @@ def test_build_public_items_stores_large_decimal_prices_without_overflow():
     assert item.quantity == Decimal("12345678901.2345")
     assert item.estimated_unit_price == Decimal("12345678901.2345")
     assert item.awarded_unit_price == Decimal("12345678901.2345")
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_isolates_purchase_failure_rolls_back_savepoint_and_exits_nonzero(
+    tmp_path, monkeypatch
+):
+    """R13(b): failing purchase rolls back savepoint, logs key+class, continues, exits != 0."""
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": f"0000000000000{i}", "razaoSocial": f"Pref {i}"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": i,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+                for i in (1, 2, 3)
+            ]
+        },
+        status_code=200,
+    )
+    for i in (1, 2, 3):
+        RawRecord.objects.create(
+            endpoint=f"/api/pncp/v1/orgaos/0000000000000{i}/compras/2026/{i}/itens",
+            params={"pagina": 1},
+            fetched_at=t1,
+            payload=[
+                {
+                    "numeroItem": 1,
+                    "descricao": f"DEMO-Item {i}",
+                    "quantidade": 1.0,
+                    "unidadeMedida": "UNIDADE",
+                    "valorUnitarioEstimado": 10.0 * i,
+                    "temResultado": False,
+                    "orcamentoSigiloso": False,
+                    "materialOuServico": "M",
+                }
+            ],
+            status_code=200,
+        )
+
+    through_manager = PublicItem.raw_records.through.objects
+    orig_bulk_create = through_manager.bulk_create
+
+    def failing_for_purchase_2(objs, *args, **kwargs):
+        rows = list(objs)
+        if (
+            rows
+            and PublicItem.objects.filter(pk=rows[0].publicitem_id, cnpj="00000000000002").exists()
+        ):
+            raise RuntimeError("synthetic purchase build failure")
+        return orig_bulk_create(rows, *args, **kwargs)
+
+    monkeypatch.setattr(through_manager, "bulk_create", failing_for_purchase_2)
+
+    failed_file = tmp_path / "build_failed.jsonl"
+    out = io.StringIO()
+    err = io.StringIO()
+
+    with pytest.raises(CommandError) as exc_info:
+        call_command(
+            "build_public_items",
+            failed_purchases_file=str(failed_file),
+            stdout=out,
+            stderr=err,
+        )
+
+    assert "1 failure" in str(exc_info.value)
+    assert "Failures: 1" in out.getvalue()
+    assert "00000000000002/2026/2" in err.getvalue()
+    assert "RuntimeError" in err.getvalue()
+
+    # Purchases 1 and 3 built cleanly; purchase 2 savepoint rolled back completely
+    assert list(PublicItem.objects.order_by("cnpj").values_list("cnpj", flat=True)) == [
+        "00000000000001",
+        "00000000000003",
+    ]
+
+    assert failed_file.exists()
+    lines = failed_file.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["purchase_key"] == ["00000000000002", 2026, 2]
+    assert record["pncp_key"] == "00000000000002/2026/2"
+    assert record["exception_class"] == "RuntimeError"
+    assert "synthetic purchase build failure" in record["error"]
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_isolates_postgres_data_error_per_purchase(tmp_path):
+    """R13(b): a real PostgreSQL DataError on one purchase does not abort remaining purchases."""
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": f"0000000000000{i}", "razaoSocial": f"Pref {i}"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": i,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+                for i in (1, 2, 3)
+            ]
+        },
+        status_code=200,
+    )
+    for i in (1, 2, 3):
+        price = "1" + "0" * 22 if i == 2 else 10.0 * i
+        RawRecord.objects.create(
+            endpoint=f"/api/pncp/v1/orgaos/0000000000000{i}/compras/2026/{i}/itens",
+            params={"pagina": 1},
+            fetched_at=t1,
+            payload=[
+                {
+                    "numeroItem": 1,
+                    "descricao": f"DEMO-Item {i}",
+                    "quantidade": 1.0,
+                    "unidadeMedida": "UNIDADE",
+                    "valorUnitarioEstimado": price,
+                    "temResultado": False,
+                    "orcamentoSigiloso": False,
+                    "materialOuServico": "M",
+                }
+            ],
+            status_code=200,
+        )
+
+    failed_file = tmp_path / "build_failed.jsonl"
+    result = build_public_items(failed_purchases_file=failed_file)
+
+    assert result.built_count == 2
+    assert result.failed_count == 1
+    assert list(PublicItem.objects.order_by("cnpj").values_list("cnpj", flat=True)) == [
+        "00000000000001",
+        "00000000000003",
+    ]
+    record = json.loads(failed_file.read_text(encoding="utf-8").strip())
+    assert record["purchase_key"] == ["00000000000002", 2026, 2]
+    assert record["exception_class"] == "DataError"
+
+
+def test_build_public_items_default_failed_purchases_file_is_outside_repository():
+    from ingestion.management.commands.build_public_items import Command
+
+    parser = Command().create_parser("manage.py", "build_public_items")
+    default_path = Path(parser.get_default("failed_purchases_file")).resolve()
+    repo_root = Path(__file__).resolve().parents[3]
+    assert not default_path.is_relative_to(repo_root)
