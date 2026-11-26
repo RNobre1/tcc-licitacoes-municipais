@@ -45,8 +45,33 @@ def _has_measurement_name(expression):
             names.append(node.id)
         elif isinstance(node, ast.Attribute):
             names.append(node.attr)
-        if any("unit" in name.casefold() or "unidade" in name.casefold() for name in names):
+        elif (
+            isinstance(node, ast.Subscript)
+            and isinstance(node.slice, ast.Constant)
+            and node.slice.value == "unidadeMedida"
+        ) or (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "get"
+            and (
+                (
+                    node.args
+                    and isinstance(node.args[0], ast.Constant)
+                    and node.args[0].value == "unidadeMedida"
+                )
+                or any(
+                    kw.arg == "key"
+                    and isinstance(kw.value, ast.Constant)
+                    and kw.value.value == "unidadeMedida"
+                    for kw in node.keywords
+                )
+            )
+        ):
             return True
+
+        for name in names:
+            if name.casefold().split("_")[-1] in {"unit", "uom"}:
+                return True
     return False
 
 
@@ -91,7 +116,9 @@ def _source_violations(source, filename):
             for operator, left, right in zip(node.ops, compared[:-1], compared[1:], strict=True):
                 if not isinstance(operator, (ast.Eq, ast.NotEq)):
                     continue
-                if not (_has_measurement_name(left) and _has_measurement_name(right)):
+                left_is_unit = _has_measurement_name(left) or _is_canonical_measurement(left)
+                right_is_unit = _has_measurement_name(right) or _is_canonical_measurement(right)
+                if not (left_is_unit and right_is_unit):
                     continue
                 if _is_canonical_measurement(left) and _is_canonical_measurement(right):
                     continue
