@@ -1501,3 +1501,60 @@ def test_build_public_items_default_failed_purchases_file_is_outside_repository(
     default_path = Path(parser.get_default("failed_purchases_file")).resolve()
     repo_root = Path(__file__).resolve().parents[3]
     assert not default_path.is_relative_to(repo_root)
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_fails_at_startup_when_failures_file_is_unwritable(tmp_path):
+    """N6: unwritable failed_purchases_file fails immediately at start before any build."""
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Pref 1"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000001/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Item 1",
+                "quantidade": 1.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 10.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+
+    blocker = tmp_path / "not_a_directory"
+    blocker.write_text("occupied", encoding="utf-8")
+    unwritable = blocker / "build_failed.jsonl"
+
+    with pytest.raises(OSError):
+        call_command(
+            "build_public_items",
+            failed_purchases_file=str(unwritable),
+            stdout=io.StringIO(),
+            stderr=io.StringIO(),
+        )
+
+    assert PublicItem.objects.count() == 0
