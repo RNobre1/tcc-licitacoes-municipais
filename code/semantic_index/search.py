@@ -65,29 +65,31 @@ def _ensure_modality_filter_supported(client: Any, collection_name: str) -> None
             )
 
         missing_counts = _MODALITY_MISSING_COUNTS.get(client)
-        if missing_counts is None:
-            missing_counts = {}
-            _MODALITY_MISSING_COUNTS[client] = missing_counts
-        if collection_name not in missing_counts:
-            missing_payload = client.count(
-                collection_name=collection_name,
-                count_filter=models.Filter(
-                    must=[
-                        models.IsEmptyCondition(
-                            is_empty=models.PayloadField(key="modality"),
-                        )
-                    ]
-                ),
-                exact=True,
-            )
-            missing_counts[collection_name] = int(missing_payload.count)
+        if missing_counts is not None and missing_counts.get(collection_name) == 0:
+            return
 
-        missing_count = missing_counts[collection_name]
+        missing_payload = client.count(
+            collection_name=collection_name,
+            count_filter=models.Filter(
+                must=[
+                    models.IsEmptyCondition(
+                        is_empty=models.PayloadField(key="modality"),
+                    )
+                ]
+            ),
+            exact=True,
+        )
+        missing_count = int(missing_payload.count)
         if missing_count:
             raise ValueError(
                 f"Collection '{collection_name}' has points without the modality payload field "
                 f"(count={missing_count}); reindex the collection before filtering"
             )
+
+        if missing_counts is None:
+            missing_counts = {}
+            _MODALITY_MISSING_COUNTS[client] = missing_counts
+        missing_counts[collection_name] = 0
 
 
 def semantic_search(
