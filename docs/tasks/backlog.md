@@ -263,6 +263,7 @@ leitura integral que vale para artigo — é referência de uso, não de argumen
 | A3 | Estratégia de atualização da ingestão | Autor | aberto — C1 fechado em 05/11: uma semana do Pará coletada em 49,6 s, sem falha. Falta decidir, e a coleta do preço homologado (D17) muda esse tempo |
 | A4 | Onde reside a geração dos documentos | Autor | aberto |
 | A5 | ~~Mecanismo concreto de autenticação~~ | Autor | **fechado 18/10** — o do próprio arcabouço, com o perfil único de 22/09 |
+| A7 | Armazenamento da coleção nacional no Qdrant (cerca de 20 milhões de pontos; só os vetores em FP32 somam cerca de 61 GB, e a máquina tem 16 GiB) | Autor | aberto desde 26/11 — decidir em dezembro, **por medição**, antes de criar a coleção: busca exata com vetores em disco em FP32 contra quantização int8 com rescore. A quantização pode mudar a busca exata da avaliação, então precisa de pesquisa e número. Em 26/11 o autor manteve a precisão FP32 e o limite de 512 tokens do modelo: o índice é o instrumento do R1, e meia precisão ou truncamento mudariam os vetores |
 | A6 | Proporção entre tipos de processo no setor | Fonte de domínio | aberto — limita o alcance do que se pode afirmar |
 
 **A1 e A5, fechadas em 18/10.** Nota em `TCC/decisões/2026-10-18-pilha-tecnologica.md`.
