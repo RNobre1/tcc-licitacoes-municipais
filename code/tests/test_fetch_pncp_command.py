@@ -1135,3 +1135,38 @@ def test_fetch_pncp_writes_failed_purchases_to_file_and_raises_command_error(tmp
     record = json.loads(lines[0])
     assert record["purchase_key"] == ["00000000000000", 2026, 1]
     assert "error" in record
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_deduplicates_duplicate_publications_in_same_listing():
+    item_calls = []
+
+    def transport(url: str, params: dict | None = None):
+        if "/contratacoes/publicacao" in url:
+            return 200, {
+                "data": [publication(1), publication(1)],
+                "totalRegistros": 2,
+                **ENVELOPE,
+            }
+        if url.endswith("/quantidade"):
+            return 200, 1
+        if "/itens" in url:
+            item_calls.append(url)
+            return 200, [{"numeroItem": 1}]
+        return 404, {}
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        modality=6,
+        transport=transport,
+        stdout=out,
+    )
+
+    assert len(item_calls) == 1
+    assert RawRecord.objects.filter(endpoint__endswith="/itens").count() == 1
+    output = out.getvalue()
+    assert "[2026-11-01 modality 6] seen: 2, fetched: 1, skipped: 1, failed: 0" in output
