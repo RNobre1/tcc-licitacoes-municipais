@@ -729,3 +729,76 @@ def test_top_n_screening_depth_and_price_only_ranks_whole_cq():
     # Because id 99 is ground truth and was ranked 1st by price-only,
     # easy_items_count == 1
     assert results["r2"]["easy_items_count"] == 1
+
+
+@pytest.mark.django_db
+def test_r2_normalizes_units_for_rf23_and_price_only_baseline(monkeypatch):
+    import evaluation.benchmark as benchmark_module
+    from ingestion.models import PublicItem
+    from ingestion.units import normalize_unit
+
+    candidate_a = PublicItem.objects.create(
+        cnpj="11111111000111",
+        year=2026,
+        purchase_sequence=100,
+        item_number=1,
+        description="Papel sulfite A4",
+        unit="PACOTE",
+        unit_normalized=normalize_unit("PACOTE"),
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("25"),
+        awarded_unit_price=Decimal("25"),
+        secret_budget=False,
+        published_on=date(2026, 5, 1),
+        agency_name="Prefeitura Fictícia",
+        agency_cnpj="11111111000111",
+        state="PA",
+        modality=6,
+        item_kind="product",
+    )
+
+    class CandidateMethod:
+        name = "candidate"
+
+        def rank(self, query, candidates):
+            return [(c, 0.9) for c in candidates]
+
+    rf23_calls = []
+    po_calls = []
+    orig_rank_rf23 = BenchmarkOrchestrator.rank_with_rf23
+    orig_rank_po = benchmark_module.rank_by_price_only
+
+    def spy_rf23(self, candidates, anchor=None, unit="UNIDADE"):
+        rf23_calls.append(([c.unit for c in candidates], unit))
+        return orig_rank_rf23(self, candidates, anchor=anchor, unit=unit)
+
+    def spy_po(candidates, anchor):
+        po_calls.append([c.unit for c in candidates])
+        return orig_rank_po(candidates, anchor=anchor)
+
+    monkeypatch.setattr(BenchmarkOrchestrator, "rank_with_rf23", spy_rf23)
+    monkeypatch.setattr(benchmark_module, "rank_by_price_only", spy_po)
+
+    items = [
+        {
+            "item_id": "item_unit",
+            "description": "Papel sulfite A4",
+            "ground_truth": {candidate_a.pk},
+            "chosen_prices": [Decimal("25")],
+            "unit": "  Pacote ",
+            "survey_date": date(2026, 6, 1),
+        }
+    ]
+    BenchmarkOrchestrator(n_noise_draws=1, n_bootstrap_resamples=5, seed=42).run_benchmark(
+        items=items,
+        corpus=PublicItem.objects.all(),
+        split_name="tuning",
+        candidate_methods=[CandidateMethod()],
+        baseline_method=BM25SearchMethod(),
+    )
+
+    assert rf23_calls
+    assert all(unit_arg == "pacote" for _, unit_arg in rf23_calls)
+    assert all(c_units == ["pacote"] for c_units, _ in rf23_calls)
+    assert po_calls
+    assert all(c_units == ["pacote"] for c_units in po_calls)
