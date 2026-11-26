@@ -1,19 +1,22 @@
 import concurrent.futures
 import http.client
+import json
+import math
 import re
 import threading
 import time
 import urllib.error
 from collections.abc import Callable
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from ingestion.client import (
     DEFAULT_PNCP_BASE_URL,
-    PncpError,
     PncpResponseError,
     TransportCallable,
     fetch_item_results,
@@ -47,23 +50,31 @@ class RateLimiter:
 
     def pause(self, duration: float) -> None:
         """Pause all threads sharing this limiter for the given duration in seconds."""
-        raise NotImplementedError
-
-    def wait(self) -> float:
-        """Wait if needed to respect the rate limit interval. Returns the waited duration."""
-        if self.interval <= 0:
-            return 0.0
+        if not math.isfinite(duration) or duration <= 0:
+            return
         with self._lock:
             now = self.time_func()
-            scheduled_time = (
-                max(now, self._last_call + self.interval) if self._last_call > 0 else now
-            )
+            self._paused_until = max(self._paused_until, now + duration)
+
+    def wait(self) -> float:
+        """Wait if needed for rate limit interval and shared pauses. Returns waited duration."""
+        with self._lock:
+            now = self.time_func()
+            base_time = max(now, self._paused_until)
+            if self.interval > 0:
+                scheduled_time = (
+                    max(base_time, self._last_call + self.interval)
+                    if self._last_call > 0
+                    else base_time
+                )
+            else:
+                scheduled_time = base_time
             wait_time = scheduled_time - now
             self._last_call = scheduled_time
 
         if wait_time > 0:
             self.sleep_func(wait_time)
-        return wait_time
+        return max(0.0, wait_time)
 
 
 class RetryingTransport:
@@ -72,22 +83,67 @@ class RetryingTransport:
     def __init__(
         self,
         base_transport: TransportCallable | None = None,
-        max_attempts: int = 5,
-        backoff_factor: float = 1.0,
+        max_attempts: int = 10,
+        backoff_factor: float | None = None,
         sleep_func: Callable[[float], None] | None = None,
         rate_limiter: RateLimiter | None = None,
         rate_limit_initial_wait: float = 30.0,
         rate_limit_max_wait: float = 600.0,
         rate_limit_max_attempts: int = 10,
+        log_func: Callable[[str], None] | None = None,
     ) -> None:
         self.base_transport = base_transport or urllib_transport
         self.max_attempts = max_attempts
-        self.backoff_factor = backoff_factor
-        self.sleep_func = sleep_func or time.sleep
-        self.rate_limiter = rate_limiter
         self.rate_limit_initial_wait = rate_limit_initial_wait
         self.rate_limit_max_wait = rate_limit_max_wait
         self.rate_limit_max_attempts = rate_limit_max_attempts
+        self.backoff_factor = rate_limit_initial_wait if backoff_factor is None else backoff_factor
+        self.sleep_func = sleep_func or time.sleep
+        self.rate_limiter = rate_limiter
+        self.log_func = log_func
+        self._stats_lock = threading.Lock()
+        self.backoff_waits_count = 0
+        self.backoff_waits_by_reason: dict[str, int] = {
+            "429": 0,
+            "5xx": 0,
+            "network": 0,
+        }
+
+    def _sanitize_retry_after(self, value: Any) -> float | None:
+        if value is None:
+            return None
+        try:
+            sec = float(value)
+        except TypeError, ValueError:
+            return None
+        if not math.isfinite(sec) or sec <= 0:
+            return None
+        return min(self.rate_limit_max_wait, sec)
+
+    def _record_backoff(
+        self,
+        reason_key: str,
+        reason_label: str,
+        url: str,
+        duration: float,
+        attempt: int,
+        *,
+        pause_limiter: bool = False,
+    ) -> None:
+        with self._stats_lock:
+            self.backoff_waits_count += 1
+            self.backoff_waits_by_reason[reason_key] = (
+                self.backoff_waits_by_reason.get(reason_key, 0) + 1
+            )
+            if self.log_func is not None:
+                self.log_func(
+                    f"[backoff] {reason_label} on {url}: "
+                    f"waiting {duration:.1f}s (attempt {attempt})"
+                )
+        if pause_limiter and self.rate_limiter is not None:
+            self.rate_limiter.pause(duration)
+        if duration > 0:
+            self.sleep_func(duration)
 
     def __call__(self, url: str, params: dict[str, Any] | None = None) -> tuple[int, Any]:
         attempt = 1
@@ -104,33 +160,63 @@ class RetryingTransport:
                         return status, data
                     retry_after = None
                     if isinstance(data, dict):
-                        retry_after = data.get("retry_after")
+                        retry_after = self._sanitize_retry_after(data.get("retry_after"))
                         if retry_after is None and "headers" in data:
                             hdrs = data["headers"]
                             if isinstance(hdrs, dict):
-                                retry_after = parse_retry_after(
-                                    hdrs.get("retry-after") or hdrs.get("Retry-After")
+                                retry_after = self._sanitize_retry_after(
+                                    parse_retry_after(
+                                        hdrs.get("retry-after") or hdrs.get("Retry-After")
+                                    )
                                 )
 
-                    if retry_after is not None and retry_after > 0:
-                        sleep_duration = float(retry_after)
+                    if retry_after is not None:
+                        sleep_duration = retry_after
                     else:
                         sleep_duration = min(
                             self.rate_limit_max_wait,
                             self.rate_limit_initial_wait * (2**rate_limit_backoff_step),
                         )
                         rate_limit_backoff_step += 1
-                    if sleep_duration > 0:
-                        self.sleep_func(sleep_duration)
+
+                    self._record_backoff(
+                        "429",
+                        "rate limit (429)",
+                        url,
+                        sleep_duration,
+                        rate_limit_attempt,
+                        pause_limiter=True,
+                    )
                     rate_limit_attempt += 1
                     continue
 
                 if status < 500 or attempt >= self.max_attempts:
                     return status, data
 
-                sleep_duration = self.backoff_factor * (2 ** (attempt - 1))
-                if sleep_duration > 0:
-                    self.sleep_func(sleep_duration)
+                retry_after = None
+                if isinstance(data, dict) and "headers" in data:
+                    hdrs = data["headers"]
+                    if isinstance(hdrs, dict):
+                        retry_after = self._sanitize_retry_after(
+                            parse_retry_after(hdrs.get("retry-after") or hdrs.get("Retry-After"))
+                        )
+
+                if retry_after is not None:
+                    sleep_duration = retry_after
+                else:
+                    sleep_duration = min(
+                        self.rate_limit_max_wait,
+                        self.backoff_factor * (2 ** (attempt - 1)),
+                    )
+
+                self._record_backoff(
+                    "5xx",
+                    f"HTTP {status}",
+                    url,
+                    sleep_duration,
+                    attempt,
+                    pause_limiter=False,
+                )
                 attempt += 1
                 continue
 
@@ -142,16 +228,19 @@ class RetryingTransport:
                 http.client.HTTPException,
             ) as exc:
                 is_429 = False
+                is_5xx = False
                 if isinstance(exc, urllib.error.HTTPError):
                     if exc.code == 429:
                         is_429 = True
-                    elif exc.code < 500:
+                    elif exc.code >= 500:
+                        is_5xx = True
+                    else:
                         raise
                 elif isinstance(exc, PncpResponseError):
                     if exc.status == 429:
                         is_429 = True
                     elif exc.status is not None and exc.status >= 500:
-                        pass
+                        is_5xx = True
                     else:
                         # Envelope/completeness violation: data integrity failure, fail immediately
                         raise
@@ -159,43 +248,63 @@ class RetryingTransport:
                 if is_429:
                     if rate_limit_attempt >= self.rate_limit_max_attempts:
                         raise
-                    retry_after = getattr(exc, "retry_after", None)
+                    retry_after = self._sanitize_retry_after(getattr(exc, "retry_after", None))
                     if retry_after is None and hasattr(exc, "headers") and exc.headers:
-                        retry_after = parse_retry_after(
-                            exc.headers.get("retry-after") or exc.headers.get("Retry-After")
+                        retry_after = self._sanitize_retry_after(
+                            parse_retry_after(
+                                exc.headers.get("retry-after") or exc.headers.get("Retry-After")
+                            )
                         )
-                    if retry_after is not None and retry_after > 0:
-                        sleep_duration = float(retry_after)
+                    if retry_after is not None:
+                        sleep_duration = retry_after
                     else:
                         sleep_duration = min(
                             self.rate_limit_max_wait,
                             self.rate_limit_initial_wait * (2**rate_limit_backoff_step),
                         )
                         rate_limit_backoff_step += 1
-                    if sleep_duration > 0:
-                        self.sleep_func(sleep_duration)
+
+                    self._record_backoff(
+                        "429",
+                        "rate limit (429)",
+                        url,
+                        sleep_duration,
+                        rate_limit_attempt,
+                        pause_limiter=True,
+                    )
                     rate_limit_attempt += 1
                     continue
 
                 if attempt >= self.max_attempts:
                     raise
 
-                sleep_duration = self.backoff_factor * (2 ** (attempt - 1))
-                if sleep_duration > 0:
-                    self.sleep_func(sleep_duration)
+                sleep_duration = min(
+                    self.rate_limit_max_wait,
+                    self.backoff_factor * (2 ** (attempt - 1)),
+                )
+                reason_key = "5xx" if is_5xx else "network"
+                self._record_backoff(
+                    reason_key,
+                    exc.__class__.__name__,
+                    url,
+                    sleep_duration,
+                    attempt,
+                    pause_limiter=False,
+                )
                 attempt += 1
 
 
 def create_retrying_transport(
     base_transport: TransportCallable | None = None,
-    max_attempts: int = 5,
-    backoff_factor: float = 1.0,
+    max_attempts: int = 10,
+    backoff_factor: float | None = None,
     sleep_func: Callable[[float], None] | None = None,
     rate_limiter: RateLimiter | None = None,
     rate_limit: float = 2.0,
     rate_limit_initial_wait: float = 30.0,
     rate_limit_max_wait: float = 600.0,
     rate_limit_max_attempts: int = 10,
+    log_func: Callable[[str], None] | None = None,
 ) -> RetryingTransport:
     if rate_limiter is None and rate_limit > 0:
         rate_limiter = RateLimiter(requests_per_second=rate_limit, sleep_func=sleep_func)
@@ -208,6 +317,7 @@ def create_retrying_transport(
         rate_limit_initial_wait=rate_limit_initial_wait,
         rate_limit_max_wait=rate_limit_max_wait,
         rate_limit_max_attempts=rate_limit_max_attempts,
+        log_func=log_func,
     )
 
 
@@ -260,6 +370,11 @@ class Command(BaseCommand):
             default=False,
             help="Fetch item results for items with temResultado=True",
         )
+        parser.add_argument(
+            "--failed-purchases-file",
+            default=None,
+            help="Path to JSONL file to write failed purchase records",
+        )
 
     def handle(self, *args, **options):
         start_str = options["start"]
@@ -300,9 +415,21 @@ class Command(BaseCommand):
         with_results = bool(options.get("with_results"))
         rate_limit_opt = options.get("rate_limit")
         rate_limit = float(rate_limit_opt) if rate_limit_opt is not None else 2.0
-        transport = options.get("transport") or create_retrying_transport(
-            rate_limit=rate_limit,
-        )
+        transport = options.get("transport")
+        if transport is None:
+            transport = create_retrying_transport(
+                rate_limit=rate_limit,
+                log_func=self.stdout.write,
+            )
+        elif hasattr(transport, "log_func") and transport.log_func is None:
+            transport.log_func = self.stdout.write
+
+        failed_purchases_path = options.get("failed_purchases_file")
+        failed_file = None
+        if failed_purchases_path:
+            path_obj = Path(failed_purchases_path)
+            path_obj.parent.mkdir(parents=True, exist_ok=True)
+            failed_file = path_obj.open("a", encoding="utf-8")
 
         start_time = time.monotonic()
 
@@ -337,137 +464,201 @@ class Command(BaseCommand):
         skipped_already_stored = 0
         failures_count = 0
 
-        # Walk day by day
-        current_dt = start_dt
-        while current_dt <= end_dt:
-            day_str = current_dt.strftime("%Y%m%d")
+        try:
+            # Walk day by day
+            current_dt = start_dt
+            while current_dt <= end_dt:
+                day_str = current_dt.strftime("%Y%m%d")
+                day_dash = current_dt.strftime("%Y-%m-%d")
 
-            for mod in modalities:
-                pub_params: dict[str, Any] = {
-                    "dataInicial": day_str,
-                    "dataFinal": day_str,
-                    "codigoModalidadeContratacao": mod,
-                }
-                if uf:
-                    pub_params["uf"] = uf
-
-                try:
-                    pub_records = fetch_publications(
-                        params=pub_params,
-                        transport=transport,
-                        base_url=base_url,
-                        save=True,
-                    )
-                except Exception as exc:
-                    raise CommandError(f"Failed to fetch publications from PNCP: {exc}") from exc
-
-                all_publications: list[dict[str, Any]] = []
-                for pub_record in pub_records:
-                    data = pub_record.payload.get("data", [])
-                    if isinstance(data, list):
-                        all_publications.extend(data)
-
-                publications_count += len(all_publications)
-
-                pubs_to_fetch: list[dict[str, Any]] = []
-                for pub in all_publications:
-                    cnpj = pub.get("orgaoEntidade", {}).get("cnpj")
-                    ano = pub.get("anoCompra")
-                    sequencial = pub.get("sequencialCompra")
-                    controle = pub.get("numeroControlePNCP", "unknown")
-
-                    if not cnpj or not ano or sequencial is None:
-                        self.stderr.write(
-                            f"Skipping publication with missing identification: {controle}"
-                        )
-                        failures_count += 1
-                        continue
-
-                    purchase_key = (str(cnpj), int(ano), int(sequencial))
-                    if purchase_key in _get_existing_purchases():
-                        skipped_already_stored += 1
-                        continue
-
-                    pubs_to_fetch.append(pub)
-
-                # Fetch items for pending publications using worker pool
-                def _fetch_single_pub(pub_data: dict[str, Any]):
-                    c = str(pub_data.get("orgaoEntidade", {}).get("cnpj"))
-                    a = int(pub_data.get("anoCompra"))
-                    s = int(pub_data.get("sequencialCompra"))
-                    ctrl = pub_data.get("numeroControlePNCP", f"{c}/{a}/{s}")
+                for mod in modalities:
+                    pub_params: dict[str, Any] = {
+                        "dataInicial": day_str,
+                        "dataFinal": day_str,
+                        "codigoModalidadeContratacao": mod,
+                    }
+                    if uf:
+                        pub_params["uf"] = uf
 
                     try:
-                        it_records = fetch_items(
-                            cnpj=c,
-                            ano=a,
-                            sequencial=s,
+                        pub_records = fetch_publications(
+                            params=pub_params,
                             transport=transport,
                             base_url=base_url,
-                            save=False,
+                            save=True,
                         )
-                        it_count = sum(
-                            len(r.payload) for r in it_records if isinstance(r.payload, list)
-                        )
-
-                        res_recs: list[RawRecord] = []
-                        if with_results:
-                            items_for_pub: list[dict[str, Any]] = []
-                            for r in it_records:
-                                if isinstance(r.payload, list):
-                                    items_for_pub.extend(r.payload)
-                            for it in items_for_pub:
-                                if it.get("temResultado") is True:
-                                    num_it = it.get("numeroItem")
-                                    if num_it is not None:
-                                        res_rec = fetch_item_results(
-                                            cnpj=c,
-                                            ano=a,
-                                            sequencial=s,
-                                            numero_item=int(num_it),
-                                            transport=transport,
-                                            base_url=base_url,
-                                            save=False,
-                                        )
-                                        res_recs.append(res_rec)
-
-                        return (c, a, s, it_records, it_count, res_recs, None, ctrl)
-                    except PncpError as exc:
-                        return (c, a, s, [], 0, [], exc, ctrl)
                     except Exception as exc:
-                        return (c, a, s, [], 0, [], exc, ctrl)
+                        raise CommandError(
+                            f"Failed to fetch publications from PNCP: {exc}"
+                        ) from exc
 
-                if pubs_to_fetch:
-                    if concurrency == 1:
-                        results = [_fetch_single_pub(p) for p in pubs_to_fetch]
-                    else:
-                        with concurrent.futures.ThreadPoolExecutor(
-                            max_workers=concurrency
-                        ) as executor:
-                            results = list(executor.map(_fetch_single_pub, pubs_to_fetch))
+                    all_publications: list[dict[str, Any]] = []
+                    for pub_record in pub_records:
+                        data = pub_record.payload.get("data", [])
+                        if isinstance(data, list):
+                            all_publications.extend(data)
 
-                    records_to_save: list[RawRecord] = []
-                    for c, a, s, it_recs, it_cnt, res_recs, err, ctrl in results:
-                        if err is not None:
+                    publications_count += len(all_publications)
+
+                    mod_seen = len(all_publications)
+                    mod_fetched = 0
+                    mod_skipped = 0
+                    mod_failed = 0
+
+                    pubs_to_fetch: list[dict[str, Any]] = []
+                    for pub in all_publications:
+                        cnpj = pub.get("orgaoEntidade", {}).get("cnpj")
+                        ano = pub.get("anoCompra")
+                        sequencial = pub.get("sequencialCompra")
+                        controle = pub.get("numeroControlePNCP", "unknown")
+
+                        if not cnpj or not ano or sequencial is None:
                             self.stderr.write(
-                                f"Skipping publication {ctrl} due to items error: {err}"
+                                f"Skipping publication with missing identification: {controle}"
                             )
                             failures_count += 1
+                            mod_failed += 1
+                            if failed_file:
+                                failed_rec = {
+                                    "timestamp": timezone.now().isoformat(),
+                                    "purchase_key": [
+                                        str(cnpj or ""),
+                                        int(ano or 0),
+                                        int(sequencial or 0),
+                                    ],
+                                    "control": controle,
+                                    "error": "Missing identification",
+                                }
+                                failed_file.write(json.dumps(failed_rec) + "\n")
+                                failed_file.flush()
+                            continue
+
+                        purchase_key = (str(cnpj), int(ano), int(sequencial))
+                        if purchase_key in _get_existing_purchases():
+                            skipped_already_stored += 1
+                            mod_skipped += 1
+                            continue
+
+                        pubs_to_fetch.append(pub)
+
+                    # Fetch items for pending publications using worker pool
+                    def _fetch_single_pub(pub_data: dict[str, Any]):
+                        c = str(pub_data.get("orgaoEntidade", {}).get("cnpj"))
+                        a = int(pub_data.get("anoCompra"))
+                        s = int(pub_data.get("sequencialCompra"))
+                        ctrl = pub_data.get("numeroControlePNCP", f"{c}/{a}/{s}")
+
+                        try:
+                            it_records = fetch_items(
+                                cnpj=c,
+                                ano=a,
+                                sequencial=s,
+                                transport=transport,
+                                base_url=base_url,
+                                save=False,
+                            )
+                            it_count = sum(
+                                len(r.payload) for r in it_records if isinstance(r.payload, list)
+                            )
+
+                            res_recs: list[RawRecord] = []
+                            if with_results:
+                                items_for_pub: list[dict[str, Any]] = []
+                                for r in it_records:
+                                    if isinstance(r.payload, list):
+                                        items_for_pub.extend(r.payload)
+                                for it in items_for_pub:
+                                    if it.get("temResultado") is True:
+                                        num_it = it.get("numeroItem")
+                                        if num_it is not None:
+                                            res_rec = fetch_item_results(
+                                                cnpj=c,
+                                                ano=a,
+                                                sequencial=s,
+                                                numero_item=int(num_it),
+                                                transport=transport,
+                                                base_url=base_url,
+                                                save=False,
+                                            )
+                                            res_recs.append(res_rec)
+
+                            return (c, a, s, it_records, it_count, res_recs, None, ctrl, False)
+                        except PncpResponseError as exc:
+                            is_404 = exc.status == 404
+                            return (c, a, s, [], 0, [], exc, ctrl, is_404)
+                        except Exception as exc:
+                            return (c, a, s, [], 0, [], exc, ctrl, False)
+
+                    if pubs_to_fetch:
+                        if concurrency == 1:
+                            results = [_fetch_single_pub(p) for p in pubs_to_fetch]
                         else:
-                            records_to_save.extend(it_recs)
-                            records_to_save.extend(res_recs)
-                            _get_existing_purchases().add((c, a, s))
-                            item_pages_count += len(it_recs)
-                            items_count += it_cnt
-                            results_count += len(res_recs)
+                            with concurrent.futures.ThreadPoolExecutor(
+                                max_workers=concurrency
+                            ) as executor:
+                                results = list(executor.map(_fetch_single_pub, pubs_to_fetch))
 
-                    if records_to_save:
-                        with transaction.atomic():
-                            RawRecord.objects.bulk_create(records_to_save)
+                        records_to_save: list[RawRecord] = []
+                        for c, a, s, it_recs, it_cnt, res_recs, err, ctrl, is_404 in results:
+                            if err is not None:
+                                self.stderr.write(
+                                    f"Skipping publication {ctrl} due to items error: {err}"
+                                )
+                                failures_count += 1
+                                mod_failed += 1
+                                if is_404:
+                                    rec_404 = RawRecord(
+                                        endpoint=f"/api/pncp/v1/orgaos/{c}/compras/{a}/{s}/itens",
+                                        params={},
+                                        fetched_at=timezone.now(),
+                                        payload={
+                                            "status": 404,
+                                            "message": str(err),
+                                        },
+                                        status_code=404,
+                                    )
+                                    records_to_save.append(rec_404)
+                                    _get_existing_purchases().add((c, a, s))
+                                if failed_file:
+                                    failed_rec = {
+                                        "timestamp": timezone.now().isoformat(),
+                                        "purchase_key": [str(c), int(a), int(s)],
+                                        "control": ctrl,
+                                        "error": str(err),
+                                    }
+                                    failed_file.write(json.dumps(failed_rec) + "\n")
+                                    failed_file.flush()
+                            else:
+                                records_to_save.extend(it_recs)
+                                records_to_save.extend(res_recs)
+                                _get_existing_purchases().add((c, a, s))
+                                item_pages_count += len(it_recs)
+                                items_count += it_cnt
+                                results_count += len(res_recs)
+                                mod_fetched += 1
 
-            current_dt += timedelta(days=1)
+                        if records_to_save:
+                            with transaction.atomic():
+                                RawRecord.objects.bulk_create(records_to_save)
+
+                    self.stdout.write(
+                        f"[{day_dash} modality {mod}] seen: {mod_seen}, "
+                        f"fetched: {mod_fetched}, skipped: {mod_skipped}, failed: {mod_failed}"
+                    )
+
+                current_dt += timedelta(days=1)
+        finally:
+            if failed_file is not None:
+                failed_file.close()
 
         elapsed = time.monotonic() - start_time
+        backoff_waits = getattr(transport, "backoff_waits_count", 0)
+        by_reason = getattr(transport, "backoff_waits_by_reason", None)
+        if by_reason and backoff_waits > 0:
+            breakdown = ", ".join(f"{k}: {v}" for k, v in by_reason.items() if v > 0)
+            backoff_line = f"Backoff waits: {backoff_waits} ({breakdown})"
+        else:
+            backoff_line = f"Backoff waits: {backoff_waits}"
 
         self.stdout.write("\n--- Ingestion Summary ---")
         self.stdout.write(f"Publications: {publications_count}")
@@ -477,4 +668,8 @@ class Command(BaseCommand):
         if with_results:
             self.stdout.write(f"Item results: {results_count}")
         self.stdout.write(f"Failures: {failures_count}")
+        self.stdout.write(backoff_line)
         self.stdout.write(f"Elapsed: {elapsed:.2f}s")
+
+        if failures_count > 0:
+            raise CommandError(f"fetch_pncp completed with {failures_count} failure(s)")

@@ -1,6 +1,7 @@
 import datetime
 import email.utils
 import json
+import math
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -14,25 +15,38 @@ from ingestion.models import RawRecord
 
 DEFAULT_PNCP_BASE_URL = "https://pncp.gov.br"
 MAX_PUBLICATIONS_PAGES = 10000
+MAX_RETRY_AFTER_SECONDS = 600.0
 
 TransportCallable = Callable[..., tuple[int, Any]]
 
 
-def parse_retry_after(value: str | None) -> float | None:
-    """Parse Retry-After header as seconds or HTTP date, returning seconds as float."""
+def parse_retry_after(
+    value: str | None,
+    *,
+    now: datetime.datetime | None = None,
+) -> float | None:
+    """Parse Retry-After header as seconds or HTTP date, returning seconds capped at 600s."""
     if not value:
         return None
     val_str = str(value).strip()
     try:
         sec = float(val_str)
-        return max(0.0, sec)
+        if not math.isfinite(sec) or sec < 0:
+            return None
+        return min(MAX_RETRY_AFTER_SECONDS, sec)
     except ValueError:
         pass
     try:
         dt = email.utils.parsedate_to_datetime(val_str)
-        now = datetime.datetime.now(datetime.UTC)
-        diff = (dt - now).total_seconds()
-        return max(0.0, diff)
+        if dt is None or dt.tzinfo is None:
+            return None
+        ref_now = now if now is not None else datetime.datetime.now(datetime.UTC)
+        diff = (dt - ref_now).total_seconds()
+        if not math.isfinite(diff):
+            return None
+        if diff < 0:
+            return 0.0
+        return min(MAX_RETRY_AFTER_SECONDS, diff)
     except Exception:
         return None
 
