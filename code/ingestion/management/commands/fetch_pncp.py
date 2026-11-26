@@ -43,6 +43,11 @@ class RateLimiter:
         self.sleep_func = sleep_func or time.sleep
         self._lock = threading.Lock()
         self._last_call: float = 0.0
+        self._paused_until: float = 0.0
+
+    def pause(self, duration: float) -> None:
+        """Pause all threads sharing this limiter for the given duration in seconds."""
+        raise NotImplementedError
 
     def wait(self) -> float:
         """Wait if needed to respect the rate limit interval. Returns the waited duration."""
