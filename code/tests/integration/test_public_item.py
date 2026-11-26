@@ -1275,3 +1275,67 @@ def test_migration_0005_backfills_unit_normalized_with_single_source():
 
     assert PublicItem.objects.get(item_number=1).unit_normalized == "caixa"
     assert PublicItem.objects.get(item_number=2).unit_normalized == ""
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_stores_large_decimal_prices_without_overflow():
+    """R13(a): schema widens quantity, estimated_unit_price, awarded_unit_price to 24 digits."""
+    t1 = timezone.now()
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Prefeitura Teste"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000001/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Fictitious large estimated price item",
+                "quantidade": "12345678901.2345",
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 12345678901.2345,
+                "temResultado": True,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000001/compras/2026/1/itens/1/resultados",
+        params={},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "situacaoCompraItemResultadoNome": "Informado",
+                "dataCancelamento": None,
+                "valorUnitarioHomologado": "12345678901.2345",
+            }
+        ],
+        status_code=200,
+    )
+
+    count = build_public_items()
+    assert count == 1
+    item = PublicItem.objects.get()
+    assert item.quantity == Decimal("12345678901.2345")
+    assert item.estimated_unit_price == Decimal("12345678901.2345")
+    assert item.awarded_unit_price == Decimal("12345678901.2345")
