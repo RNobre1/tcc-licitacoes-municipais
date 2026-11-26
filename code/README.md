@@ -47,6 +47,17 @@ uv run --env-file .env python manage.py measure_sample --start 2026-10-26 --end 
 
 Fetched data is real and stays in the local database. It is never committed.
 
+## Semantic Index
+
+Remove orphan points from a Qdrant collection whose `PublicItem` rows no longer exist in PostgreSQL (pass `--dry-run` first to inspect counts without deleting):
+
+```bash
+uv run --env-file .env python manage.py prune_index --dry-run
+uv run --env-file .env python manage.py prune_index
+```
+
+- `prune_index` derives the collection name from `--model` and `--revision` (matching `index_public_items` defaults) without loading the embedding model, scrolls point IDs in batches (`--batch-size`, default `1000`), and deletes points absent from PostgreSQL.
+
 ## Testing
 
 Run the test suite:
