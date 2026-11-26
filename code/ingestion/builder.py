@@ -91,7 +91,8 @@ def build_public_items(
         for pub in data:
             if not isinstance(pub, dict):
                 continue
-            cnpj = pub.get("orgaoEntidade", {}).get("cnpj")
+            orgao = pub.get("orgaoEntidade") or {}
+            cnpj = orgao.get("cnpj") if isinstance(orgao, dict) else None
             ano = pub.get("anoCompra")
             seq = pub.get("sequencialCompra")
             if not cnpj or ano is None or seq is None:
@@ -110,13 +111,16 @@ def build_public_items(
             if end_date and pub_date > end_date:
                 continue
 
-            agency_name = pub.get("orgaoEntidade", {}).get("razaoSocial", "") or ""
+            agency_name = (orgao.get("razaoSocial") or "") if isinstance(orgao, dict) else ""
             agency_cnpj = str(cnpj)
-            state = pub.get("unidadeOrgao", {}).get("ufSigla", "") or ""
+            unidade = pub.get("unidadeOrgao") or {}
+            state = str(unidade.get("ufSigla") or "").strip() if isinstance(unidade, dict) else ""
             try:
                 modality = int(pub.get("modalidadeId", 0) or 0)
             except Exception:
                 modality = 0
+            if not state or modality <= 0:
+                continue
 
             prev = pub_lookup.get(key)
             if prev is None or (fetched_at, rec_id) > (prev.fetched_at, prev.raw_record_id):
@@ -150,13 +154,17 @@ def build_public_items(
         if end_date and pub_date > end_date:
             continue
 
-        agency_name = payload.get("orgaoEntidade", {}).get("razaoSocial", "") or ""
+        orgao = payload.get("orgaoEntidade") or {}
+        agency_name = (orgao.get("razaoSocial") or "") if isinstance(orgao, dict) else ""
         agency_cnpj = str(key[0])
-        state = payload.get("unidadeOrgao", {}).get("ufSigla", "") or ""
+        unidade = payload.get("unidadeOrgao") or {}
+        state = str(unidade.get("ufSigla") or "").strip() if isinstance(unidade, dict) else ""
         try:
             modality = int(payload.get("modalidadeId", 0) or 0)
         except Exception:
             modality = 0
+        if not state or modality <= 0:
+            continue
 
         prev = pub_lookup.get(key)
         if prev is None or (fetched_at, rec_id) > (prev.fetched_at, prev.raw_record_id):
