@@ -118,6 +118,57 @@ def compute_mrr_at_k(ranked_ids: Sequence[Any], ground_truth_ids: set[Any], k: i
     return 0.0
 
 
+def group_tied_scored_ids(
+    ranked_scored: Sequence[tuple[Any, Any]],
+) -> list[tuple[float, list[Any]]]:
+    """Group a full (doc_or_id, score) sequence into exact-score tie groups descending."""
+    raise NotImplementedError("C17 tied-score grouping is not implemented yet")
+
+
+def compute_expected_recall_at_k(
+    ranked_scored: Sequence[tuple[Any, Any]],
+    ground_truth_ids: set[Any],
+    k: int,
+) -> float:
+    """Compute exact expected Recall@k over uniform random orderings within tied groups."""
+    raise NotImplementedError("C17 expected Recall@k is not implemented yet")
+
+
+def compute_expected_success_at_k(
+    ranked_scored: Sequence[tuple[Any, Any]],
+    ground_truth_ids: set[Any],
+    k: int,
+) -> float:
+    """Compute exact expected Success@k over uniform random orderings within tied groups."""
+    raise NotImplementedError("C17 expected Success@k is not implemented yet")
+
+
+def compute_expected_mrr_at_k(
+    ranked_scored: Sequence[tuple[Any, Any]],
+    ground_truth_ids: set[Any],
+    k: int = 20,
+) -> float:
+    """Compute exact expected MRR@k over uniform random orderings within tied groups."""
+    raise NotImplementedError("C17 expected MRR@k is not implemented yet")
+
+
+def shuffle_tied_groups(
+    ranked_scored: Sequence[tuple[Any, Any]],
+    rng: random.Random,
+) -> list[tuple[Any, float]]:
+    """Shuffle item order strictly within each exact-score tie group."""
+    raise NotImplementedError("C17 tie-group shuffling is not implemented yet")
+
+
+def compute_tie_sensitivity(
+    ranked_scored: Sequence[tuple[Any, Any]],
+    ground_truth_ids: set[Any],
+    top_n: int = 20,
+) -> dict[str, bool]:
+    """Return tie-sensitivity flags for Recall@10, MRR@20, and R2 screening pool."""
+    raise NotImplementedError("C17 tie-sensitivity computation is not implemented yet")
+
+
 def bootstrap_paired_difference(
     scores_a: Sequence[float],
     scores_b: Sequence[float],
