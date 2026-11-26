@@ -37,6 +37,7 @@ A investigação está em `docs/pesquisas/limiares-de-aceitacao-r1-r2.md`.
 | Escolha do finalista | Maior Recall\@10 no ajuste, com desempate pelo MRR\@20; dois finalistas com correção; o multilingual-E5 fixado agora | Maior Recall\@10 no ajuste, com desempate pelo MRR\@20 |
 | Definição de Recall\@10 | Fração dos escolhidos entre os dez primeiros; ao menos um entre os dez primeiros | Fração dos escolhidos |
 | Aceite de R2 | Nível de referência de 25% de erro; R2 só descritivo até 2027; nível de 50% | Nível de referência de 25% |
+| Profundidade da reordenação no R2 (escolhida em 26/11) | 20, a profundidade da tela; 50; curva em 10, 20 e 50 | 20 |
 | Leitura de R2 | Grade fixa com linha de base só-preço e partição fácil/difícil; só a curva; esperar o erro real da servidora | Grade fixa, só-preço e fácil/difícil |
 
 ## Decisão
@@ -86,6 +87,10 @@ A investigação está em `docs/pesquisas/limiares-de-aceitacao-r1-r2.md`.
   |ln(p/âncora)|, sem texto. Se ela empatar com o sistema, o ganho é do preço.
 - Uma **partição fácil/difícil**: o item é fácil quando o só-preço já põe um
   relevante entre os dez primeiros. O ganho de R1 tem de persistir nos difíceis.
+- Cada método entrega os **20 primeiros** candidatos do seu espaço de busca, a
+  mesma profundidade que a tela de triagem tinha em 26/11, e o RF23 reordena
+  esses 20 com a âncora. A linha de base só-preço ordena o espaço de busca
+  inteiro. Escolhido pelo autor em 26/11, antes de qualquer medição.
 - Relata-se G(σ) = Recall\@10 com σ − Recall\@10 sem âncora, em todos os
   níveis.
 - **R2 é aceito** se as três condições valerem: R1 aceito; com a âncora em
@@ -122,7 +127,7 @@ fixas, gravadas na saída de cada execução.
 ## Consequência
 
 - O arnês implementa exatamente estes parâmetros. Mudar qualquer um depois de
-  rodar sobre a medição invalida o R1.
+  rodar sobre a medição invalida o R1 e o R2.
 - O espaço de busca foi decidido no mesmo dia, em nota própria:
   [[2026-11-24-espaco-de-busca-e-preco-do-candidato]].
 - A C11 fica fechada para R1 e R2. Os limiares de R3 a R8 vêm com as medições
