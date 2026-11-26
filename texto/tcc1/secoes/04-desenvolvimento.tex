@@ -579,25 +579,35 @@ duas puxou cada candidato para cima.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth,height=0.80\textheight,keepaspectratio]{figuras/sequencia-busca-triagem.pdf}
-  \caption{Sequência de operações na ingestão de registros, indexação vetorial e
-    triagem assistida de preços}
-  \label{fig:sequencia-busca-triagem}
+  \includegraphics[width=\textwidth]{figuras/sequencia-ingestao-indexacao.pdf}
+  \caption{Sequência de operações na ingestão de registros e na indexação
+    vetorial em segundo plano}
+  \label{fig:sequencia-ingestao-indexacao}
   \fonte{Elaborado pelo autor.}
 \end{figure}
 
-A Figura~\ref{fig:sequencia-busca-triagem} divide a operação em dois tempos que
-não se cruzam em memória: o serviço em segundo plano alimenta os dois bancos, e
-a tela só os consulta durante a triagem. Na parte~(a), cada etapa separa coleta,
-normalização e vetorização --- \code{fetch\_pncp} grava a página bruta em
-\code{RawRecord} antes de \code{build\_public\_items} consolidar a cópia
-mais recente em \code{PublicItem}, e \code{index\_public\_items} publica no
-Qdrant o vetor ligado ao identificador relacional. Na parte~(b), a busca
-semântica aplica o filtro obrigatório de doze meses (RN07) e a modalidade no
-índice vetorial antes de hidratar os candidatos no PostgreSQL, consulta na API do
-PNCP o preço homologado apenas dos itens com resultado ainda ausente, ordena
-pelo RF23 e calcula o painel de estimativa exclusivamente sobre preços
-homologados.
+A Figura~\ref{fig:sequencia-ingestao-indexacao} mostra a primeira metade da
+operação, em segundo plano, que alimenta o PostgreSQL e o Qdrant:
+\code{fetch\_pncp} grava a página bruta em \code{RawRecord} antes de
+\code{build\_public\_items} consolidar a cópia mais recente em \code{PublicItem};
+em seguida, \code{index\_public\_items} publica no Qdrant o vetor ligado ao identificador
+relacional. As duas frentes --- preparação dos dados e uso na tela --- só se
+encontram nos bancos de dados.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/sequencia-triagem.pdf}
+  \caption{Sequência de operações na triagem assistida de preços com busca
+    semântica e preço homologado sob demanda}
+  \label{fig:sequencia-triagem}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
+
+Na Figura~\ref{fig:sequencia-triagem}, a triagem lê os dois bancos quando o
+operador abre um item --- aplicando no Qdrant o filtro obrigatório da janela de
+doze meses (RN07) --- e só recorre à API do PNCP para buscar o preço homologado
+que falta, grava-o de volta no PostgreSQL, ordena os candidatos pelo RF23 e
+calcula o painel de estimativa só com preços homologados.
 
 \begin{figure}[H]
   \centering
