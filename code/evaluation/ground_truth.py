@@ -5,9 +5,10 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
-from ingestion.builder import _deduplicate_raw_records, map_item_kind
 from ingestion.client import fetch_items
+from ingestion.item_kind import map_item_kind
 from ingestion.models import RawRecord
+from ingestion.raw_records import latest_copies
 
 
 @dataclass(frozen=True)
@@ -72,7 +73,7 @@ def match_ground_truth_item(
     it_num = item_number if item_number is not None else (numero_item or 0)
 
     raw_items_input = item_records if item_records is not None else (records or [])
-    deduped_item_records = _deduplicate_raw_records(raw_items_input)
+    deduped_item_records = latest_copies(raw_items_input)
 
     found_item: dict[str, Any] | None = None
     for record in deduped_item_records:
@@ -114,7 +115,7 @@ def match_ground_truth_item(
     # N6: Awarded price comes strictly from result records, never from the item payload
     awarded_price: Decimal | None = None
     if result_records:
-        deduped_results = _deduplicate_raw_records(result_records)
+        deduped_results = latest_copies(result_records)
         for r in deduped_results:
             if not isinstance(r.payload, list):
                 continue

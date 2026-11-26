@@ -12,9 +12,9 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from evaluation.ground_truth import match_ground_truth_item, resolve_purchase_items
-from ingestion.builder import _deduplicate_raw_records
 from ingestion.client import ItemCountMismatchError, PncpResponseError
 from ingestion.models import RawRecord
+from ingestion.raw_records import latest_copies
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -177,7 +177,7 @@ class Command(BaseCommand):
                     }
                 continue
 
-            deduped_records = _deduplicate_raw_records(records)
+            deduped_records = latest_copies(records)
 
             for ref in refs:
                 item_num = ref["item_number"]

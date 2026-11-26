@@ -13,9 +13,22 @@ from typing import Any
 
 from django.db.models import QuerySet
 
+from ingestion.units import normalize_unit
 from semantic_index.embedding import EmbeddingModel
 
 ALLOWED_MODALITIES = (6, 7, 8)
+
+
+def _normalized_candidate_unit(doc: Any) -> str:
+    if isinstance(doc, dict):
+        norm = doc.get("unit_normalized")
+        if norm:
+            return str(norm)
+        return normalize_unit(doc.get("unit", "UNIDADE"))
+    norm = getattr(doc, "unit_normalized", "")
+    if norm:
+        return str(norm)
+    return normalize_unit(getattr(doc, "unit", "UNIDADE"))
 
 
 def compute_recall_at_k(ranked_ids: Sequence[Any], ground_truth_ids: set[Any], k: int) -> float:
@@ -636,7 +649,11 @@ class BenchmarkOrchestrator:
         from pricing.ranking import rank_candidates
 
         expected_price = Decimal(str(anchor)) if anchor is not None else None
-        return rank_candidates(candidates, expected_price=expected_price, item_unit=unit)
+        return rank_candidates(
+            candidates,
+            expected_price=expected_price,
+            item_unit=normalize_unit(unit),
+        )
 
     def run_benchmark(
         self,
@@ -721,6 +738,7 @@ class BenchmarkOrchestrator:
                         "pk",
                         "description",
                         "unit",
+                        "unit_normalized",
                         "published_on",
                         "modality",
                         "state",
@@ -750,11 +768,7 @@ class BenchmarkOrchestrator:
                 if p_val is None:
                     p_val = resolve_candidate_price(doc)
                 p_dec = Decimal(str(p_val)) if p_val is not None else Decimal("0")
-                d_unit = (
-                    doc.get("unit", "UNIDADE")
-                    if isinstance(doc, dict)
-                    else getattr(doc, "unit", "UNIDADE")
-                )
+                d_unit = _normalized_candidate_unit(doc)
                 whole_cq_sim.append(
                     PriceCandidateSim(
                         id=d_id,
@@ -794,11 +808,7 @@ class BenchmarkOrchestrator:
                         if p_val is None:
                             p_val = resolve_candidate_price(doc)
                         p_dec = Decimal(str(p_val)) if p_val is not None else Decimal("0")
-                        d_unit = (
-                            doc.get("unit", "UNIDADE")
-                            if isinstance(doc, dict)
-                            else getattr(doc, "unit", "UNIDADE")
-                        )
+                        d_unit = _normalized_candidate_unit(doc)
                         sim_candidates.append(
                             PriceCandidateSim(
                                 id=d_id,
@@ -888,7 +898,7 @@ class BenchmarkOrchestrator:
             gt_ids = set(item.get("ground_truth", set()))
             candidates = active_candidates.get(item_id, [])
             whole_cq = whole_c_q_by_item.get(item_id, [])
-            unit = str(item.get("unit", "UNIDADE"))
+            unit = normalize_unit(item.get("unit", "UNIDADE"))
 
             anchors_by_sigma = generate_anchor_prices(
                 chosen_prices,
