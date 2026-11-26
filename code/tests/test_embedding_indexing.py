@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
 from qdrant_client.models import Distance, VectorParams
 
 from semantic_index import (
@@ -202,3 +203,94 @@ def test_index_public_items_uses_the_stored_normalized_unit():
 
     collection_name = collection_name_for_model(model)
     assert client.points[collection_name][0].payload["unit"] == "stored canonical value"
+
+
+def test_index_public_items_refuses_non_blank_unit_with_blank_unit_normalized():
+    client = FakeQdrantIndexingClient()
+    model = FakeEmbeddingModel(dimension=16)
+
+    valid_item = SimpleNamespace(
+        pk=1,
+        description="DEMO-Caneta",
+        unit="KG",
+        unit_normalized="kg",
+        state="PA",
+        published_on=date(2026, 10, 29),
+        item_kind="product",
+        modality=6,
+    )
+    blank_item = SimpleNamespace(
+        pk=2,
+        description="DEMO-Sem unidade",
+        unit="   ",
+        unit_normalized="",
+        state="PA",
+        published_on=date(2026, 10, 29),
+        item_kind="product",
+        modality=6,
+    )
+    bad_item_1 = SimpleNamespace(
+        pk=3,
+        description="DEMO-Caixa sem normalizacao",
+        unit="Caixa ",
+        unit_normalized="",
+        state="PA",
+        published_on=date(2026, 10, 29),
+        item_kind="product",
+        modality=6,
+    )
+    bad_item_2 = SimpleNamespace(
+        pk=4,
+        description="DEMO-Resma sem normalizacao",
+        unit="RESMA",
+        unit_normalized="   ",
+        state="PA",
+        published_on=date(2026, 10, 29),
+        item_kind="product",
+        modality=6,
+    )
+
+    with pytest.raises(ValueError, match=r"\b2\b"):
+        index_public_items(
+            model=model,
+            items=[valid_item, blank_item, bad_item_1, bad_item_2],
+            client=client,
+        )
+
+    assert not client.collection_exists(collection_name_for_model(model))
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_index_public_items_queryset_refuses_unnormalized_rows_and_reports_count():
+    from decimal import Decimal
+
+    from ingestion.models import PublicItem
+
+    PublicItem.objects.create(
+        cnpj="00000000000001",
+        year=2026,
+        purchase_sequence=1,
+        item_number=1,
+        description="DEMO-Old row without normalized unit",
+        unit="Caixa ",
+        unit_normalized="",
+        quantity=Decimal("1.0000"),
+        estimated_unit_price=Decimal("10.0000"),
+        awarded_unit_price=None,
+        secret_budget=False,
+        published_on=date(2026, 10, 29),
+        agency_name="Prefeitura Teste",
+        agency_cnpj="00000000000001",
+        state="PA",
+        modality=6,
+        item_kind="product",
+    )
+
+    client = FakeQdrantIndexingClient()
+    model = FakeEmbeddingModel(dimension=16)
+
+    with pytest.raises(ValueError, match=r"\b1\b"):
+        index_public_items(model=model, items=PublicItem.objects.all(), client=client)
+
+    assert not client.collection_exists(collection_name_for_model(model))
