@@ -1070,3 +1070,154 @@ def test_build_public_items_skips_items_without_state_or_modality():
     assert result == 0
     assert PublicItem.objects.count() == 0
     assert result.skipped_without_publication == 3
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_newest_publication_wins_across_different_pages():
+    """R8: newest publication across different pages wins even when its RawRecord pk is lower."""
+    t1 = timezone.now()
+    t2 = t1 + timezone.timedelta(hours=2)
+
+    rec_newer = RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t2,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Prefeitura Nova"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-28T08:00:00",
+                    "modalidadeId": 8,
+                    "unidadeOrgao": {"ufSigla": "SP"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    rec_older = RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 2},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Prefeitura Antiga"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    assert rec_newer.pk < rec_older.pk
+
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000001/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Item publicacao",
+                "quantidade": 1.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 10.0,
+                "temResultado": False,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+
+    build_public_items()
+    item = PublicItem.objects.get()
+    assert item.agency_name == "Prefeitura Nova"
+    assert item.state == "SP"
+    assert item.modality == 8
+    assert item.published_on == date(2026, 10, 28)
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_newest_result_wins_even_with_lower_pk():
+    """R8: newest result record wins by fetched_at even when inserted with a lower pk."""
+    t1 = timezone.now()
+    t2 = t1 + timezone.timedelta(hours=2)
+
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Prefeitura"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                }
+            ]
+        },
+        status_code=200,
+    )
+    RawRecord.objects.create(
+        endpoint="/api/pncp/v1/orgaos/00000000000001/compras/2026/1/itens",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "descricao": "DEMO-Item resultado",
+                "quantidade": 1.0,
+                "unidadeMedida": "UNIDADE",
+                "valorUnitarioEstimado": 100.0,
+                "temResultado": True,
+                "orcamentoSigiloso": False,
+                "materialOuServico": "M",
+            }
+        ],
+        status_code=200,
+    )
+    result_endpoint = "/api/pncp/v1/orgaos/00000000000001/compras/2026/1/itens/1/resultados"
+    rec_newer = RawRecord.objects.create(
+        endpoint=result_endpoint,
+        params={},
+        fetched_at=t2,
+        payload=[
+            {
+                "numeroItem": 1,
+                "situacaoCompraItemResultadoNome": "Informado",
+                "dataCancelamento": None,
+                "valorUnitarioHomologado": 82.0,
+            }
+        ],
+        status_code=200,
+    )
+    rec_older = RawRecord.objects.create(
+        endpoint=result_endpoint,
+        params={},
+        fetched_at=t1,
+        payload=[
+            {
+                "numeroItem": 1,
+                "situacaoCompraItemResultadoNome": "Informado",
+                "dataCancelamento": None,
+                "valorUnitarioHomologado": 95.0,
+            }
+        ],
+        status_code=200,
+    )
+    assert rec_newer.pk < rec_older.pk
+
+    build_public_items()
+    item = PublicItem.objects.get()
+    assert item.awarded_unit_price == Decimal("82.0000")

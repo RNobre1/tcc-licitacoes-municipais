@@ -368,7 +368,10 @@ class Command(BaseCommand):
             "--with-results",
             action="store_true",
             default=False,
-            help="Fetch item results for items with temResultado=True",
+            help=(
+                "Fetch item results for items with temResultado=True "
+                "(purchases already stored in DB are skipped on resumption)"
+            ),
         )
         parser.add_argument(
             "--failed-purchases-file",
