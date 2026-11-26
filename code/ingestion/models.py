@@ -28,6 +28,7 @@ class PublicItem(models.Model):
     quantity = models.DecimalField(max_digits=14, decimal_places=4)
     estimated_unit_price = models.DecimalField(max_digits=14, decimal_places=4)
     awarded_unit_price = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True)
+    has_result = models.BooleanField(default=False)
     secret_budget = models.BooleanField(default=False)
     published_on = models.DateField(db_index=True)
     agency_name = models.TextField()

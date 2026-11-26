@@ -233,6 +233,7 @@ def build_public_items(
                     estimated_price = Decimal(str(item.get("valorUnitarioEstimado") or 0))
                 except Exception:
                     estimated_price = Decimal("0.0000")
+                has_result = bool(item.get("temResultado", False))
                 secret_budget = bool(item.get("orcamentoSigiloso", False))
                 item_kind = map_item_kind(
                     item.get("materialOuServico"),
@@ -251,6 +252,7 @@ def build_public_items(
                     "quantity": quantity,
                     "estimated_unit_price": estimated_price,
                     "awarded_unit_price": awarded_price,
+                    "has_result": has_result,
                     "secret_budget": secret_budget,
                     "published_on": pub.published_on,
                     "agency_name": pub.agency_name,
@@ -302,6 +304,7 @@ def build_public_items(
                         "quantity",
                         "estimated_unit_price",
                         "awarded_unit_price",
+                        "has_result",
                         "secret_budget",
                         "published_on",
                         "agency_name",
