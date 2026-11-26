@@ -577,6 +577,49 @@ não uma: semelhança do item e proximidade do preço esperado. Elas são exibid
 separadas, e não fundidas em escore único, para que o operador saiba qual das
 duas puxou cada candidato para cima.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth,height=0.80\textheight,keepaspectratio]{figuras/sequencia-busca-triagem.pdf}
+  \caption{Sequência de operações na ingestão de registros, indexação vetorial e
+    triagem assistida de preços}
+  \label{fig:sequencia-busca-triagem}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
+
+A Figura~\ref{fig:sequencia-busca-triagem} divide a operação em dois tempos que
+não se cruzam em memória: o serviço em segundo plano alimenta os dois bancos, e
+a tela só os consulta durante a triagem. Na parte~(a), cada etapa separa coleta,
+normalização e vetorização --- \code{fetch\_pncp} grava a página bruta em
+\code{RawRecord} antes de \code{build\_public\_items} consolidar a cópia
+mais recente em \code{PublicItem}, e \code{index\_public\_items} publica no
+Qdrant o vetor ligado ao identificador relacional. Na parte~(b), a busca
+semântica aplica o filtro obrigatório de doze meses (RN07) e a modalidade no
+índice vetorial antes de hidratar os candidatos no PostgreSQL, consulta na API do
+PNCP o preço homologado apenas dos itens com resultado ainda ausente, ordena
+pelo RF23 e calcula o painel de estimativa exclusivamente sobre preços
+homologados.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/modelo-de-dados.pdf}
+  \caption{Modelo de dados relacional da ingestão e estrutura das coleções no
+    índice vetorial}
+  \label{fig:modelo-de-dados}
+  \fonte{Elaborado pelo autor.}
+\end{figure}
+
+Na Figura~\ref{fig:modelo-de-dados}, o desenho destaca a fronteira entre o que
+exige rastreabilidade relacional e o que vai para o índice vetorial. No
+PostgreSQL, \code{RawRecord} preserva a página integral em \code{JSONB},
+enquanto \code{PublicItem} normaliza descrição, unidade, preços e dados do
+órgão, mantendo uma relação N:N (\code{raw\_records}) com os registros brutos
+de origem para sustentar a procedência exigida pela regra RN08. No Qdrant, cada
+coleção isola um modelo e revisão de representação e cada ponto armazena apenas
+o vetor e os atributos de filtro, sem replicar textos ou valores. A ponte entre
+os dois bancos dispensa chave estrangeira e se resume ao identificador: o ponto
+vetorial grava a chave de \code{PublicItem} (\code{point.id = PublicItem.id}),
+permitindo hidratar diretamente no banco relacional os candidatos recuperados.
+
 \subsubsection{Pilha tecnológica}
 \label{subsec:pilha}
 
