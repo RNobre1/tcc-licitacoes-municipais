@@ -1,12 +1,17 @@
+import json
+import logging
 import re
 from collections import defaultdict
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from django.db import transaction
+from django.utils import timezone
 
 from ingestion.item_kind import map_item_kind
 from ingestion.models import PublicItem, RawRecord
@@ -28,6 +33,11 @@ PURCHASE_KEY_PATTERN = re.compile(
     r"^/api/pncp/v1/orgaos/(?P<cnpj>\d+)/compras/(?P<ano>\d+)/(?P<seq>\d+)/itens(?:/(?P<item>\d+)/resultados)?$"
 )
 RAW_ITEM_PREFIX = "/api/pncp/v1/orgaos/"
+DEFAULT_FAILED_PURCHASES_FILE = (
+    Path.home() / ".local" / "state" / "preparatory-phase-support" / "build_failed_purchases.jsonl"
+)
+
+logger = logging.getLogger(__name__)
 
 
 class BuildResult(int):
@@ -35,11 +45,21 @@ class BuildResult(int):
 
     built_count: int
     skipped_without_publication: int
+    failed_count: int
+    failed_purchases_file: str | None
 
-    def __new__(cls, built_count: int, skipped_without_publication: int = 0):
+    def __new__(
+        cls,
+        built_count: int,
+        skipped_without_publication: int = 0,
+        failed_count: int = 0,
+        failed_purchases_file: str | None = None,
+    ):
         obj = super().__new__(cls, built_count)
         obj.built_count = built_count
         obj.skipped_without_publication = skipped_without_publication
+        obj.failed_count = failed_count
+        obj.failed_purchases_file = failed_purchases_file
         return obj
 
 
@@ -68,6 +88,9 @@ def _parse_date(val: date | str | None) -> date | None:
 def build_public_items(
     start: date | str | None = None,
     end: date | str | None = None,
+    *,
+    failed_purchases_file: str | Path | None = DEFAULT_FAILED_PURCHASES_FILE,
+    on_error: Callable[[str], None] | None = None,
 ) -> BuildResult:
     """Build or update PublicItem records from latest RawRecords idempotently in streaming mode."""
     start_date = _parse_date(start)
@@ -174,6 +197,9 @@ def build_public_items(
 
     built_count = 0
     skipped_without_publication = 0
+    failed_count = 0
+    failed_path = Path(failed_purchases_file) if failed_purchases_file else None
+    failed_handle = None
 
     def _process_single_purchase(
         purchase_key: tuple[str, int, int],
@@ -272,7 +298,8 @@ def build_public_items(
                 parsed_items[num_item] = (defaults, provenance_ids)
 
         if not parsed_items:
-            PublicItem.objects.filter(cnpj=cnpj, year=ano, purchase_sequence=seq).delete()
+            with transaction.atomic():
+                PublicItem.objects.filter(cnpj=cnpj, year=ano, purchase_sequence=seq).delete()
             return
 
         with transaction.atomic():
@@ -342,6 +369,38 @@ def build_public_items(
 
         built_count += len(parsed_items)
 
+    def _run_purchase(
+        purchase_key: tuple[str, int, int],
+        p_item_records: list[RawRecord],
+        p_result_records: list[tuple[int, RawRecord]],
+    ) -> None:
+        nonlocal failed_count, failed_handle
+
+        try:
+            _process_single_purchase(purchase_key, p_item_records, p_result_records)
+        except Exception as exc:
+            failed_count += 1
+            cnpj, ano, seq = purchase_key
+            pncp_key = f"{cnpj}/{ano}/{seq}"
+            exc_name = exc.__class__.__name__
+            msg = f"Failed building purchase {pncp_key} ({exc_name}): {exc}"
+            logger.exception(msg)
+            if on_error is not None:
+                on_error(msg)
+            if failed_path is not None:
+                if failed_handle is None:
+                    failed_path.parent.mkdir(parents=True, exist_ok=True)
+                    failed_handle = failed_path.open("a", encoding="utf-8")
+                failed_rec = {
+                    "timestamp": timezone.now().isoformat(),
+                    "purchase_key": [str(cnpj), int(ano), int(seq)],
+                    "pncp_key": pncp_key,
+                    "exception_class": exc_name,
+                    "error": str(exc),
+                }
+                failed_handle.write(json.dumps(failed_rec) + "\n")
+                failed_handle.flush()
+
     records_qs = (
         RawRecord.objects.filter(endpoint__startswith=RAW_ITEM_PREFIX)
         .order_by("endpoint")
@@ -352,25 +411,35 @@ def build_public_items(
     current_item_records: list[RawRecord] = []
     current_result_records: list[tuple[int, RawRecord]] = []
 
-    for r in records_qs:
-        m = PURCHASE_KEY_PATTERN.match(r.endpoint)
-        if not m:
-            continue
-        purchase_key = (str(m.group("cnpj")), int(m.group("ano")), int(m.group("seq")))
-        if purchase_key != current_key:
-            if current_key is not None:
-                _process_single_purchase(current_key, current_item_records, current_result_records)
-                current_item_records.clear()
-                current_result_records.clear()
-            current_key = purchase_key
+    try:
+        for r in records_qs:
+            m = PURCHASE_KEY_PATTERN.match(r.endpoint)
+            if not m:
+                continue
+            purchase_key = (str(m.group("cnpj")), int(m.group("ano")), int(m.group("seq")))
+            if purchase_key != current_key:
+                if current_key is not None:
+                    _run_purchase(current_key, current_item_records, current_result_records)
+                    current_item_records.clear()
+                    current_result_records.clear()
+                current_key = purchase_key
 
-        item_str = m.group("item")
-        if item_str is None:
-            current_item_records.append(r)
-        else:
-            current_result_records.append((int(item_str), r))
+            item_str = m.group("item")
+            if item_str is None:
+                current_item_records.append(r)
+            else:
+                current_result_records.append((int(item_str), r))
 
-    if current_key is not None:
-        _process_single_purchase(current_key, current_item_records, current_result_records)
+        if current_key is not None:
+            _run_purchase(current_key, current_item_records, current_result_records)
+    finally:
+        if failed_handle is not None:
+            failed_handle.close()
 
-    return BuildResult(built_count, skipped_without_publication)
+    recorded_file = str(failed_path) if failed_count > 0 and failed_path is not None else None
+    return BuildResult(
+        built_count,
+        skipped_without_publication,
+        failed_count,
+        recorded_file,
+    )
