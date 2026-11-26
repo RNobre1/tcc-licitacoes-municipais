@@ -123,7 +123,7 @@ def test_n1_measurement_reads_tuning_output_checks_hash_and_rejects_mismatched_f
 
     monkeypatch.setattr(
         "semantic_index.search.semantic_search",
-        lambda model, query, structured_filter, limit, client=None: [
+        lambda model, query, structured_filter, limit, client=None, exact=False: [
             ScoredPublicItem(item=public_item, score=0.9)
         ],
     )
@@ -174,7 +174,19 @@ def test_n1_measurement_reads_tuning_output_checks_hash_and_rejects_mismatched_f
 
     # 3. Refuses --finalist when it differs from tuning output's finalist
     tuning_file.write_text(
-        json.dumps({"split": "tuning", "split_hash": split_hash, "finalist": "semantic"}),
+        json.dumps(
+            {
+                "split": "tuning",
+                "synthetic": False,
+                "items_count": 1,
+                "split_hash": split_hash,
+                "finalist": "semantic",
+                "methods": {
+                    "bm25": {"metrics": {"recall_at_10": 0.4, "mrr_at_20": 0.3}},
+                    "semantic": {"metrics": {"recall_at_10": 0.8, "mrr_at_20": 0.7}},
+                },
+            }
+        ),
         encoding="utf-8",
     )
     with pytest.raises(CommandError, match="does not match"):
@@ -338,7 +350,7 @@ def test_n2_metamorphic_sentinel_on_public_item_db_corpus(monkeypatch):
 
     monkeypatch.setattr(
         "semantic_index.search.semantic_search",
-        lambda model, query, structured_filter, limit, client=None: [
+        lambda model, query, structured_filter, limit, client=None, exact=False: [
             ScoredPublicItem(item=doc_1, score=0.90),
             ScoredPublicItem(item=doc_2, score=0.75),
             ScoredPublicItem(item=doc_3, score=0.75),
@@ -690,7 +702,7 @@ def test_n4_fails_on_partial_index_and_records_complete_coverage(monkeypatch):
 
     search_called = False
 
-    def fake_semantic_search(model, query, structured_filter, limit, client=None):
+    def fake_semantic_search(model, query, structured_filter, limit, client=None, exact=False):
         nonlocal search_called
         search_called = True
         return [
@@ -835,7 +847,7 @@ def test_n7_real_benchmark_requires_explicit_pattern_and_ignores_other_json(monk
     )
     monkeypatch.setattr(
         "semantic_index.search.semantic_search",
-        lambda model, query, structured_filter, limit, client=None: [
+        lambda model, query, structured_filter, limit, client=None, exact=False: [
             ScoredPublicItem(item=public_item, score=0.9)
         ],
     )

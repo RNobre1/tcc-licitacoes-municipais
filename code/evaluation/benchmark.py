@@ -118,11 +118,40 @@ def compute_mrr_at_k(ranked_ids: Sequence[Any], ground_truth_ids: set[Any], k: i
     return 0.0
 
 
+def _extract_doc_id(doc: Any) -> Any:
+    if isinstance(doc, dict):
+        return doc.get("id")
+    if hasattr(doc, "id"):
+        return doc.id
+    if hasattr(doc, "pk"):
+        return doc.pk
+    return doc
+
+
 def group_tied_scored_ids(
     ranked_scored: Sequence[tuple[Any, Any]],
 ) -> list[tuple[float, list[Any]]]:
     """Group a full (doc_or_id, score) sequence into exact-score tie groups descending."""
-    raise NotImplementedError("C17 tied-score grouping is not implemented yet")
+    if not ranked_scored:
+        return []
+
+    ordered = sorted(
+        ((_extract_doc_id(doc), float(score)) for doc, score in ranked_scored),
+        key=lambda pair: pair[1],
+        reverse=True,
+    )
+    groups: list[tuple[float, list[Any]]] = []
+    current_score = ordered[0][1]
+    current_ids: list[Any] = [ordered[0][0]]
+    for doc_id, score in ordered[1:]:
+        if score == current_score:
+            current_ids.append(doc_id)
+        else:
+            groups.append((current_score, current_ids))
+            current_score = score
+            current_ids = [doc_id]
+    groups.append((current_score, current_ids))
+    return groups
 
 
 def compute_expected_recall_at_k(
@@ -131,7 +160,24 @@ def compute_expected_recall_at_k(
     k: int,
 ) -> float:
     """Compute exact expected Recall@k over uniform random orderings within tied groups."""
-    raise NotImplementedError("C17 expected Recall@k is not implemented yet")
+    if not ground_truth_ids or k <= 0 or not ranked_scored:
+        return 0.0
+
+    groups = group_tied_scored_ids(ranked_scored)
+    expected_hits = 0.0
+    offset = 0
+    for _score, group_ids in groups:
+        if offset >= k:
+            break
+        m = len(group_ids)
+        r = sum(1 for doc_id in group_ids if doc_id in ground_truth_ids)
+        if offset + m <= k:
+            expected_hits += float(r)
+        else:
+            t = k - offset
+            expected_hits += r * (t / m)
+        offset += m
+    return expected_hits / len(ground_truth_ids)
 
 
 def compute_expected_success_at_k(
@@ -140,7 +186,28 @@ def compute_expected_success_at_k(
     k: int,
 ) -> float:
     """Compute exact expected Success@k over uniform random orderings within tied groups."""
-    raise NotImplementedError("C17 expected Success@k is not implemented yet")
+    if not ground_truth_ids or k <= 0 or not ranked_scored:
+        return 0.0
+
+    groups = group_tied_scored_ids(ranked_scored)
+    offset = 0
+    for _score, group_ids in groups:
+        if offset >= k:
+            break
+        m = len(group_ids)
+        r = sum(1 for doc_id in group_ids if doc_id in ground_truth_ids)
+        if r > 0:
+            if offset + m <= k:
+                return 1.0
+            t = k - offset
+            if r > m - t:
+                return 1.0
+            prob_no_hit = 1.0
+            for i in range(t):
+                prob_no_hit *= (m - r - i) / (m - i)
+            return 1.0 - prob_no_hit
+        offset += m
+    return 0.0
 
 
 def compute_expected_mrr_at_k(
@@ -149,7 +216,28 @@ def compute_expected_mrr_at_k(
     k: int = 20,
 ) -> float:
     """Compute exact expected MRR@k over uniform random orderings within tied groups."""
-    raise NotImplementedError("C17 expected MRR@k is not implemented yet")
+    if not ground_truth_ids or k <= 0 or not ranked_scored:
+        return 0.0
+
+    groups = group_tied_scored_ids(ranked_scored)
+    offset = 0
+    for _score, group_ids in groups:
+        if offset >= k:
+            break
+        m = len(group_ids)
+        r = sum(1 for doc_id in group_ids if doc_id in ground_truth_ids)
+        if r > 0:
+            t = min(k - offset, m)
+            max_j = min(t, m - r + 1)
+            expected_rr = 0.0
+            prob_first_at_j = r / m
+            for j in range(1, max_j + 1):
+                expected_rr += prob_first_at_j / (offset + j)
+                if j < max_j:
+                    prob_first_at_j *= (m - r - (j - 1)) / (m - j)
+            return expected_rr
+        offset += m
+    return 0.0
 
 
 def shuffle_tied_groups(
@@ -157,7 +245,28 @@ def shuffle_tied_groups(
     rng: random.Random,
 ) -> list[tuple[Any, float]]:
     """Shuffle item order strictly within each exact-score tie group."""
-    raise NotImplementedError("C17 tie-group shuffling is not implemented yet")
+    if not ranked_scored:
+        return []
+
+    ordered = sorted(
+        ((doc, float(score)) for doc, score in ranked_scored),
+        key=lambda pair: pair[1],
+        reverse=True,
+    )
+    result: list[tuple[Any, float]] = []
+    idx = 0
+    n = len(ordered)
+    while idx < n:
+        end = idx + 1
+        current_score = ordered[idx][1]
+        while end < n and ordered[end][1] == current_score:
+            end += 1
+        group = ordered[idx:end]
+        if len(group) > 1:
+            rng.shuffle(group)
+        result.extend(group)
+        idx = end
+    return result
 
 
 def compute_tie_sensitivity(
@@ -166,7 +275,38 @@ def compute_tie_sensitivity(
     top_n: int = 20,
 ) -> dict[str, bool]:
     """Return tie-sensitivity flags for Recall@10, MRR@20, and R2 screening pool."""
-    raise NotImplementedError("C17 tie-sensitivity computation is not implemented yet")
+    if not ranked_scored:
+        return {"recall_at_10": False, "mrr_at_20": False, "r2_pool": False}
+
+    groups = group_tied_scored_ids(ranked_scored)
+    recall_sensitive = False
+    mrr_sensitive = False
+    r2_pool_sensitive = False
+    found_first_rel_in_20 = False
+
+    offset = 0
+    for _score, group_ids in groups:
+        m = len(group_ids)
+        r = sum(1 for doc_id in group_ids if doc_id in ground_truth_ids) if ground_truth_ids else 0
+
+        if offset < 10 < offset + m and 0 < r < m:
+            recall_sensitive = True
+
+        if not found_first_rel_in_20 and offset < 20 and r > 0:
+            found_first_rel_in_20 = True
+            if m > 1 and r < m:
+                mrr_sensitive = True
+
+        if offset < top_n < offset + m:
+            r2_pool_sensitive = True
+
+        offset += m
+
+    return {
+        "recall_at_10": recall_sensitive,
+        "mrr_at_20": mrr_sensitive,
+        "r2_pool": r2_pool_sensitive,
+    }
 
 
 def bootstrap_paired_difference(
@@ -420,12 +560,25 @@ def classify_easy_hard_items(
     ground_truth_ids: set[Any],
     k: int = 10,
 ) -> bool:
-    """Classify an item as easy if price-only baseline puts a relevant item in top k."""
+    """Classify an item as easy if expected Success@k of price-only under ties > 0."""
+    anchor_f = float(anchor)
+    if anchor_f <= 0:
+        raise ValueError("Anchor price must be positive")
     if not ground_truth_ids or not candidates:
         return False
-    ranked = rank_by_price_only(candidates, anchor=anchor)
-    top_k_ids = set(c.id for c in ranked[:k])
-    return bool(top_k_ids.intersection(ground_truth_ids))
+
+    scored_candidates: list[tuple[Any, float]] = []
+    for candidate in candidates:
+        p = getattr(candidate, "price", None)
+        p_val = float(p) if p is not None else 0.0
+        if p_val <= 0:
+            scored_candidates.append((candidate, float("-inf")))
+        else:
+            dist = abs(math.log(p_val / anchor_f))
+            scored_candidates.append((candidate, -round(dist, 9)))
+
+    p_success = compute_expected_success_at_k(scored_candidates, ground_truth_ids, k=k)
+    return p_success > 0.0
 
 
 def evaluate_r1_acceptance(
@@ -639,7 +792,7 @@ class BM25SearchMethod:
             ),
             reverse=True,
         )
-        return ranked
+        return [(doc, float(score)) for doc, score in ranked]
 
 
 class SemanticSearchMethod:
@@ -665,27 +818,24 @@ class SemanticSearchMethod:
 
             dates = [candidate.published_on for candidate in candidates]
             date_window = (min(dates), max(dates))
-            search_limit = max(len(candidates) * 10, len(candidates) + 20)
+            search_limit = len(candidates) + 20
             scored_items = semantic_search(
                 self.model,
                 query,
-                structured_filter=StructuredFilter(date_window=date_window),
+                structured_filter=StructuredFilter(
+                    date_window=date_window,
+                    modality=list(ALLOWED_MODALITIES),
+                ),
                 limit=search_limit,
                 client=self.client,
-            )
-            scored_ids = [result.item.pk for result in scored_items]
-            allowed_ids = set(
-                PublicItem.objects.filter(
-                    pk__in=scored_ids,
-                    published_on__range=date_window,
-                    modality__in=ALLOWED_MODALITIES,
-                ).values_list("pk", flat=True)
+                exact=True,
             )
             candidates_by_id = {candidate.pk: candidate for candidate in candidates}
             return [
                 (candidates_by_id[result.item.pk], float(result.score))
                 for result in scored_items
-                if result.item.pk in allowed_ids and result.item.pk in candidates_by_id
+                if result.item.pk in candidates_by_id
+                and candidates_by_id[result.item.pk].modality in ALLOWED_MODALITIES
             ]
 
         query_vectors = self.model.embed_queries([query])
@@ -767,6 +917,7 @@ class BenchmarkOrchestrator:
         synthetic: bool = False,
         top_n: int | None = None,
         n: int | None = None,
+        include_full_rankings: bool = False,
     ) -> dict[str, Any]:
         effective_top_n = n if n is not None else (top_n if top_n is not None else self.top_n)
         """Run benchmark over items, applying per-item C(q), evaluating R1 and R2."""
@@ -819,7 +970,7 @@ class BenchmarkOrchestrator:
             parsed_survey_dates[item_id] = s_date
 
             raw_prices = item.get("chosen_prices") or []
-            if not [p for p in raw_prices if float(p) > 0]:
+            if not [p for p in raw_prices if p is not None and float(p) > 0]:
                 missing_price_count += 1
 
         if missing_price_count > 0:
@@ -948,11 +1099,14 @@ class BenchmarkOrchestrator:
                         "coverage_ratio": 1.0,
                     }
 
-        # Rankings and candidates by method
-        ranked_ids_by_method: dict[str, dict[str, list[Any]]] = {m: {} for m in all_method_names}
-        finalist_candidates_by_item: dict[str, dict[str, list[PriceCandidateSim]]] = {
-            m: {} for m in candidate_names
+        # Full rankings (preserving exact scores for tie groups) and top-N IDs by method
+        full_ranked_by_method: dict[str, dict[str, list[tuple[Any, float]]]] = {
+            m: {} for m in all_method_names
         }
+        ranked_ids_by_method: dict[str, dict[str, list[Any]]] = {m: {} for m in all_method_names}
+        full_ranked_groups_by_method: dict[str, dict[str, list[tuple[float, list[Any]]]]] | None = (
+            {m: {} for m in all_method_names} if include_full_rankings else None
+        )
 
         for item in eval_items:
             item_id = str(item.get("item_id"))
@@ -961,45 +1115,22 @@ class BenchmarkOrchestrator:
 
             for method in all_methods:
                 ranked_pairs = method.rank(query=item_desc, candidates=c_q_corpus)
-                top_pairs = ranked_pairs[:effective_top_n]
-                doc_ids = [
-                    getattr(
-                        doc,
-                        "id",
-                        getattr(doc, "pk", doc.get("id") if isinstance(doc, dict) else None),
-                    )
-                    for doc, score in top_pairs
+                full_pairs = sorted(
+                    ((doc, float(score)) for doc, score in ranked_pairs),
+                    key=lambda pair: pair[1],
+                    reverse=True,
+                )
+                full_ranked_by_method[method.name][item_id] = full_pairs
+                top_pairs = full_pairs[:effective_top_n]
+                ranked_ids_by_method[method.name][item_id] = [
+                    _extract_doc_id(doc) for doc, _score in top_pairs
                 ]
-                ranked_ids_by_method[method.name][item_id] = doc_ids
+                if full_ranked_groups_by_method is not None:
+                    full_ranked_groups_by_method[method.name][item_id] = group_tied_scored_ids(
+                        full_pairs
+                    )
 
-                if method.name in candidate_names:
-                    sim_candidates = []
-                    for doc, score in top_pairs:
-                        d_id = getattr(
-                            doc,
-                            "id",
-                            getattr(doc, "pk", doc.get("id") if isinstance(doc, dict) else None),
-                        )
-                        p_val = (
-                            doc.get("price")
-                            if isinstance(doc, dict)
-                            else getattr(doc, "price", None)
-                        )
-                        if p_val is None:
-                            p_val = resolve_candidate_price(doc)
-                        p_dec = Decimal(str(p_val)) if p_val is not None else Decimal("0")
-                        d_unit = _normalized_candidate_unit(doc)
-                        sim_candidates.append(
-                            PriceCandidateSim(
-                                id=d_id,
-                                price=p_dec,
-                                similarity=score,
-                                unit=d_unit,
-                            )
-                        )
-                    finalist_candidates_by_item[method.name][item_id] = sim_candidates
-
-        # Compute descriptive metrics per method
+        # Compute expected descriptive metrics & tie sensitivity per method over FULL ranked lists
         method_item_metrics: dict[str, dict[str, list[float]]] = {
             m: {
                 "recall_at_1": [],
@@ -1011,34 +1142,47 @@ class BenchmarkOrchestrator:
             }
             for m in all_method_names
         }
+        method_tie_counts: dict[str, dict[str, int]] = {
+            m: {"recall_at_10": 0, "mrr_at_20": 0, "r2_pool": 0} for m in all_method_names
+        }
 
         for item in eval_items:
             item_id = str(item.get("item_id"))
             gt_ids = set(item.get("ground_truth", set()))
             for m in all_method_names:
-                r_ids = ranked_ids_by_method[m][item_id]
+                full_pairs = full_ranked_by_method[m][item_id]
                 method_item_metrics[m]["recall_at_1"].append(
-                    compute_recall_at_k(r_ids, gt_ids, k=1)
+                    compute_expected_recall_at_k(full_pairs, gt_ids, k=1)
                 )
                 method_item_metrics[m]["recall_at_5"].append(
-                    compute_recall_at_k(r_ids, gt_ids, k=5)
+                    compute_expected_recall_at_k(full_pairs, gt_ids, k=5)
                 )
                 method_item_metrics[m]["recall_at_10"].append(
-                    compute_recall_at_k(r_ids, gt_ids, k=10)
+                    compute_expected_recall_at_k(full_pairs, gt_ids, k=10)
                 )
                 method_item_metrics[m]["recall_at_20"].append(
-                    compute_recall_at_k(r_ids, gt_ids, k=20)
+                    compute_expected_recall_at_k(full_pairs, gt_ids, k=20)
                 )
-                method_item_metrics[m]["mrr_at_20"].append(compute_mrr_at_k(r_ids, gt_ids, k=20))
+                method_item_metrics[m]["mrr_at_20"].append(
+                    compute_expected_mrr_at_k(full_pairs, gt_ids, k=20)
+                )
                 method_item_metrics[m]["success_at_10"].append(
-                    compute_success_at_k(r_ids, gt_ids, k=10)
+                    compute_expected_success_at_k(full_pairs, gt_ids, k=10)
                 )
+                sens = compute_tie_sensitivity(full_pairs, gt_ids, top_n=effective_top_n)
+                for key in ("recall_at_10", "mrr_at_20", "r2_pool"):
+                    if sens[key]:
+                        method_tie_counts[m][key] += 1
 
         method_summary_metrics: dict[str, dict[str, float]] = {}
+        method_tie_sensitivity: dict[str, dict[str, float]] = {}
         for m in all_method_names:
             method_summary_metrics[m] = {
                 metric: sum(scores) / len(scores) if scores else 0.0
                 for metric, scores in method_item_metrics[m].items()
+            }
+            method_tie_sensitivity[m] = {
+                key: count / len(eval_items) for key, count in method_tie_counts[m].items()
             }
 
         # Finalist selection / pinning
@@ -1063,20 +1207,20 @@ class BenchmarkOrchestrator:
         r1_acceptance = evaluate_r1_acceptance(diff_mean, ci_95_l, ci_95_u, ci_90_l, ci_90_u)
         r1_acceptance["p_value"] = p_val
 
-        # R2 Simulation across sigmas using active finalist candidates
+        # R2 Simulation across sigmas using active finalist's full ranking
         sigmas = [0.0, 0.1, 0.25, 0.5, 1.0]
         item_system_r10: dict[float, list[float]] = {s: [] for s in sigmas}
         item_po_r10: dict[float, list[float]] = {s: [] for s in sigmas}
         easy_items_count = 0
         hard_indices: list[int] = []
 
-        active_candidates = finalist_candidates_by_item.get(active_finalist, {})
+        active_full_rankings = full_ranked_by_method.get(active_finalist, {})
 
         for idx, item in enumerate(eval_items):
             item_id = str(item.get("item_id"))
             chosen_prices = [p for p in item["chosen_prices"] if float(p) > 0]
             gt_ids = set(item.get("ground_truth", set()))
-            candidates = active_candidates.get(item_id, [])
+            full_pairs = active_full_rankings.get(item_id, [])
             whole_cq = whole_c_q_by_item.get(item_id, [])
             unit = normalize_unit(item.get("unit", "UNIDADE"))
 
@@ -1088,7 +1232,7 @@ class BenchmarkOrchestrator:
                 item_id=item_id,
             )
 
-            # Classify easy/hard on sigma=0.25 using geometric mean anchor over whole C(q)
+            # Classify easy/hard using exact geometric mean anchor (sigma = 0) over whole C(q)
             geo_anchor = math.exp(
                 sum(math.log(float(p)) for p in chosen_prices) / len(chosen_prices)
             )
@@ -1100,23 +1244,102 @@ class BenchmarkOrchestrator:
             else:
                 hard_indices.append(idx)
 
+            # Group full finalist pairs once per item for pre-cut tie shuffling across draws
+            grouped_finalist_docs: list[tuple[float, list[Any]]] = []
+            if full_pairs:
+                g_score = full_pairs[0][1]
+                g_docs = [full_pairs[0][0]]
+                for doc, score in full_pairs[1:]:
+                    if score == g_score:
+                        g_docs.append(doc)
+                    else:
+                        grouped_finalist_docs.append((g_score, g_docs))
+                        g_score = score
+                        g_docs = [doc]
+                grouped_finalist_docs.append((g_score, g_docs))
+
+            # Precompute per-draw tie-shuffled top-N finalist candidates with random rank IDs
+            # (replacing persistent DB IDs inside RF23), and per-draw random rank IDs for whole C(q)
+            # in price-only ranking. Seeds never depend on labels.
+            tie_rng = random.Random(derive_item_seed(self.seed, f"tie:{item_id}"))
+            rf23_candidates_by_draw: list[list[PriceCandidateSim]] = []
+            sys_rank_to_real_by_draw: list[dict[int, Any]] = []
+            po_candidates_by_draw: list[list[PriceCandidateSim]] = []
+            po_rank_to_real_by_draw: list[dict[int, Any]] = []
+
+            for _draw_idx in range(self.n_noise_draws):
+                selected_top_pairs: list[tuple[Any, float]] = []
+                for g_score, g_docs in grouped_finalist_docs:
+                    if len(selected_top_pairs) >= effective_top_n:
+                        break
+                    needed = effective_top_n - len(selected_top_pairs)
+                    if len(g_docs) <= needed:
+                        picked = list(g_docs)
+                        tie_rng.shuffle(picked)
+                    else:
+                        picked = tie_rng.sample(g_docs, needed)
+                    for doc in picked:
+                        selected_top_pairs.append((doc, g_score))
+
+                sys_ranks = list(range(len(selected_top_pairs)))
+                tie_rng.shuffle(sys_ranks)
+                sys_draw_candidates: list[PriceCandidateSim] = []
+                sys_id_map: dict[int, Any] = {}
+                for rank_pos, (doc, score) in zip(sys_ranks, selected_top_pairs, strict=True):
+                    d_id = _extract_doc_id(doc)
+                    p_val = (
+                        doc.get("price") if isinstance(doc, dict) else getattr(doc, "price", None)
+                    )
+                    if p_val is None:
+                        p_val = resolve_candidate_price(doc)
+                    p_dec = Decimal(str(p_val)) if p_val is not None else Decimal("0")
+                    d_unit = _normalized_candidate_unit(doc)
+                    sys_id_map[rank_pos] = d_id
+                    sys_draw_candidates.append(
+                        PriceCandidateSim(
+                            id=rank_pos,
+                            price=p_dec,
+                            similarity=score,
+                            unit=d_unit,
+                        )
+                    )
+                rf23_candidates_by_draw.append(sys_draw_candidates)
+                sys_rank_to_real_by_draw.append(sys_id_map)
+
+                po_ranks = list(range(len(whole_cq)))
+                tie_rng.shuffle(po_ranks)
+                po_draw_candidates: list[PriceCandidateSim] = []
+                po_id_map: dict[int, Any] = {}
+                for rank_pos, candidate in zip(po_ranks, whole_cq, strict=True):
+                    po_id_map[rank_pos] = candidate.id
+                    po_draw_candidates.append(
+                        PriceCandidateSim(
+                            id=rank_pos,
+                            price=candidate.price,
+                            similarity=0.0,
+                            unit=candidate.unit,
+                        )
+                    )
+                po_candidates_by_draw.append(po_draw_candidates)
+                po_rank_to_real_by_draw.append(po_id_map)
+
             for s in sigmas:
                 draw_anchors = anchors_by_sigma[s]
                 sys_draw_recalls: list[float] = []
                 po_draw_recalls: list[float] = []
-                for a in draw_anchors:
-                    # System with RF23 reordering the top N candidates
+                for draw_idx, a in enumerate(draw_anchors):
+                    # System with RF23 reordering the tie-shuffled top N candidates
                     ranked_sys = self.rank_with_rf23(
-                        candidates, anchor=Decimal(str(round(a, 4))), unit=unit
+                        rf23_candidates_by_draw[draw_idx],
+                        anchor=Decimal(str(round(a, 4))),
+                        unit=unit,
                     )
-                    sys_draw_recalls.append(
-                        compute_recall_at_k([c.id for c in ranked_sys], gt_ids, k=10)
-                    )
-                    # Price-only baseline ranking the WHOLE C(q)
-                    ranked_po = rank_by_price_only(whole_cq, anchor=a)
-                    po_draw_recalls.append(
-                        compute_recall_at_k([c.id for c in ranked_po], gt_ids, k=10)
-                    )
+                    sys_real_ids = [sys_rank_to_real_by_draw[draw_idx][c.id] for c in ranked_sys]
+                    sys_draw_recalls.append(compute_recall_at_k(sys_real_ids, gt_ids, k=10))
+                    # Price-only baseline ranking the WHOLE C(q) with equal-price ties reshuffled
+                    ranked_po = rank_by_price_only(po_candidates_by_draw[draw_idx], anchor=a)
+                    po_real_ids = [po_rank_to_real_by_draw[draw_idx][c.id] for c in ranked_po]
+                    po_draw_recalls.append(compute_recall_at_k(po_real_ids, gt_ids, k=10))
 
                 item_system_r10[s].append(sum(sys_draw_recalls) / len(sys_draw_recalls))
                 item_po_r10[s].append(sum(po_draw_recalls) / len(po_draw_recalls))
@@ -1158,7 +1381,7 @@ class BenchmarkOrchestrator:
 
         price_only_baseline = sum(item_po_r10[0.25]) / len(eval_items)
 
-        return {
+        result: dict[str, Any] = {
             "split": split_name,
             "synthetic": synthetic,
             "items_count": len(eval_items),
@@ -1166,9 +1389,11 @@ class BenchmarkOrchestrator:
             "n": effective_top_n,
             "finalist": active_finalist,
             "index_coverage": index_coverage,
+            "tie_sensitivity": method_tie_sensitivity[active_finalist],
             "methods": {
                 m: {
                     "metrics": method_summary_metrics[m],
+                    "tie_sensitivity": method_tie_sensitivity[m],
                 }
                 for m in all_method_names
             },
@@ -1176,6 +1401,7 @@ class BenchmarkOrchestrator:
                 "n_noise_draws": self.n_noise_draws,
                 "n_bootstrap_resamples": self.n_bootstrap_resamples,
                 "seed": self.seed,
+                "r2_tie_break_seed": self.seed,
                 "top_n": effective_top_n,
                 "n": effective_top_n,
             },
@@ -1188,3 +1414,6 @@ class BenchmarkOrchestrator:
             },
             "ranked_ids_by_method": ranked_ids_by_method,
         }
+        if full_ranked_groups_by_method is not None:
+            result["full_ranked_groups_by_method"] = full_ranked_groups_by_method
+        return result

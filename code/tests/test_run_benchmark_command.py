@@ -196,7 +196,7 @@ def test_real_handler_runs_synthetic_fixture_only_on_frozen_tuning_split(monkeyp
         item_kind="product",
     )
 
-    def fake_semantic_search(model, query, structured_filter, limit, client=None):
+    def fake_semantic_search(model, query, structured_filter, limit, client=None, exact=False):
         return [ScoredPublicItem(item=public_item, score=0.9)]
 
     monkeypatch.setattr("semantic_index.search.semantic_search", fake_semantic_search)

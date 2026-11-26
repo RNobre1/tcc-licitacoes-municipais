@@ -177,7 +177,7 @@ def test_semantic_method_uses_embedding_search_and_filters_modality_in_database(
     calls = []
     model = FakeDeterministicEmbeddingModel()
 
-    def fake_semantic_search(model_arg, query, structured_filter, limit, client=None):
+    def fake_semantic_search(model_arg, query, structured_filter, limit, client=None, exact=False):
         calls.append((model_arg, query, structured_filter, limit))
         return [
             ScoredPublicItem(item=disallowed, score=0.99),
@@ -341,9 +341,20 @@ def test_r1_contrasts_finalist_against_bm25_baseline():
         }
         for index in range(1, 11)
     ]
+    corpus.extend(
+        {
+            "id": index,
+            "description": "filler item",
+            "price": Decimal("10"),
+            "unit": "UNIDADE",
+            "published_on": date(2026, 5, 1),
+            "modality": 6,
+        }
+        for index in range(12, 24)
+    )
     corpus.append(
         {
-            "id": 11,
+            "id": 100,
             "description": "unrelated item",
             "price": Decimal("10"),
             "unit": "UNIDADE",
@@ -354,7 +365,7 @@ def test_r1_contrasts_finalist_against_bm25_baseline():
     item = {
         "item_id": "item_1",
         "description": "needle",
-        "ground_truth": {11},
+        "ground_truth": {100},
         "chosen_prices": [Decimal("10")],
         "unit": "UNIDADE",
         "survey_date": date(2026, 6, 1),
@@ -368,8 +379,8 @@ def test_r1_contrasts_finalist_against_bm25_baseline():
         baseline_method=BM25SearchMethod(),
     )
 
-    assert results["ranked_ids_by_method"]["candidate"]["item_1"][0] == 11
-    assert results["ranked_ids_by_method"]["bm25"]["item_1"][0] != 11
+    assert results["ranked_ids_by_method"]["candidate"]["item_1"][0] == 100
+    assert results["ranked_ids_by_method"]["bm25"]["item_1"][0] != 100
     assert results["r1_acceptance"]["diff_mean"] == 1.0
     assert results["r1_acceptance"]["ci_95"] == (1.0, 1.0)
 

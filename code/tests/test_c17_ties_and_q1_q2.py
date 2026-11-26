@@ -336,7 +336,9 @@ def test_c17_tie_sensitivity_exact_rules():
     }
 
     # Crossing group has zero relevant (r==0) & earlier singleton relevant -> both False
-    zero_rel_cross_10 = [(i, 0.9) for i in range(1, 9)] + [(i, 0.5) for i in range(9, 13)]
+    zero_rel_cross_10 = (
+        [(1, 0.95)] + [(i, 0.9) for i in range(2, 9)] + [(i, 0.5) for i in range(9, 13)]
+    )
     assert compute_tie_sensitivity(zero_rel_cross_10, {1}, top_n=20) == {
         "recall_at_10": False,
         "mrr_at_20": False,
@@ -456,20 +458,29 @@ def test_c17_metamorphic_sentinel_covers_tie_groups_and_scores():
 
 def test_c17_semantic_search_supports_exact_flag():
     model = FakeDeterministicEmbeddingModel()
-    mock_client = SimpleNamespace(
-        collection_exists=lambda name: True,
-        get_collection=lambda name: SimpleNamespace(
-            payload_schema={"modality": SimpleNamespace(data_type=models.PayloadSchemaType.INTEGER)}
-        ),
-        count=lambda **kw: SimpleNamespace(count=0),
-        query_points_calls=[],
-    )
 
-    def fake_query_points(**kwargs):
-        mock_client.query_points_calls.append(kwargs)
-        return SimpleNamespace(points=[])
+    class MockQdrantClient:
+        def __init__(self):
+            self.query_points_calls = []
 
-    mock_client.query_points = fake_query_points
+        def collection_exists(self, name):
+            return True
+
+        def get_collection(self, name):
+            return SimpleNamespace(
+                payload_schema={
+                    "modality": SimpleNamespace(data_type=models.PayloadSchemaType.INTEGER)
+                }
+            )
+
+        def count(self, **kwargs):
+            return SimpleNamespace(count=0)
+
+        def query_points(self, **kwargs):
+            self.query_points_calls.append(kwargs)
+            return SimpleNamespace(points=[])
+
+    mock_client = MockQdrantClient()
 
     semantic_search(
         model=model,

@@ -98,6 +98,7 @@ def semantic_search(
     structured_filter: StructuredFilter | dict[str, Any],
     limit: int = 10,
     client: Any = None,
+    exact: bool = False,
 ) -> list[ScoredPublicItem]:
     """Search PublicItems by vector similarity under mandatory structured filter."""
     from ingestion.models import PublicItem
@@ -228,12 +229,15 @@ def semantic_search(
 
     # Over-fetch from Qdrant so dropped ghosts never shrink the result below limit
     fetch_limit = max(limit * 2, limit + 20)
-    response = qdrant_client.query_points(
-        collection_name=collection_name,
-        query=query_vector,
-        query_filter=qdrant_filter,
-        limit=fetch_limit,
-    )
+    query_kwargs: dict[str, Any] = {
+        "collection_name": collection_name,
+        "query": query_vector,
+        "query_filter": qdrant_filter,
+        "limit": fetch_limit,
+    }
+    if exact:
+        query_kwargs["search_params"] = models.SearchParams(exact=True)
+    response = qdrant_client.query_points(**query_kwargs)
 
     scored_points = response.points
     if not scored_points:

@@ -1,5 +1,6 @@
 """Management command to run evaluation benchmarks."""
 
+import hashlib
 import json
 import os
 from datetime import date
@@ -18,6 +19,7 @@ from evaluation.benchmark import (
     SemanticSearchMethod,
     check_thresholds_note_guard,
     create_dataset_split,
+    select_finalist,
     verify_split_hash,
 )
 from evaluation.parser import parse_date_br
@@ -116,10 +118,23 @@ class Command(BaseCommand):
         tuning_output: str | None,
         split_hash: str,
         cli_finalist: str | None,
+        expected_synthetic: bool,
+        expected_items_count: int,
     ) -> str:
+        resolved_eval_dir = eval_dir.resolve()
         tuning_file = (
-            Path(tuning_output) if tuning_output else (eval_dir / "benchmark_tuning_results.json")
+            Path(tuning_output).resolve()
+            if tuning_output
+            else (resolved_eval_dir / "benchmark_tuning_results.json").resolve()
         )
+        try:
+            tuning_file.relative_to(resolved_eval_dir)
+        except ValueError:
+            raise CommandError(
+                f"Tuning output file must reside strictly inside eval directory "
+                f"{eval_dir}: {tuning_file}"
+            ) from None
+
         if not tuning_file.is_file():
             raise CommandError(
                 f"Measurement requires tuning output file (benchmark_tuning_results.json); "
@@ -133,8 +148,10 @@ class Command(BaseCommand):
         if not isinstance(tuning_data, dict):
             raise CommandError(f"Tuning output file must be a JSON object: {tuning_file}")
 
-        if "split" in tuning_data and tuning_data.get("split") != "tuning":
-            raise CommandError(f"Tuning output file must come from a tuning run: {tuning_file}")
+        if tuning_data.get("split") != "tuning":
+            raise CommandError(
+                f"Tuning output file must come from a tuning run (split='tuning'): {tuning_file}"
+            )
 
         tuning_split_hash = tuning_data.get("split_hash")
         if not tuning_split_hash or tuning_split_hash != split_hash:
@@ -142,14 +159,71 @@ class Command(BaseCommand):
                 "Tuning output split_hash does not match the frozen dataset split hash."
             )
 
+        if tuning_data.get("synthetic") is not expected_synthetic:
+            raise CommandError(
+                f"Tuning output synthetic flag ({tuning_data.get('synthetic')!r}) does not match "
+                f"expected mode ({expected_synthetic!r})."
+            )
+
+        items_count = tuning_data.get("items_count")
+        if (
+            isinstance(items_count, bool)
+            or not isinstance(items_count, int)
+            or items_count != expected_items_count
+        ):
+            raise CommandError(
+                f"Tuning output items_count ({items_count!r}) does not match tuning split size "
+                f"({expected_items_count})."
+            )
+
+        methods_payload = tuning_data.get("methods")
+        if not isinstance(methods_payload, dict) or not methods_payload:
+            raise CommandError(f"Tuning output is missing 'methods' metrics: {tuning_file}")
+
+        reconstructed_metrics: dict[str, dict[str, float]] = {}
+        for method_name, method_entry in methods_payload.items():
+            if not isinstance(method_entry, dict):
+                raise CommandError(f"Invalid method entry '{method_name}' in tuning output.")
+            metrics = method_entry.get("metrics")
+            if not isinstance(metrics, dict):
+                raise CommandError(f"Missing metrics for method '{method_name}' in tuning output.")
+            recall_10 = metrics.get("recall_at_10")
+            mrr_20 = metrics.get("mrr_at_20")
+            if (
+                isinstance(recall_10, bool)
+                or not isinstance(recall_10, (int, float))
+                or isinstance(mrr_20, bool)
+                or not isinstance(mrr_20, (int, float))
+            ):
+                raise CommandError(
+                    f"Tuning metrics for '{method_name}' must include numeric "
+                    "recall_at_10 and mrr_at_20."
+                )
+            reconstructed_metrics[str(method_name)] = {
+                "recall_at_10": float(recall_10),
+                "mrr_at_20": float(mrr_20),
+            }
+
         tuning_finalist = tuning_data.get("finalist")
         if (
             not isinstance(tuning_finalist, str)
             or not tuning_finalist.strip()
             or tuning_finalist == "bm25"
+            or tuning_finalist not in reconstructed_metrics
         ):
             raise CommandError(
                 f"Tuning output does not contain a valid finalist candidate: {tuning_file}"
+            )
+
+        try:
+            expected_finalist = select_finalist(reconstructed_metrics, baseline_name="bm25")
+        except ValueError as exc:
+            raise CommandError(f"Cannot verify finalist from tuning metrics: {exc}") from exc
+
+        if tuning_finalist != expected_finalist:
+            raise CommandError(
+                f"Tuning output finalist '{tuning_finalist}' does not match recomputed finalist "
+                f"'{expected_finalist}' from tuning metrics."
             )
 
         if cli_finalist is not None and cli_finalist != tuning_finalist:
@@ -293,6 +367,8 @@ class Command(BaseCommand):
                 tuning_output=tuning_output,
                 split_hash=split.sha256_hash,
                 cli_finalist=finalist,
+                expected_synthetic=True,
+                expected_items_count=len(split.tuning_items),
             )
 
         bm25 = BM25SearchMethod(name="bm25")
@@ -318,7 +394,11 @@ class Command(BaseCommand):
             out_file = Path(output_path)
             out_file.parent.mkdir(parents=True, exist_ok=True)
             out_file.write_text(json.dumps(results, indent=2, cls=DecimalEncoder), encoding="utf-8")
-            self.stdout.write(f"Synthetic benchmark completed. Results written to {out_file}")
+            output_sha256 = hashlib.sha256(out_file.read_bytes()).hexdigest()
+            self.stdout.write(
+                f"Synthetic benchmark completed. Results written to {out_file} "
+                f"(SHA-256: {output_sha256})"
+            )
         else:
             self.stdout.write("Synthetic benchmark completed successfully.")
 
@@ -379,6 +459,8 @@ class Command(BaseCommand):
                 tuning_output=tuning_output,
                 split_hash=split_hash,
                 cli_finalist=finalist,
+                expected_synthetic=False,
+                expected_items_count=len(tuning_items),
             )
 
         ground_truth_path = eval_dir / "ground_truth_resolved.json"
@@ -498,8 +580,11 @@ class Command(BaseCommand):
             ground_truth_ids = {
                 public_items_by_key[key] for key in ground_truth_keys_by_item[item_id]
             }
+            raw_chosen = report_item.get("chosen_prices") or []
             chosen_prices = [
-                Decimal(str(price["unit_price"])) for price in report_item.get("chosen_prices", [])
+                Decimal(str(price["unit_price"]))
+                for price in raw_chosen
+                if isinstance(price, dict) and price.get("unit_price") is not None
             ]
             if not [p for p in chosen_prices if p > 0]:
                 missing_chosen_price_count += 1
@@ -548,7 +633,9 @@ class Command(BaseCommand):
         )
         out_file.parent.mkdir(parents=True, exist_ok=True)
         out_file.write_text(json.dumps(results, indent=2, cls=DecimalEncoder), encoding="utf-8")
+        output_sha256 = hashlib.sha256(out_file.read_bytes()).hexdigest()
         self.stdout.write(
             f"Real {split_name} benchmark completed for {results['items_count']} items; "
-            f"split SHA-256: {split_hash}. Results written to {out_file.name}."
+            f"split SHA-256: {split_hash}. Results written to {out_file.name} "
+            f"(output SHA-256: {output_sha256})."
         )

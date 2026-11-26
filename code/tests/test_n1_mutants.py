@@ -101,7 +101,7 @@ def test_orchestrator_finalist_uses_recall_before_mrr():
             relevant_rank = self.preferred_rank(query_index)
             ranked = distractors[: relevant_rank - 1] + [relevant]
             ranked.extend(distractors[relevant_rank - 1 :])
-            return [(candidate, 1.0 if candidate is relevant else 0.0) for candidate in ranked]
+            return [(candidate, float(len(ranked) - idx)) for idx, candidate in enumerate(ranked)]
 
     high_recall = RankingMethod("high_recall", lambda item_index: 10 if item_index < 8 else 11)
     high_mrr = RankingMethod("high_mrr", lambda item_index: 1 if item_index < 7 else 11)
