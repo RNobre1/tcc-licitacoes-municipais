@@ -1221,3 +1221,57 @@ def test_build_public_items_newest_result_wins_even_with_lower_pk():
     build_public_items()
     item = PublicItem.objects.get()
     assert item.awarded_unit_price == Decimal("82.0000")
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_migration_0005_backfills_unit_normalized_with_single_source():
+    import importlib
+
+    from django.apps import apps
+
+    migration_mod = importlib.import_module("ingestion.migrations.0005_backfill_unit_normalized")
+
+    PublicItem.objects.create(
+        cnpj="00000000000001",
+        year=2026,
+        purchase_sequence=1,
+        item_number=1,
+        description="DEMO-Old row pre-0003",
+        unit=" Caixa ",
+        unit_normalized="",
+        quantity=Decimal("1.0000"),
+        estimated_unit_price=Decimal("10.0000"),
+        awarded_unit_price=None,
+        secret_budget=False,
+        published_on=date(2026, 10, 26),
+        agency_name="Prefeitura Teste",
+        agency_cnpj="00000000000001",
+        state="PA",
+        modality=6,
+        item_kind="product",
+    )
+    PublicItem.objects.create(
+        cnpj="00000000000001",
+        year=2026,
+        purchase_sequence=1,
+        item_number=2,
+        description="DEMO-Blank unit",
+        unit="   ",
+        unit_normalized="",
+        quantity=Decimal("1.0000"),
+        estimated_unit_price=Decimal("10.0000"),
+        awarded_unit_price=None,
+        secret_budget=False,
+        published_on=date(2026, 10, 26),
+        agency_name="Prefeitura Teste",
+        agency_cnpj="00000000000001",
+        state="PA",
+        modality=6,
+        item_kind="product",
+    )
+
+    migration_mod.backfill_unit_normalized(apps, None)
+
+    assert PublicItem.objects.get(item_number=1).unit_normalized == "caixa"
+    assert PublicItem.objects.get(item_number=2).unit_normalized == ""
