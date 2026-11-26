@@ -1,7 +1,7 @@
 ---
 tipo: pesquisa
 titulo: "Como tratar escores empatados no cálculo de Recall@k e MRR da bateria"
-status: aberta — aguarda decisão do autor antes de qualquer medição (C17)
+status: decidida em 26/11/2026 — opção C; ver TCC/decisões/2026-11-26-empates-na-avaliacao.md
 criado: 2026-11-26
 autor: Rafael Nobre de Souza
 relacionado:

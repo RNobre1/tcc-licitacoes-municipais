@@ -132,6 +132,8 @@ fixas, gravadas na saída de cada execução.
   [[2026-11-24-espaco-de-busca-e-preco-do-candidato]].
 - A C11 fica fechada para R1 e R2. Os limiares de R3 a R8 vêm com as medições
   deles.
+- A regra de desempate dos escores foi fixada em 26/11, também antes de medir:
+  [[2026-11-26-empates-na-avaliacao]].
 
 ## Critério de revisão
 
@@ -147,3 +149,4 @@ fixas, gravadas na saída de cada execução.
 - [[2026-10-15-classificacao-da-pesquisa-dsr]]
 - [[2026-09-06-escopo-dos-modulos-e-desenho-da-avaliacao]]
 - [[2026-11-24-espaco-de-busca-e-preco-do-candidato]]
+- [[2026-11-26-empates-na-avaliacao]]
