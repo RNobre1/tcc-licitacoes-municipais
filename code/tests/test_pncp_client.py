@@ -18,6 +18,7 @@ from ingestion.client import (
     fetch_items,
     fetch_publications,
     fetch_purchase,
+    parse_retry_after,
     urllib_transport,
 )
 
@@ -720,3 +721,97 @@ def test_urllib_transport_handles_non_2xx_html_body_without_raising_json_decode_
         assert status == 502
         assert isinstance(data, dict)
         assert "502" in str(data.get("error", ""))
+
+
+def test_parse_retry_after_parses_seconds_and_caps_at_600():
+    assert parse_retry_after("15") == 15.0
+    assert parse_retry_after("0") == 0.0
+    assert parse_retry_after("600") == 600.0
+    assert parse_retry_after("601") == 600.0
+    assert parse_retry_after("10000") == 600.0
+
+
+def test_parse_retry_after_rejects_inf_nan_and_negative():
+    assert parse_retry_after("inf") is None
+    assert parse_retry_after("+inf") is None
+    assert parse_retry_after("-inf") is None
+    assert parse_retry_after("nan") is None
+    assert parse_retry_after("-1") is None
+    assert parse_retry_after("-100") is None
+    assert parse_retry_after("") is None
+    assert parse_retry_after(None) is None
+    assert parse_retry_after("invalid") is None
+
+
+def test_parse_retry_after_parses_http_date():
+    import datetime
+    import email.utils
+
+    fixed_now = datetime.datetime(2026, 11, 24, 12, 0, 0, tzinfo=datetime.UTC)
+
+    future_dt = fixed_now + datetime.timedelta(seconds=45)
+    assert parse_retry_after(email.utils.format_datetime(future_dt), now=fixed_now) == 45.0
+
+    far_future_dt = fixed_now + datetime.timedelta(seconds=1200)
+    assert parse_retry_after(email.utils.format_datetime(far_future_dt), now=fixed_now) == 600.0
+
+    past_dt = fixed_now - datetime.timedelta(seconds=30)
+    assert parse_retry_after(email.utils.format_datetime(past_dt), now=fixed_now) == 0.0
+
+    # Naive HTTP date without timezone should return None
+    assert parse_retry_after("Tue, 24 Nov 2026 12:00:45", now=fixed_now) is None
+
+    # Default now uses current UTC time
+    real_future = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=45)
+    parsed_real = parse_retry_after(email.utils.format_datetime(real_future))
+    assert parsed_real is not None
+    assert 40.0 <= parsed_real <= 46.0
+
+
+def test_urllib_transport_handles_429_with_http_date_and_caps_retry_after():
+    import datetime
+    import email.utils
+
+    headers_cap = email.message.Message()
+    headers_cap["Retry-After"] = "1200"
+    err_cap = urllib.error.HTTPError(
+        url="https://pncp.gov.br/api/test",
+        code=429,
+        msg="Too Many Requests",
+        hdrs=headers_cap,
+        fp=io.BytesIO(b"429"),
+    )
+    with patch("urllib.request.urlopen", side_effect=err_cap):
+        status, data = urllib_transport("https://pncp.gov.br/api/test")
+        assert status == 429
+        assert data.get("retry_after") == 600.0
+
+    headers_inf = email.message.Message()
+    headers_inf["Retry-After"] = "inf"
+    err_inf = urllib.error.HTTPError(
+        url="https://pncp.gov.br/api/test",
+        code=429,
+        msg="Too Many Requests",
+        hdrs=headers_inf,
+        fp=io.BytesIO(b"429"),
+    )
+    with patch("urllib.request.urlopen", side_effect=err_inf):
+        status, data = urllib_transport("https://pncp.gov.br/api/test")
+        assert status == 429
+        assert data.get("retry_after") is None
+
+    future_dt = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=45)
+    headers_date = email.message.Message()
+    headers_date["Retry-After"] = email.utils.format_datetime(future_dt)
+    err_date = urllib.error.HTTPError(
+        url="https://pncp.gov.br/api/test",
+        code=429,
+        msg="Too Many Requests",
+        hdrs=headers_date,
+        fp=io.BytesIO(b"429"),
+    )
+    with patch("urllib.request.urlopen", side_effect=err_date):
+        status, data = urllib_transport("https://pncp.gov.br/api/test")
+        assert status == 429
+        assert data.get("retry_after") is not None
+        assert 40.0 <= data["retry_after"] <= 46.0

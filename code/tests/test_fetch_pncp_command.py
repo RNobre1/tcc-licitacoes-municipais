@@ -370,16 +370,17 @@ def test_fetch_pncp_skips_publication_on_item_failure_and_counts_it():
 
     out = io.StringIO()
     err = io.StringIO()
-    call_command(
-        "fetch_pncp",
-        start="2026-11-01",
-        end="2026-11-01",
-        uf="PA",
-        modality=6,
-        transport=retrying_transport,
-        stdout=out,
-        stderr=err,
-    )
+    with pytest.raises(CommandError):
+        call_command(
+            "fetch_pncp",
+            start="2026-11-01",
+            end="2026-11-01",
+            uf="PA",
+            modality=6,
+            transport=retrying_transport,
+            stdout=out,
+            stderr=err,
+        )
 
     output = out.getvalue()
     assert "Publications: 1" in output
@@ -506,15 +507,16 @@ def test_one_failing_publication_does_not_stop_the_others():
         return 200, [{"numeroItem": 1}, {"numeroItem": 2}]
 
     out, err = io.StringIO(), io.StringIO()
-    call_command(
-        "fetch_pncp",
-        start="2026-11-01",
-        end="2026-11-01",
-        modality=6,
-        transport=transport,
-        stdout=out,
-        stderr=err,
-    )
+    with pytest.raises(CommandError):
+        call_command(
+            "fetch_pncp",
+            start="2026-11-01",
+            end="2026-11-01",
+            modality=6,
+            transport=transport,
+            stdout=out,
+            stderr=err,
+        )
     assert "Publications: 3" in out.getvalue()
     assert "Item pages: 2" in out.getvalue()
     assert "Items: 4" in out.getvalue()
@@ -762,3 +764,374 @@ def test_retrying_transport_does_not_retry_envelope_or_completeness_violations()
     assert "Missing paginasRestantes" in str(exc_info.value)
     assert len(calls) == 1
     assert sleep_calls == []
+
+
+def test_rate_limiter_enforces_interval_across_concurrent_threads():
+    import concurrent.futures
+    import time
+
+    def slow_fake_time():
+        time.sleep(0.002)
+        return 100.0
+
+    sleep_calls = []
+    limiter = RateLimiter(
+        requests_per_second=2.0,
+        time_func=slow_fake_time,
+        sleep_func=sleep_calls.append,
+    )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        waits = list(executor.map(lambda _: limiter.wait(), range(12)))
+
+    # With lock held during schedule calculation, each call gets a unique 0.5s slot
+    assert sorted(waits) == [0.5 * i for i in range(12)]
+
+
+def test_create_retrying_transport_shares_single_rate_limiter_across_calls():
+    current_time = 100.0
+    sleep_calls = []
+
+    def fake_time():
+        return current_time
+
+    limiter = RateLimiter(
+        requests_per_second=2.0,
+        time_func=fake_time,
+        sleep_func=sleep_calls.append,
+    )
+    transport = create_retrying_transport(
+        base_transport=lambda url, params=None: (200, {}),
+        rate_limiter=limiter,
+        sleep_func=sleep_calls.append,
+    )
+
+    transport("https://example.test/1", None)
+    transport("https://example.test/2", None)
+    transport("https://example.test/3", None)
+    assert sleep_calls == [0.5, 1.0]
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_shares_one_rate_limiter_across_worker_threads():
+    import time
+    from unittest.mock import patch
+
+    call_times = []
+
+    def fake_urllib(url, params=None):
+        call_times.append(time.monotonic())
+        if "/contratacoes/publicacao" in url:
+            return 200, {
+                "data": [publication(1), publication(2), publication(3), publication(4)],
+                "totalRegistros": 4,
+                **ENVELOPE,
+            }
+        if url.endswith("/quantidade"):
+            return 200, 1
+        return 200, [{"numeroItem": 1}]
+
+    out = io.StringIO()
+    with patch(
+        "ingestion.management.commands.fetch_pncp.urllib_transport",
+        side_effect=fake_urllib,
+    ):
+        call_command(
+            "fetch_pncp",
+            start="2026-11-01",
+            end="2026-11-01",
+            modality=6,
+            concurrency=3,
+            rate_limit=100.0,
+            stdout=out,
+        )
+
+    # 1 pub call + 4 * 2 item calls = 9 calls; at 100 req/s (10ms interval), span >= 80ms
+    assert len(call_times) == 9
+    call_times.sort()
+    assert (call_times[-1] - call_times[0]) >= 0.07
+
+
+def test_rate_limiter_shared_pause_blocks_subsequent_wait_calls():
+    current_time = 100.0
+
+    def fake_time():
+        return current_time
+
+    sleep_calls = []
+    limiter = RateLimiter(
+        requests_per_second=2.0,
+        time_func=fake_time,
+        sleep_func=sleep_calls.append,
+    )
+
+    assert limiter.wait() == 0.0
+
+    limiter.pause(30.0)
+
+    current_time = 100.1
+    w = limiter.wait()
+    assert abs(w - 29.9) < 0.001
+    assert any(abs(s - 29.9) < 0.001 for s in sleep_calls)
+
+
+def test_retrying_transport_pauses_shared_rate_limiter_on_429():
+    calls = []
+
+    def fake_transport(url: str, params: dict | None = None):
+        calls.append(url)
+        if len(calls) == 1:
+            return 429, {"error": "Too Many Requests", "retry_after": 25.0}
+        return 200, {"ok": True}
+
+    current_time = 100.0
+    sleep_calls = []
+    limiter = RateLimiter(
+        requests_per_second=2.0,
+        time_func=lambda: current_time,
+        sleep_func=sleep_calls.append,
+    )
+
+    transport = RetryingTransport(
+        base_transport=fake_transport,
+        rate_limiter=limiter,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, data = transport("https://example.test/api/endpoint", None)
+    assert status == 200
+    assert limiter._paused_until >= 125.0
+
+
+def test_retrying_transport_429_backoff_caps_at_600s():
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=lambda url, params=None: (429, {"error": "Too Many Requests"}),
+        sleep_func=sleep_calls.append,
+    )
+
+    status, _ = transport("https://example.test/api/429", None)
+    assert status == 429
+    assert sleep_calls == [30.0, 60.0, 120.0, 240.0, 480.0, 600.0, 600.0, 600.0, 600.0]
+
+    # Retry-After above 600s in dict is also capped, and inf falls back to backoff
+    sleep_calls_2 = []
+    responses = [
+        (429, {"retry_after": 1200.0}),
+        (429, {"retry_after": float("inf")}),
+        (200, {"ok": True}),
+    ]
+    transport2 = RetryingTransport(
+        base_transport=lambda url, params=None: responses.pop(0),
+        sleep_func=sleep_calls_2.append,
+    )
+    status2, _ = transport2("https://example.test/api/429-cap", None)
+    assert status2 == 200
+    assert sleep_calls_2 == [600.0, 30.0]
+
+
+def test_retrying_transport_5xx_and_network_errors_use_long_backoff():
+    calls = []
+
+    def flaky_503_transport(url: str, params: dict | None = None):
+        calls.append(url)
+        if len(calls) == 1:
+            return 503, {"error": "Service Unavailable"}
+        return 200, {"recovered": True}
+
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=flaky_503_transport,
+        sleep_func=sleep_calls.append,
+    )
+
+    status, _ = transport("https://example.test/api/503", None)
+    assert status == 200
+    assert len(calls) == 2
+    assert sleep_calls == [30.0]
+
+    # Exhausting 503 uses full 10-attempt long backoff capped at 600s
+    sleep_503 = []
+    transport_503 = RetryingTransport(
+        base_transport=lambda url, params=None: (503, {"error": "Service Unavailable"}),
+        sleep_func=sleep_503.append,
+    )
+    status_503, _ = transport_503("https://example.test/api/503-exhaust", None)
+    assert status_503 == 503
+    assert sleep_503 == [30.0, 60.0, 120.0, 240.0, 480.0, 600.0, 600.0, 600.0, 600.0]
+
+    # Network errors also use the same long backoff
+    sleep_net = []
+
+    def always_reset(url, params=None):
+        raise ConnectionResetError("reset")
+
+    transport_net = RetryingTransport(
+        base_transport=always_reset,
+        sleep_func=sleep_net.append,
+    )
+    with pytest.raises(ConnectionResetError):
+        transport_net("https://example.test/api/net-exhaust", None)
+    assert sleep_net == [30.0, 60.0, 120.0, 240.0, 480.0, 600.0, 600.0, 600.0, 600.0]
+
+
+def test_retrying_transport_logs_backoff_wait_and_increments_count():
+    calls = []
+
+    def flaky_transport(url: str, params: dict | None = None):
+        calls.append(url)
+        if len(calls) == 1:
+            return 429, {"error": "Too Many Requests", "retry_after": 10.0}
+        return 200, {"ok": True}
+
+    logs = []
+    sleep_calls = []
+    transport = RetryingTransport(
+        base_transport=flaky_transport,
+        sleep_func=sleep_calls.append,
+        log_func=logs.append,
+    )
+
+    status, _ = transport("https://example.test/api/call", None)
+    assert status == 200
+    assert transport.backoff_waits_count == 1
+    assert len(logs) == 1
+    assert "[backoff]" in logs[0]
+    assert "https://example.test/api/call" in logs[0]
+    assert "10.0s" in logs[0]
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_prints_progress_line_per_day_and_modality():
+    page_1 = _read_json("publications_page_1.json")
+    single_pub = dict(page_1)
+    single_pub["data"] = [page_1["data"][0]]
+    single_pub["totalRegistros"] = 1
+    single_pub["totalPaginas"] = 1
+    single_pub["numeroPagina"] = 1
+    single_pub["paginasRestantes"] = 0
+
+    def mock_transport(url: str, params: dict | None = None):
+        if "/api/consulta/v1/contratacoes/publicacao" in url:
+            return 200, single_pub
+        if url.endswith("/quantidade"):
+            return 200, 1
+        if url.endswith("/itens"):
+            return 200, [{"numeroItem": 1}]
+        return 404, {}
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        uf="PA",
+        modality=6,
+        transport=mock_transport,
+        stdout=out,
+    )
+    output = out.getvalue()
+    assert "[2026-11-01 modality 6] seen: 1, fetched: 1, skipped: 0, failed: 0" in output
+    assert "Backoff waits: 0" in output
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_records_permanent_404_as_raw_record_and_skips_on_resumption():
+    page_1 = _read_json("publications_page_1.json")
+    single_pub = dict(page_1)
+    single_pub["data"] = [page_1["data"][0]]
+    single_pub["totalRegistros"] = 1
+    single_pub["totalPaginas"] = 1
+    single_pub["numeroPagina"] = 1
+    single_pub["paginasRestantes"] = 0
+
+    calls_to_items = []
+
+    def mock_transport(url: str, params: dict | None = None):
+        if "/api/consulta/v1/contratacoes/publicacao" in url:
+            return 200, single_pub
+        if url.endswith("/quantidade"):
+            calls_to_items.append(url)
+            return 404, {"message": "Contratação não cadastrada"}
+        return 404, {}
+
+    out = io.StringIO()
+    err = io.StringIO()
+
+    with pytest.raises(CommandError):
+        call_command(
+            "fetch_pncp",
+            start="2026-11-01",
+            end="2026-11-01",
+            uf="PA",
+            modality=6,
+            transport=mock_transport,
+            stdout=out,
+            stderr=err,
+        )
+
+    assert len(calls_to_items) == 1
+    rec_404 = RawRecord.objects.filter(endpoint__endswith="/itens", status_code=404).first()
+    assert rec_404 is not None
+
+    out2 = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        uf="PA",
+        modality=6,
+        transport=mock_transport,
+        stdout=out2,
+    )
+    assert len(calls_to_items) == 1
+    assert "Skipped already stored: 1" in out2.getvalue()
+    assert "Failures: 0" in out2.getvalue()
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_writes_failed_purchases_to_file_and_raises_command_error(tmp_path):
+    page_1 = _read_json("publications_page_1.json")
+    single_pub = dict(page_1)
+    single_pub["data"] = [page_1["data"][0]]
+    single_pub["totalRegistros"] = 1
+    single_pub["totalPaginas"] = 1
+    single_pub["numeroPagina"] = 1
+    single_pub["paginasRestantes"] = 0
+
+    def failing_transport(url: str, params: dict | None = None):
+        if "/api/consulta/v1/contratacoes/publicacao" in url:
+            return 200, single_pub
+        if url.endswith("/quantidade"):
+            return 500, {"message": "fatal internal server error"}
+        return 404, {}
+
+    failed_file = tmp_path / "test_failed.jsonl"
+    out = io.StringIO()
+    err = io.StringIO()
+
+    with pytest.raises(CommandError) as exc_info:
+        call_command(
+            "fetch_pncp",
+            start="2026-11-01",
+            end="2026-11-01",
+            uf="PA",
+            modality=6,
+            transport=failing_transport,
+            failed_purchases_file=str(failed_file),
+            stdout=out,
+            stderr=err,
+        )
+
+    assert "1 failure" in str(exc_info.value)
+    assert "Failures: 1" in out.getvalue()
+    assert failed_file.exists()
+    lines = failed_file.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["purchase_key"] == ["00000000000000", 2026, 1]
+    assert "error" in record
