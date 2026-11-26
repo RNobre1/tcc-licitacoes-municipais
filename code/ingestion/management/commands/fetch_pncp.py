@@ -6,8 +6,8 @@ import re
 import threading
 import time
 import urllib.error
-from collections.abc import Callable
-from datetime import datetime, timedelta
+from collections.abc import Callable, Sequence
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -319,6 +319,17 @@ def create_retrying_transport(
         rate_limit_max_attempts=rate_limit_max_attempts,
         log_func=log_func,
     )
+
+
+def find_complete_listing_counts(
+    start_dt: date,
+    end_dt: date,
+    modalities: Sequence[int],
+    uf: str | None,
+    existing_purchases: set[tuple[str, int, int]] | Callable[[], set[tuple[str, int, int]]],
+) -> dict[tuple[str, int], int]:
+    """Return seen publication counts for completely stored (YYYYMMDD, modality) slices."""
+    raise NotImplementedError
 
 
 class Command(BaseCommand):
