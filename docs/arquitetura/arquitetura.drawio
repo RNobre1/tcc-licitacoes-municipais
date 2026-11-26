@@ -290,4 +290,331 @@
       </root>
     </mxGraphModel>
   </diagram>
+
+  <diagram name="Sequência — busca e triagem" id="sequencia-busca-triagem">
+    <mxGraphModel dx="1100" dy="1180" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1120" pageHeight="1180" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="sq-titulo" value="&lt;b&gt;Sequência — busca e triagem&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px; color: #666666;&quot;&gt;(a) Ingestão e indexação em segundo plano; (b) triagem assistida com busca semântica e preço homologado sob demanda&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="30" y="18" width="900" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Participantes (cabeçalhos) -->
+        <mxCell id="sq-op" value="&lt;b&gt;:Operador&lt;/b&gt;&lt;div style=&quot;font-size:10px; margin-top:3px;&quot;&gt;setor de licitações&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="30" y="84" width="130" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-visao" value="&lt;b&gt;:Visão de triagem&lt;/b&gt;&lt;div style=&quot;font-size:10px; margin-top:3px;&quot;&gt;pricing/views.py&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="205" y="84" width="140" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-ing" value="&lt;b&gt;:Ingestão e índice&lt;/b&gt;&lt;div style=&quot;font-size:10px; margin-top:3px;&quot;&gt;ingestion · semantic_index&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="84" width="150" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-pg" value="&lt;b&gt;:PostgreSQL&lt;/b&gt;&lt;div style=&quot;font-size:10px; margin-top:3px;&quot;&gt;RawRecord · PublicItem&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="585" y="84" width="140" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-qd" value="&lt;b&gt;:Qdrant&lt;/b&gt;&lt;div style=&quot;font-size:10px; margin-top:3px;&quot;&gt;items_&amp;lt;modelo&amp;gt;_&amp;lt;rev&amp;gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="770" y="84" width="140" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-pncp" value="&lt;b&gt;:API do PNCP&lt;/b&gt;&lt;div style=&quot;font-size:10px; margin-top:3px;&quot;&gt;pncp.gov.br&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8C8C8C;strokeColor=#5E5E5E;fontColor=#FFFFFF;fontSize=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="955" y="84" width="130" height="56" as="geometry" />
+        </mxCell>
+
+        <!-- Linhas de vida tracejadas -->
+        <mxCell id="sq-ll-op" style="edgeStyle=none;endArrow=none;dashed=1;dashPattern=6 6;strokeColor=#9E9E9E;strokeWidth=1.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="95" y="140" as="sourcePoint" /><mxPoint x="95" y="1148" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="sq-ll-visao" style="edgeStyle=none;endArrow=none;dashed=1;dashPattern=6 6;strokeColor=#9E9E9E;strokeWidth=1.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="275" y="140" as="sourcePoint" /><mxPoint x="275" y="1148" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="sq-ll-ing" style="edgeStyle=none;endArrow=none;dashed=1;dashPattern=6 6;strokeColor=#9E9E9E;strokeWidth=1.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="465" y="140" as="sourcePoint" /><mxPoint x="465" y="1148" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="sq-ll-pg" style="edgeStyle=none;endArrow=none;dashed=1;dashPattern=6 6;strokeColor=#9E9E9E;strokeWidth=1.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="655" y="140" as="sourcePoint" /><mxPoint x="655" y="1148" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="sq-ll-qd" style="edgeStyle=none;endArrow=none;dashed=1;dashPattern=6 6;strokeColor=#9E9E9E;strokeWidth=1.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="840" y="140" as="sourcePoint" /><mxPoint x="840" y="1148" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="sq-ll-pncp" style="edgeStyle=none;endArrow=none;dashed=1;dashPattern=6 6;strokeColor=#9E9E9E;strokeWidth=1.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1020" y="140" as="sourcePoint" /><mxPoint x="1020" y="1148" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <!-- Quadro (a) Ingestão e indexação -->
+        <mxCell id="sq-frame-a" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 6;fillColor=none;strokeColor=#5B8DD6;strokeWidth=1.4;" vertex="1" parent="1">
+          <mxGeometry x="360" y="160" width="735" height="378" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-tag-a" value="&lt;b&gt;(a) Ingestão e indexação&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#2E6295;fillColor=#E8F0FE;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="368" y="166" width="185" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Ativações parte (a) -->
+        <mxCell id="sq-act-a1-ing" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="458" y="200" width="14" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-a1-pncp" value="" style="rounded=0;fillColor=#EEEEEE;strokeColor=#5E5E5E;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="1013" y="205" width="14" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-a1-pg" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="648" y="245" width="14" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sq-act-a2-ing" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="458" y="300" width="14" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-a2-pg1" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="648" y="300" width="14" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-a2-pg2" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="648" y="360" width="14" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sq-act-a3-ing" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="458" y="420" width="14" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-a3-pg" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="648" y="420" width="14" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-a3-qd" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="833" y="480" width="14" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Mensagens parte (a) -->
+        <mxCell id="sq-m-a1" value="1. fetch_pncp: GET /publicacoes, /itens, /resultados (opc.)" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.125;entryX=0;entryY=0.125;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a1-ing" target="sq-act-a1-pncp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-a2" value="páginas JSON completas" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.4375;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a1-pncp" target="sq-act-a1-ing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-a3" value="2. grava página inteira como RawRecord (JSONB)" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.6875;entryX=0;entryY=0.25;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a1-ing" target="sq-act-a1-pg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-a4" value="RawRecord.id" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.9375;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a1-pg" target="sq-act-a1-ing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sq-m-a5" value="3. build_public_items: lê RawRecord" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.1;entryX=0;entryY=0.25;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a2-ing" target="sq-act-a2-pg1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-a6" value="registros brutos" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.3;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a2-pg1" target="sq-act-a2-ing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-a7" value="latest_copies() e normalização" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.3;endArrow=blockThin;endFill=1;exitX=1;exitY=0.4;entryX=1;entryY=0.58;align=left;labelPosition=right;verticalAlign=middle;spacingLeft=6;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a2-ing" target="sq-act-a2-ing">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="505" y="340" /><mxPoint x="505" y="358" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sq-m-a8" value="4. grava PublicItem + raw_records" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.7;entryX=0;entryY=0.25;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a2-ing" target="sq-act-a2-pg2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-a9" value="PublicItem.id" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.9;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a2-pg2" target="sq-act-a2-ing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sq-m-a10" value="5. index_public_items: lê PublicItem" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.1;entryX=0;entryY=0.25;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a3-ing" target="sq-act-a3-pg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-a11" value="descrição e campos de filtro" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.3;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a3-pg" target="sq-act-a3-ing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-a12" value="6. EmbeddingModel.embed_passages()" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.3;endArrow=blockThin;endFill=1;exitX=1;exitY=0.4;entryX=1;entryY=0.58;align=left;labelPosition=right;verticalAlign=middle;spacingLeft=6;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a3-ing" target="sq-act-a3-ing">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="505" y="460" /><mxPoint x="505" y="478" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sq-m-a13" value="7. upsert(id = PublicItem.id, vetor, payload)" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.7;entryX=0;entryY=0.25;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a3-ing" target="sq-act-a3-qd">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-a14" value="coleção items_&amp;lt;modelo&amp;gt;_&amp;lt;rev&amp;gt; atualizada" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.9;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-a3-qd" target="sq-act-a3-ing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Quadro (b) Triagem -->
+        <mxCell id="sq-frame-b" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 6;fillColor=none;strokeColor=#5B8DD6;strokeWidth=1.4;" vertex="1" parent="1">
+          <mxGeometry x="20" y="552" width="1075" height="588" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-tag-b" value="&lt;b&gt;(b) Triagem&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#2E6295;fillColor=#E8F0FE;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="28" y="558" width="115" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Ativações parte (b) -->
+        <mxCell id="sq-act-b-op" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#073B6F;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="88" y="592" width="14" height="538" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-b-visao" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="268" y="592" width="14" height="538" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-b-ing" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="458" y="616" width="14" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-b-qd" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="833" y="661" width="14" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-b-pg1" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="648" y="706" width="14" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Quadro opt busca sob demanda -->
+        <mxCell id="sq-frame-opt" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=6 4;fillColor=none;strokeColor=#E08C2E;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="220" y="772" width="855" height="138" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-tag-opt" value="&lt;b&gt;opt&lt;/b&gt; [candidato com temResultado = true e sem awarded_unit_price]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#8A4B08;fillColor=#FFF3E0;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="228" y="778" width="405" height="22" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sq-act-b-pncp" value="" style="rounded=0;fillColor=#EEEEEE;strokeColor=#5E5E5E;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="1013" y="806" width="14" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-act-b-pg2" value="" style="rounded=0;fillColor=#E8F0FE;strokeColor=#2E6295;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="648" y="856" width="14" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Mensagens parte (b) -->
+        <mxCell id="sq-m-b1" value="1. abre triagem do item" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.0297;entryX=0;entryY=0.0297;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-op" target="sq-act-b-visao">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b2" value="2. semantic_search(descrição, filtro)" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.0669;entryX=0;entryY=0.0857;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-visao" target="sq-act-b-ing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b3" value="3. embed_queries(descrição)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.3;endArrow=blockThin;endFill=1;exitX=1;exitY=0.1429;entryX=1;entryY=0.2714;align=left;labelPosition=right;verticalAlign=middle;spacingLeft=6;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-ing" target="sq-act-b-ing">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="505" y="636" /><mxPoint x="505" y="654" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sq-m-b4" value="4. query_points(vetor, filtro: janela 12m RN07, modalidade)" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.3929;entryX=0;entryY=0.25;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-ing" target="sq-act-b-qd">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b5" value="ids e escores" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.5357;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-qd" target="sq-act-b-ing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b6" value="5. hidrata PublicItem (pk IN ids)" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.7143;entryX=0;entryY=0.25;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-ing" target="sq-act-b-pg1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b7" value="PublicItem[] ordenados" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.8571;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-pg1" target="sq-act-b-ing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b8" value="ScoredPublicItem[]" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.9429;entryX=1;entryY=0.29;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-ing" target="sq-act-b-visao">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sq-m-b9" value="6. fetch_awarded_price_on_demand: GET /itens/{n}/resultados" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.4164;entryX=0;entryY=0.25;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-visao" target="sq-act-b-pncp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b10" value="valorUnitarioHomologado" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.4535;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-pncp" target="sq-act-b-visao">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b11" value="7. grava RawRecord e atualiza PublicItem.awarded_unit_price" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.5093;entryX=0;entryY=0.25;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-visao" target="sq-act-b-pg2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b12" value="ok" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.75;entryX=1;entryY=0.5465;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-pg2" target="sq-act-b-visao">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sq-m-b13" value="8. RF23: rank_candidates (faixa de comparabilidade; |ln(preço/esperado)|)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.3;endArrow=blockThin;endFill=1;exitX=1;exitY=0.6208;entryX=1;entryY=0.6654;align=left;labelPosition=right;verticalAlign=middle;spacingLeft=6;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-visao" target="sq-act-b-visao">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="320" y="926" /><mxPoint x="320" y="950" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sq-m-b14" value="9. painel: média, mediana e menor valor (IN 65/2021, art. 6º) só com preços homologados" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.3;endArrow=blockThin;endFill=1;exitX=1;exitY=0.7138;entryX=1;entryY=0.7584;align=left;labelPosition=right;verticalAlign=middle;spacingLeft=6;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-visao" target="sq-act-b-visao">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="320" y="976" /><mxPoint x="320" y="1000" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sq-m-b15" value="exibe candidatos e painel" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.8067;entryX=1;entryY=0.8067;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-visao" target="sq-act-b-op">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b16" value="10. aceita/rejeita (POST decide)" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.4;endArrow=blockThin;endFill=1;exitX=1;exitY=0.8625;entryX=0;entryY=0.8625;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-op" target="sq-act-b-visao">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sq-m-b17" value="11. recalcula painel só com homologados (RN06 se &amp;lt; 3)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#444444;strokeWidth=1.3;endArrow=blockThin;endFill=1;exitX=1;exitY=0.8922;entryX=1;entryY=0.9368;align=left;labelPosition=right;verticalAlign=middle;spacingLeft=6;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-visao" target="sq-act-b-visao">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="320" y="1072" /><mxPoint x="320" y="1096" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sq-m-b18" value="atualiza painel (HTMX)" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#555555;strokeColor=#666666;strokeWidth=1.3;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.9740;entryX=1;entryY=0.9740;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="sq-act-b-visao" target="sq-act-b-op">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Modelo de dados" id="modelo-de-dados">
+    <mxGraphModel dx="1260" dy="790" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1260" pageHeight="790" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="md-titulo" value="&lt;b&gt;Modelo de dados&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px; color: #666666;&quot;&gt;Persistência relacional da ingestão e índice vetorial no Qdrant, ligados pela chave do PublicItem&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="880" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Fronteira PostgreSQL -->
+        <mxCell id="md-pg-fronteira" value="PostgreSQL — banco relacional (ingestion)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 6;fillColor=none;strokeColor=#5B8DD6;strokeWidth=1.4;fontSize=12;fontColor=#2E6295;fontStyle=1;verticalAlign=bottom;align=left;spacingLeft=12;spacingBottom=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="725" height="655" as="geometry" />
+        </mxCell>
+
+        <!-- Fronteira Qdrant -->
+        <mxCell id="md-qd-fronteira" value="Qdrant — índice semântico (semantic_index)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 6;fillColor=none;strokeColor=#5B8DD6;strokeWidth=1.4;fontSize=12;fontColor=#2E6295;fontStyle=1;verticalAlign=bottom;align=left;spacingLeft=12;spacingBottom=8;" vertex="1" parent="1">
+          <mxGeometry x="895" y="90" width="325" height="655" as="geometry" />
+        </mxCell>
+
+        <!-- Classe RawRecord -->
+        <mxCell id="md-rawrecord" value="&lt;div style=&quot;background:#E8F0FE; border-bottom:1.5px solid #2E6295; padding:8px; text-align:center;&quot;&gt;&lt;span style=&quot;font-size:10px; color:#2E6295;&quot;&gt;«model»&lt;/span&gt;&lt;br&gt;&lt;b style=&quot;font-size:13px;&quot;&gt;RawRecord&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;padding:8px 10px; border-bottom:1px solid #B8CCE4; font-size:11px; line-height:1.55;&quot;&gt;+ &lt;b&gt;id&lt;/b&gt;: BigAutoField «PK»&lt;br&gt;+ endpoint: TextField&lt;br&gt;+ params: JSONField (JSON)&lt;br&gt;+ fetched_at: DateTimeField&lt;br&gt;+ payload: JSONField (JSONB)&lt;br&gt;+ status_code: PositiveIntegerField?&lt;/div&gt;&lt;div style=&quot;padding:7px 10px; font-size:11px; line-height:1.4;&quot;&gt;+ __str__(): str&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E6295;strokeWidth=1.5;align=left;verticalAlign=top;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="65" y="130" width="255" height="230" as="geometry" />
+        </mxCell>
+
+        <!-- Classe PublicItem -->
+        <mxCell id="md-publicitem" value="&lt;div style=&quot;background:#E8F0FE; border-bottom:1.5px solid #2E6295; padding:8px; text-align:center;&quot;&gt;&lt;span style=&quot;font-size:10px; color:#2E6295;&quot;&gt;«model»&lt;/span&gt;&lt;br&gt;&lt;b style=&quot;font-size:13px;&quot;&gt;PublicItem&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;padding:8px 10px; border-bottom:1px solid #B8CCE4; font-size:11px; line-height:1.45;&quot;&gt;+ &lt;b&gt;id&lt;/b&gt;: BigAutoField «PK»&lt;br&gt;&lt;span style=&quot;color:#666666; font-size:10px;&quot;&gt;— chave do PNCP (UniqueConstraint) —&lt;/span&gt;&lt;br&gt;+ cnpj: CharField(14)&lt;br&gt;+ year: PositiveIntegerField&lt;br&gt;+ purchase_sequence: PositiveIntegerField&lt;br&gt;+ item_number: PositiveIntegerField&lt;br&gt;&lt;span style=&quot;color:#666666; font-size:10px;&quot;&gt;— descrição e unidade —&lt;/span&gt;&lt;br&gt;+ description: TextField&lt;br&gt;+ unit: CharField(50)&lt;br&gt;+ unit_normalized: CharField(50)&lt;br&gt;+ quantity: DecimalField(14, 4)&lt;br&gt;&lt;span style=&quot;color:#666666; font-size:10px;&quot;&gt;— preços e resultado —&lt;/span&gt;&lt;br&gt;+ estimated_unit_price: DecimalField(14, 4)&lt;br&gt;+ awarded_unit_price: DecimalField(14, 4)?&lt;br&gt;+ secret_budget: BooleanField&lt;br&gt;+ has_result: BooleanField&lt;br&gt;&lt;span style=&quot;color:#666666; font-size:10px;&quot;&gt;— órgão, publicação e filtro —&lt;/span&gt;&lt;br&gt;+ published_on: DateField&lt;br&gt;+ agency_name: TextField&lt;br&gt;+ agency_cnpj: CharField(14)&lt;br&gt;+ state: CharField(2)&lt;br&gt;+ modality: PositiveIntegerField&lt;br&gt;+ item_kind: CharField(10)&lt;/div&gt;&lt;div style=&quot;padding:7px 10px; font-size:11px; line-height:1.45;&quot;&gt;+ pncp_key(): (cnpj, year, seq, item)&lt;br&gt;+ usable_estimated_unit_price(): Decimal?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E6295;strokeWidth=1.5;align=left;verticalAlign=top;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="450" y="115" width="295" height="580" as="geometry" />
+        </mxCell>
+
+        <!-- Associação N:N RawRecord <-> PublicItem -->
+        <mxCell id="md-nn" value="raw_records&lt;br&gt;procedência (N:N)" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#2E6295;strokeWidth=1.5;endArrow=none;startArrow=none;exitX=1;exitY=0.587;entryX=0;entryY=0.2586;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="md-rawrecord" target="md-publicitem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="md-nn-mult-a" value="*" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#2E6295;" vertex="1" parent="1">
+          <mxGeometry x="324" y="268" width="18" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="md-nn-mult-b" value="*" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#2E6295;" vertex="1" parent="1">
+          <mxGeometry x="428" y="268" width="18" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Notas explicativas (PostgreSQL e Ponte) -->
+        <mxCell id="md-nota-prov" value="&lt;b&gt;Procedência até a origem (RN08)&lt;/b&gt;&lt;div style=&quot;margin-top:6px; line-height:1.45;&quot;&gt;A relação N:N (&lt;code&gt;raw_records&lt;/code&gt;) liga cada &lt;code&gt;PublicItem&lt;/code&gt; aos registros brutos de publicação, itens e resultado que o originaram.&lt;br&gt;&lt;br&gt;&lt;code&gt;build_public_items&lt;/code&gt; lê apenas a cópia mais recente de cada &lt;code&gt;(endpoint, params)&lt;/code&gt;.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0C46C;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="65" y="395" width="255" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="md-nota-ponte" value="&lt;b&gt;Ponte entre os dois bancos&lt;/b&gt;&lt;div style=&quot;margin-top:6px; line-height:1.45;&quot;&gt;Não há chave estrangeira entre PostgreSQL e Qdrant: o ponto grava &lt;code&gt;id = PublicItem.id&lt;/code&gt;.&lt;br&gt;&lt;br&gt;Na busca, &lt;code&gt;semantic_search&lt;/code&gt; filtra no payload do Qdrant e hidrata os &lt;code&gt;PublicItem&lt;/code&gt; correspondentes no PostgreSQL.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0C46C;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="65" y="565" width="255" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Classe Collection (Qdrant) -->
+        <mxCell id="md-collection" value="&lt;div style=&quot;background:#E8F0FE; border-bottom:1.5px solid #2E6295; padding:8px; text-align:center;&quot;&gt;&lt;span style=&quot;font-size:10px; color:#2E6295;&quot;&gt;«Qdrant collection»&lt;/span&gt;&lt;br&gt;&lt;b style=&quot;font-size:13px;&quot;&gt;Collection&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;padding:8px 10px; border-bottom:1px solid #B8CCE4; font-size:11px; line-height:1.5;&quot;&gt;+ name: str (&lt;i&gt;items_&amp;lt;modelo&amp;gt;_&amp;lt;revisão&amp;gt;&lt;/i&gt;)&lt;br&gt;+ model_name: str&lt;br&gt;+ revision: str&lt;br&gt;+ vector_size: int&lt;br&gt;+ distance: Distance (COSINE)&lt;/div&gt;&lt;div style=&quot;padding:7px 10px; font-size:10.5px; color:#555555;&quot;&gt;Uma coleção por modelo e revisão&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E6295;strokeWidth=1.5;align=left;verticalAlign=top;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="920" y="130" width="275" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- Classe Point (Qdrant) -->
+        <mxCell id="md-point" value="&lt;div style=&quot;background:#E8F0FE; border-bottom:1.5px solid #2E6295; padding:8px; text-align:center;&quot;&gt;&lt;span style=&quot;font-size:10px; color:#2E6295;&quot;&gt;«Qdrant point»&lt;/span&gt;&lt;br&gt;&lt;b style=&quot;font-size:13px;&quot;&gt;Point (PointStruct)&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;padding:8px 10px; border-bottom:1px solid #B8CCE4; font-size:11px; line-height:1.5;&quot;&gt;+ &lt;b&gt;id&lt;/b&gt;: int (&lt;i&gt;= PublicItem.id&lt;/i&gt;)&lt;br&gt;+ vector: float[vector_size]&lt;br&gt;+ payload: dict&lt;br&gt;&amp;nbsp;&amp;nbsp;• unit: str (&lt;i&gt;unit_normalized&lt;/i&gt;)&lt;br&gt;&amp;nbsp;&amp;nbsp;• state: str&lt;br&gt;&amp;nbsp;&amp;nbsp;• published_on: date&lt;br&gt;&amp;nbsp;&amp;nbsp;• item_kind: str&lt;br&gt;&amp;nbsp;&amp;nbsp;• modality: int&lt;/div&gt;&lt;div style=&quot;padding:7px 10px; font-size:11px; line-height:1.4;&quot;&gt;+ embed_passages(description)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E6295;strokeWidth=1.5;align=left;verticalAlign=top;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="920" y="425" width="275" height="245" as="geometry" />
+        </mxCell>
+
+        <!-- Composição Collection 1 -> * Point -->
+        <mxCell id="md-comp" value="armazena" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontColor=#222222;strokeColor=#2E6295;strokeWidth=1.5;startArrow=diamondThin;startFill=1;startSize=12;endArrow=open;endFill=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="md-collection" target="md-point">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="md-comp-mult-1" value="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#2E6295;" vertex="1" parent="1">
+          <mxGeometry x="1062" y="308" width="16" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="md-comp-mult-n" value="*" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#2E6295;" vertex="1" parent="1">
+          <mxGeometry x="1062" y="402" width="16" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Ponte Point.id = PublicItem.id -->
+        <mxCell id="md-ponte" value="point.id =&lt;br&gt;PublicItem.id" style="edgeStyle=none;rounded=0;html=1;fontSize=11;fontStyle=1;fontColor=#B45309;strokeColor=#D97706;strokeWidth=2;dashed=1;dashPattern=6 4;endArrow=open;endFill=0;exitX=0;exitY=0.5;entryX=1;entryY=0.7457;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="md-point" target="md-publicitem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
 </mxfile>
