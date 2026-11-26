@@ -65,12 +65,13 @@ def test_pricing_decide_accept_updates_session_and_renders_partial_fragment(clie
     response = client.post(url, {"decision": "accept"})
 
     assert response.status_code == 200
-    assert "pricing/_candidate.html" in [t.name for t in response.templates]
+    assert "pricing/_candidate_decision.html" in [t.name for t in response.templates]
     assert "base.html" not in [t.name for t in response.templates]
 
     html = response.content.decode()
+    assert f'id="candidate-{candidate.id}-decision"' in html
     assert "Aceito" in html
-    assert candidate.description in html
+    assert "<tr" not in html
     assert "<!DOCTYPE" not in html
 
     assert client.session["screening_decisions"][f"{candidate.item_id}:{candidate.id}"] == "accept"
@@ -112,12 +113,18 @@ def test_decide_returns_the_row_of_the_candidate_that_was_asked_for(client):
     for candidate_id in (1, 2, 5):
         candidate = demo_data.get_candidate(candidate_id)
         assert candidate is not None
-        html = _decide(client, candidate_id, "reject").content.decode()
+        page_html = client.get(
+            reverse("pricing:screening", args=[candidate.item_id])
+        ).content.decode()
+        row_html = _row(page_html, candidate_id)
+        assert f'hx-target="#candidate-{candidate_id}-decision"' in row_html
+        assert escape(candidate.description) in row_html
 
-        assert html.lstrip().startswith(f'<tr id="candidate-{candidate_id}">')
-        assert html.count("<tr") == 1
-        assert f'hx-target="#candidate-{candidate_id}"' in html
-        assert escape(candidate.description) in html
+        html = _decide(client, candidate_id, "reject").content.decode()
+        assert html.lstrip().startswith(f'<td id="candidate-{candidate_id}-decision">')
+        assert html.count("<td") == 1
+        assert "<tr" not in html
+        assert "Descartado" in html
 
 
 @pytest.mark.parametrize("value", [None, "", "banana", "ACCEPT", "maybe"])
@@ -285,51 +292,92 @@ def test_pricing_screening_adapts_string_session_decisions_to_integer_keys(clien
 
 
 def test_decide_preserves_proximity_when_expected_price_is_posted(client):
+    screening_url = reverse("pricing:screening", args=[1]) + "?expected_price=28.00"
+    page_before = client.get(screening_url).content.decode()
+    assert "1,06× abaixo" in _row(page_before, 1)
+
     url = reverse("pricing:decide", args=[1])
     response = client.post(url, {"decision": "accept", "expected_price": "28.00"})
 
     assert response.status_code == 200
     html = response.content.decode()
-    assert "1,06× abaixo" in html
-    assert "<td>—</td>" not in html
+    assert html.lstrip().startswith('<td id="candidate-1-decision">')
+    assert "Aceito" in html
+    assert "<tr" not in html
+    assert response.context["expected_price"] == Decimal("28.00")
+
+    page_after = client.get(screening_url).content.decode()
+    row_after = _row(page_after, 1)
+    assert "1,06× abaixo" in row_after
+    assert "Aceito" in row_after
 
 
 def test_decide_preserves_unit_mismatch_proximity_when_expected_price_is_posted(client):
+    screening_url = reverse("pricing:screening", args=[1]) + "?expected_price=28.00"
+    assert "unidade diferente" in _row(client.get(screening_url).content.decode(), 4)
+
     url = reverse("pricing:decide", args=[4])
     response = client.post(url, {"decision": "reject", "expected_price": "28.00"})
 
     assert response.status_code == 200
     html = response.content.decode()
-    assert "unidade diferente" in html
+    assert html.lstrip().startswith('<td id="candidate-4-decision">')
+    assert "Descartado" in html
+    assert "<tr" not in html
+
+    row_after = _row(client.get(screening_url).content.decode(), 4)
+    assert "unidade diferente" in row_after
+    assert "Descartado" in row_after
 
 
 def test_decide_preserves_expected_price_in_hidden_input(client):
+    page_html = client.get(
+        reverse("pricing:screening", args=[1]) + "?expected_price=28.00"
+    ).content.decode()
+    assert '<input type="hidden" name="expected_price" value="28.00">' in _row(page_html, 1)
+
     url = reverse("pricing:decide", args=[1])
     response = client.post(url, {"decision": "accept", "expected_price": "28.00"})
 
     assert response.status_code == 200
+    assert response.context["expected_price"] == Decimal("28.00")
     html = response.content.decode()
-    assert '<input type="hidden" name="expected_price" value="28.00">' in html
+    assert html.lstrip().startswith('<td id="candidate-1-decision">')
+    assert "<tr" not in html
 
 
 def test_decide_accepts_comma_in_posted_expected_price(client):
+    page_html = client.get(
+        reverse("pricing:screening", args=[1]) + "?expected_price=28,00"
+    ).content.decode()
+    row_html = _row(page_html, 1)
+    assert "1,06× abaixo" in row_html
+    assert '<input type="hidden" name="expected_price" value="28.00">' in row_html
+
     url = reverse("pricing:decide", args=[1])
     response = client.post(url, {"decision": "accept", "expected_price": "28,00"})
 
     assert response.status_code == 200
+    assert response.context["expected_price"] == Decimal("28.00")
     html = response.content.decode()
-    assert "1,06× abaixo" in html
-    assert '<input type="hidden" name="expected_price" value="28.00">' in html
+    assert html.lstrip().startswith('<td id="candidate-1-decision">')
+    assert "<tr" not in html
 
 
 def test_decide_without_expected_price_renders_dash_and_empty_hidden_input(client):
+    page_html = client.get(reverse("pricing:screening", args=[1])).content.decode()
+    row_html = _row(page_html, 1)
+    assert "<td>—</td>" in row_html
+    assert '<input type="hidden" name="expected_price" value="">' in row_html
+
     url = reverse("pricing:decide", args=[1])
     response = client.post(url, {"decision": "accept"})
 
     assert response.status_code == 200
+    assert response.context["expected_price"] is None
     html = response.content.decode()
-    assert "<td>—</td>" in html
-    assert '<input type="hidden" name="expected_price" value="">' in html
+    assert html.lstrip().startswith('<td id="candidate-1-decision">')
+    assert "<tr" not in html
 
 
 @pytest.mark.parametrize("raw", ["Infinity", "inf", "1e999", "1e-999", "NaN"])
@@ -337,37 +385,50 @@ def test_screening_and_decide_treat_unusable_expected_prices_as_none(client, raw
     page = client.get(reverse("pricing:screening", args=[1]) + f"?expected_price={raw}")
     assert page.status_code == 200
     assert page.context["expected_price"] is None
+    row_html = _row(page.content.decode(), 1)
+    assert "<td>—</td>" in row_html
+    assert '<input type="hidden" name="expected_price" value="">' in row_html
 
-    row = client.post(
+    swap = client.post(
         reverse("pricing:decide", args=[1]), {"decision": "accept", "expected_price": raw}
     )
-    assert row.status_code == 200
-    html = row.content.decode()
-    assert "<td>—</td>" in html
-    assert '<input type="hidden" name="expected_price" value="">' in html
+    assert swap.status_code == 200
+    assert swap.context["expected_price"] is None
+    html = swap.content.decode()
+    assert html.lstrip().startswith('<td id="candidate-1-decision">')
+    assert "<tr" not in html
 
 
 def test_a_swapped_row_shows_the_same_proximity_as_the_screening_page(client):
     for item_id in (1, 2, 3, 5):
         page = client.get(reverse("pricing:screening", args=[item_id]) + "?expected_price=20")
         assert page.status_code == 200
+        page_html = page.content.decode()
         for candidate in page.context["candidates"]:
-            row = client.post(
+            assert f"<td>{page.context['proximities'][candidate.id]}</td>" in _row(
+                page_html, candidate.id
+            ), candidate.id
+            swap = client.post(
                 reverse("pricing:decide", args=[candidate.id]),
                 {"decision": "accept", "expected_price": "20"},
             ).content.decode()
 
-            assert f"<td>{page.context['proximities'][candidate.id]}</td>" in row, candidate.id
+            assert swap.lstrip().startswith(f'<td id="candidate-{candidate.id}-decision">')
+            assert "<tr" not in swap
 
 
 def test_decide_uses_the_unit_of_the_candidates_own_item(client):
     # candidate 5 belongs to item 2 (unit "unidade"), whereas item 1 is sold by "pacote"
-    row = client.post(
+    response = client.post(
         reverse("pricing:decide", args=[5]), {"decision": "accept", "expected_price": "1.50"}
-    ).content.decode()
+    )
+    assert response.status_code == 200
+    html = response.content.decode()
 
-    assert "unidade diferente" not in row
-    assert "<td>1,20× abaixo</td>" in row
+    assert "Aceito" in html
+    assert "unidade diferente" not in html
+    assert response.context["item_unit"] == "unidade"
+    assert response.context["estimate"]["count"] == 1
 
 
 def test_screening_view_announces_ignored_expected_price_when_unusable_query_param_given(client):
@@ -617,9 +678,10 @@ def test_decide_post_returns_candidate_row_and_out_of_band_estimate_panel(client
     assert response.status_code == 200
     html = response.content.decode()
 
-    # The candidate row is returned
-    assert html.lstrip().startswith('<tr id="candidate-1">')
-    assert html.count("<tr") == 1
+    # Only the decision cell is returned
+    assert html.lstrip().startswith('<td id="candidate-1-decision">')
+    assert html.count("<td") == 1
+    assert "<tr" not in html
     assert "Aceito" in html
 
     # The estimate panel is returned as an out-of-band swap with stable id
@@ -640,7 +702,9 @@ def test_decide_post_unit_mismatch_shows_fora_do_calculo_and_panel_zero(client):
     assert response.status_code == 200
     html = response.content.decode()
 
-    assert html.lstrip().startswith('<tr id="candidate-4">')
+    assert html.lstrip().startswith('<td id="candidate-4-decision">')
+    assert html.count("<td") == 1
+    assert "<tr" not in html
     assert "fora do cálculo: unidade diferente" in html
     assert "Aceito" not in html
 
@@ -895,7 +959,7 @@ def test_screening_renders_real_candidates_from_semantic_search(client, monkeypa
 
     assert "https://pncp.gov.br/app/editais/00000000000007/2026/42" in html
     assert "25,50" in html
-    assert "28,00 (estimado)" in html
+    assert "28 (estimado)" in html
 
     row_secret = _row(html, 1003)
     assert "<td>—</td>" in row_secret

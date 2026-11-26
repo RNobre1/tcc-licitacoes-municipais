@@ -3,45 +3,17 @@
 <tr id="candidate-{{ candidate.id }}">
     <td>{{ candidate.description }}</td>
     <td>{{ candidate.unit }}</td>
-    <td>{{ candidate.quantity }}</td>
+    <td>{{ candidate.quantity|format_decimal }}</td>
     <td>{{ candidate.agency }}</td>
     <td>{{ candidate.date }}</td>
     <td>{{ candidate.source }}</td>
     <td>{{ candidate.provenance }}</td>
-    <td>{% if candidate.secret_budget or candidate.price is None %}—{% elif candidate.is_estimated %}{{ candidate.price }} (estimado){% else %}{{ candidate.price }}{% endif %}</td>
+    <td>{% if candidate.secret_budget or candidate.price is None %}—{% elif candidate.is_estimated %}{{ candidate.price|format_decimal }} (estimado){% else %}{{ candidate.price|format_decimal }}{% endif %}</td>
     <td>{{ candidate.similarity }}</td>
     <td>{% if proximity %}{{ proximity }}{% else %}—{% endif %}</td>
+    {% include "pricing/_candidate_decision.html" with oob_estimate=None %}
     <td>
-        {% if decision == "accept" %}
-            {% if estimate %}
-                {% if candidate.id in estimate.counted_candidate_ids %}
-                    Aceito
-                {% elif candidate.is_estimated %}
-                    fora do cálculo: preço estimado
-                {% elif candidate.secret_budget %}
-                    fora do cálculo: orçamento sigiloso
-                {% elif candidate.price is None %}
-                    fora do cálculo: sem preço
-                {% else %}
-                    fora do cálculo: unidade diferente
-                {% endif %}
-            {% elif item_unit and not candidate.unit|units_match:item_unit %}
-                fora do cálculo: unidade diferente
-            {% elif candidate.is_estimated %}
-                fora do cálculo: preço estimado
-            {% elif candidate.secret_budget %}
-                fora do cálculo: orçamento sigiloso
-            {% elif candidate.price is None %}
-                fora do cálculo: sem preço
-            {% else %}
-                Aceito
-            {% endif %}
-        {% elif decision == "reject" %}
-            Descartado
-        {% endif %}
-    </td>
-    <td>
-        <form method="post" action="{% url 'pricing:decide' candidate.id %}" hx-post="{% url 'pricing:decide' candidate.id %}" hx-target="#candidate-{{ candidate.id }}" hx-swap="outerHTML">
+        <form method="post" action="{% url 'pricing:decide' candidate.id %}" hx-post="{% url 'pricing:decide' candidate.id %}" hx-target="#candidate-{{ candidate.id }}-decision" hx-swap="outerHTML">
             {% csrf_token %}
             <input type="hidden" name="expected_price" value="{% if expected_price is not None %}{{ expected_price|unlocalize }}{% endif %}">
             <input type="hidden" name="item_id" value="{% if item_id %}{{ item_id }}{% elif item %}{{ item.id }}{% elif candidate.item_id %}{{ candidate.item_id }}{% endif %}">

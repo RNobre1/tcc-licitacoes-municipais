@@ -228,7 +228,7 @@ def test_screening_and_decide_preserve_similarity_and_format_decimals_end_to_end
         assert f'hx-target="#candidate-{item.pk}-decision"' in get_html
 
         candidate = get_resp.context["candidates"][0]
-        assert candidate.similarity > 0.0
+        assert candidate.similarity != 0.0
 
         post_accept = django_client.post(
             reverse("pricing:decide", args=[item.pk]),

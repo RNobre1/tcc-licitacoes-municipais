@@ -557,7 +557,7 @@ def decide(request, candidate_id):
 
     return render(
         request,
-        "pricing/_candidate.html",
+        "pricing/_candidate_decision.html",
         {
             "candidate": candidate,
             "decision": decision,

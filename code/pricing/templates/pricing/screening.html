@@ -19,7 +19,7 @@
 <section>
     <h2>Item demandado</h2>
     <p><strong>Descrição:</strong> {{ item.description }}</p>
-    <p><strong>Quantidade:</strong> {{ item.quantity }}</p>
+    <p><strong>Quantidade:</strong> {{ item.quantity|format_decimal }}</p>
     <p><strong>Unidade:</strong> {{ item.unit }}</p>
     <p><strong>Secretaria demandante:</strong> {{ item.requesting_department }}</p>
 </section>

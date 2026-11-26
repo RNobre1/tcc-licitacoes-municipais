@@ -206,7 +206,8 @@ def test_candidate_fragment_renders_decide_form_with_htmx_attributes_and_csrf():
     rendered = _render_candidate_fragment(candidate)
     assert f'id="candidate-{candidate.id}"' in rendered
     assert f'hx-post="/candidates/{candidate.id}/decision/"' in rendered
-    assert f'hx-target="#candidate-{candidate.id}"' in rendered
+    assert f'id="candidate-{candidate.id}-decision"' in rendered
+    assert f'hx-target="#candidate-{candidate.id}-decision"' in rendered
     assert 'hx-swap="outerHTML"' in rendered
     assert 'name="csrfmiddlewaretoken"' in rendered
     assert '<button type="submit" name="decision" value="accept">Aceitar</button>' in rendered
@@ -339,7 +340,7 @@ def test_candidate_fragment_form_posts_to_decide_for_its_own_candidate():
     flat = _flat(_render_candidate_fragment(_make_candidate(id=7)))
     assert (
         '<form method="post" action="/candidates/7/decision/" hx-post="/candidates/7/decision/" '
-        'hx-target="#candidate-7" hx-swap="outerHTML">'
+        'hx-target="#candidate-7-decision" hx-swap="outerHTML">'
     ) in flat
 
 

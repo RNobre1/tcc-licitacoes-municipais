@@ -1,0 +1,33 @@
+{% load pricing_extras %}
+<td id="candidate-{{ candidate.id }}-decision">
+    {% if decision == "accept" %}
+        {% if estimate %}
+            {% if candidate.id in estimate.counted_candidate_ids %}
+                Aceito
+            {% elif candidate.is_estimated %}
+                fora do cálculo: preço estimado
+            {% elif candidate.secret_budget %}
+                fora do cálculo: orçamento sigiloso
+            {% elif candidate.price is None %}
+                fora do cálculo: sem preço
+            {% else %}
+                fora do cálculo: unidade diferente
+            {% endif %}
+        {% elif item_unit and not candidate.unit|units_match:item_unit %}
+            fora do cálculo: unidade diferente
+        {% elif candidate.is_estimated %}
+            fora do cálculo: preço estimado
+        {% elif candidate.secret_budget %}
+            fora do cálculo: orçamento sigiloso
+        {% elif candidate.price is None %}
+            fora do cálculo: sem preço
+        {% else %}
+            Aceito
+        {% endif %}
+    {% elif decision == "reject" %}
+        Descartado
+    {% endif %}
+</td>
+{% if oob_estimate %}
+    {% include "pricing/_estimate_panel.html" with estimate=oob_estimate hx_swap_oob=True %}
+{% endif %}
