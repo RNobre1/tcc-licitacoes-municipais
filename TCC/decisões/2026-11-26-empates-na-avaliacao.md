@@ -15,10 +15,12 @@ devolve os pontos, na busca semântica. A revisão da frente de avaliação most
 numa sonda sintética, que essa regra decide o Recall\@10. Os relevantes de
 menor identificador dão 1,00, e os de maior dão 0,00.
 
-Na fatia coletada do PNCP, em 26/11/2026, 33,2% dos itens têm descrição
-idêntica à de outro item, e 3.547 grupos têm dez itens idênticos ou mais.
-Descrição idêntica gera empate nos dois métodos, e o BM25 empata também entre
-descrições distintas. A regra de desempate muda o que se mede, então precisa
+Na fatia coletada do PNCP, 33,2% dos itens têm descrição idêntica à de outro
+item, em minúsculas, como o BM25 a vê. Respeitando maiúsculas, como o modelo de
+representação a vê, são 32,1%. E 3.547 grupos têm dez itens idênticos ou mais.
+A contagem é de 26/11/2026, às 19:12 UTC, sobre a cópia mais recente de cada
+página; o critério está na pesquisa. Descrição idêntica gera empate nos dois
+métodos, e o BM25 empata também entre descrições distintas. A regra de desempate muda o que se mede, então precisa
 estar fixada antes da medição, como as demais da C11.
 
 A investigação está em `docs/pesquisas/empates-na-avaliacao.md`.
@@ -28,7 +30,7 @@ A investigação está em `docs/pesquisas/empates-na-avaliacao.md`.
 | Opção | Prós | Contras |
 |---|---|---|
 | A. Identificador ou ordem do índice, como hoje | Nenhum trabalho | Viés documentado; o identificador acompanha a ordem de coleta, e a ordem do Qdrant não é estável entre reconstruções |
-| B. *Hash* com uma semente fixa | Simples e sem viés sistemático | Uma única ordem sorteada: cada item carrega a variância do sorteio, e o intervalo do R1 se alarga |
+| B. *Hash* com uma semente fixa | Simples e sem viés sistemático | Uma única ordem sorteada: cada item carrega a variância do sorteio, e, por inferência, o intervalo do R1 se alarga |
 | C. Valor esperado sobre as ordens dos grupos empatados, no R1, e sorteio a cada sorteio de ruído, no R2 | Exato no R1, sem parâmetro novo; sem empate, dá o mesmo número que B | O arnês passa a guardar a lista inteira com os escores, e a busca semântica da avaliação passa a ser exata |
 
 ## Decisão
@@ -43,14 +45,30 @@ A investigação está em `docs/pesquisas/empates-na-avaliacao.md`.
   empatado é sorteada de novo na lista inteira do finalista, **antes** de tirar
   os 20 primeiros que o RF23 reordena. A semente é gravada e não depende do
   rótulo.
-- **Linha de base só-preço e partição fácil/difícil.** Seguem a mesma regra.
+- **Desempate final do RF23.** O RF23 ordena por faixa, proximidade,
+  semelhança e, por último, identificador. No R2, esse último critério também é
+  sorteado: a cada sorteio, cada candidato recebe um posto aleatório que
+  substitui o identificador. Sem isso, o identificador desfaria o sorteio entre
+  candidatos de descrição e preço idênticos. A ordenação de `pricing/` não muda.
+- **Linha de base só-preço.** No R2, a ordem dentro de cada grupo de preço igual
+  também é sorteada de novo a cada sorteio de ruído.
+- **Partição fácil/difícil.** Seguem duas escolhas do autor, de 26/11, antes de
+  medir:
+  - a âncora é a exata: a média geométrica dos preços escolhidos, sem ruído
+    (σ = 0);
+  - com ela, *p* é a chance de o só-preço pôr um relevante entre os dez
+    primeiros, como valor esperado sobre as ordens dos grupos de preço igual.
+
+  O item é **fácil se *p* > 0** e **difícil se *p* = 0**. Difícil é, então, o
+  item em que nem o preço exato tem chance de achar o relevante, e o ganho
+  medido nesse grupo não pode vir do preço.
 - **Empate** é igualdade exata do escore como o método o devolve. No Qdrant,
   isso é em 32 bits.
 - **Todo resultado relata a fração de itens sensíveis ao desempate:**
   - no Recall\@10, item com grupo empatado atravessando a décima posição, com
-    parte dos seus membros relevante;
+    ao menos um membro relevante e ao menos um não relevante;
   - no MRR\@20, item cujo primeiro grupo com relevante, dentro dos 20 primeiros,
-    tem mais de um membro;
+    tem mais de um membro, e nem todos relevantes;
   - no R2, item com grupo empatado atravessando a vigésima posição.
 
 ## Justificativa
