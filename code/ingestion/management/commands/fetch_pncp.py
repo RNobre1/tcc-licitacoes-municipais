@@ -8,9 +8,10 @@ import time
 import urllib.error
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -31,6 +32,7 @@ from ingestion.models import RawRecord
 ITEM_ENDPOINT_PATTERN = re.compile(
     r"^/api/pncp/v1/orgaos/(?P<cnpj>\d+)/compras/(?P<ano>\d+)/(?P<seq>\d+)/itens$"
 )
+PNCP_TIMEZONE = ZoneInfo("America/Sao_Paulo")
 
 
 class RateLimiter:
@@ -430,12 +432,28 @@ def find_complete_listing_counts(
         page_1 = pages.get(1)
         if page_1 is None or not page_1.valid:
             continue
+        day_dt = datetime.strptime(slice_key[0], "%Y%m%d").date()
+        next_day = day_dt + timedelta(days=1)
+        day_end_brt = datetime(
+            next_day.year,
+            next_day.month,
+            next_day.day,
+            0,
+            0,
+            tzinfo=PNCP_TIMEZONE,
+        )
         total_pages = page_1.total_paginas
         is_complete = True
         seen_count = 0
         for p_num in range(1, total_pages + 1):
             page = pages.get(p_num)
             if page is None or not page.valid or page.total_paginas != total_pages:
+                is_complete = False
+                break
+            page_fetched_at = page.order_key[0]
+            if timezone.is_naive(page_fetched_at):
+                page_fetched_at = timezone.make_aware(page_fetched_at, UTC)
+            if page_fetched_at < day_end_brt:
                 is_complete = False
                 break
             if any(pk not in known_purchases for pk in page.purchase_keys):
