@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
@@ -518,9 +519,16 @@ class Command(BaseCommand):
                 "(purchases already stored in DB are skipped on resumption)"
             ),
         )
+        default_failed_file = (
+            Path.home()
+            / ".local"
+            / "state"
+            / "preparatory-phase-support"
+            / "fetch_failed_purchases.jsonl"
+        )
         parser.add_argument(
             "--failed-purchases-file",
-            default=None,
+            default=str(default_failed_file),
             help="Path to JSONL file to write failed purchase records",
         )
         parser.add_argument(
@@ -579,12 +587,22 @@ class Command(BaseCommand):
         elif hasattr(transport, "log_func") and transport.log_func is None:
             transport.log_func = self.stdout.write
 
+        state_dir = Path.home() / ".local" / "state" / "preparatory-phase-support"
+        repo_root = Path(settings.BASE_DIR).resolve().parent
         failed_purchases_path = options.get("failed_purchases_file")
-        failed_file = None
         if failed_purchases_path:
-            path_obj = Path(failed_purchases_path)
-            path_obj.parent.mkdir(parents=True, exist_ok=True)
-            failed_file = path_obj.open("a", encoding="utf-8")
+            path_obj = Path(failed_purchases_path).expanduser()
+            if not path_obj.is_absolute():
+                path_obj = state_dir / path_obj
+        else:
+            path_obj = state_dir / "fetch_failed_purchases.jsonl"
+        resolved_failed_path = path_obj.resolve()
+        if resolved_failed_path.is_relative_to(repo_root):
+            raise CommandError(
+                f"Failed purchases file must be outside the repository: {resolved_failed_path}"
+            )
+        resolved_failed_path.parent.mkdir(parents=True, exist_ok=True)
+        failed_file = resolved_failed_path.open("a", encoding="utf-8")
 
         start_time = time.monotonic()
 
@@ -619,15 +637,14 @@ class Command(BaseCommand):
         skipped_already_stored = 0
         failures_count = 0
 
-        complete_listings = (
-            {}
-            if refetch_listings
-            else find_complete_listing_counts(
-                start_dt, end_dt, modalities, uf, _get_existing_purchases
-            )
-        )
-
         try:
+            complete_listings = (
+                {}
+                if refetch_listings
+                else find_complete_listing_counts(
+                    start_dt, end_dt, modalities, uf, _get_existing_purchases
+                )
+            )
             # Walk day by day
             current_dt = start_dt
             while current_dt <= end_dt:

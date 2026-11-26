@@ -20,6 +20,13 @@ from ingestion.management.commands.fetch_pncp import (
 from ingestion.models import RawRecord
 
 PNCP_RESPONSES_DIR = Path(__file__).resolve().parent / "api_responses" / "pncp"
+
+
+@pytest.fixture(autouse=True)
+def _isolated_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+
 ENVELOPE = {"totalPaginas": 1, "numeroPagina": 1, "paginasRestantes": 0}
 
 
