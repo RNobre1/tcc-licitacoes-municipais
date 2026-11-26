@@ -2106,3 +2106,200 @@ def test_get_corpus_info_does_not_load_model_when_search_function_is_injected(mo
     info = views.get_corpus_info(client=mock_client)
     assert info.qdrant_error is False
     assert info.model_error is False
+
+
+def test_decide_preserves_semantic_similarity_and_never_renders_zero_for_public_item(
+    client, monkeypatch
+):
+    from ingestion.models import PublicItem
+    from semantic_index.search import ScoredPublicItem
+
+    today = datetime.date.today()
+    pi = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=today.year,
+        purchase_sequence=84001,
+        item_number=1,
+        description="Papel sulfite A4 branco para teste D1",
+        unit="pacote",
+        quantity=Decimal("50.0000"),
+        agency_name="Prefeitura D1",
+        published_on=today,
+        awarded_unit_price=Decimal("41.1400"),
+        estimated_unit_price=Decimal("45.0000"),
+        secret_budget=False,
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+
+    search_calls = 0
+
+    def fake_search(**kwargs):
+        nonlocal search_calls
+        search_calls += 1
+        return [ScoredPublicItem(item=pi, score=0.89414424)]
+
+    monkeypatch.setattr(views, "search_function", fake_search)
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: views.CorpusInfo(1, today, today, is_partial=False, db_items_count=1),
+    )
+
+    get_resp = client.get(reverse("pricing:screening", args=[1]))
+    assert get_resp.status_code == 200
+    get_html = get_resp.content.decode()
+    assert "0,89414424" in get_html
+    assert f'hx-target="#candidate-{pi.pk}-decision"' in get_html
+    assert search_calls == 1
+
+    # POST accept (including forged similarity/score parameters that must be ignored)
+    post_accept = client.post(
+        reverse("pricing:decide", args=[pi.pk]),
+        {
+            "decision": "accept",
+            "item_id": "1",
+            "similarity": "0.1234",
+            "score": "0.1234",
+        },
+    )
+    assert post_accept.status_code == 200
+    assert search_calls == 1
+    accept_html = post_accept.content.decode()
+    assert accept_html.lstrip().startswith(f'<td id="candidate-{pi.pk}-decision">')
+    assert "Aceito" in accept_html
+    assert 'id="estimate-panel"' in accept_html
+    assert 'hx-swap-oob="true"' in accept_html
+    assert "<tr" not in accept_html
+    assert "0,0" not in accept_html
+    assert "0,1234" not in accept_html
+
+    # POST reject
+    post_reject = client.post(
+        reverse("pricing:decide", args=[pi.pk]),
+        {
+            "decision": "reject",
+            "item_id": "1",
+            "similarity": "0.5",
+            "score": "0.5",
+        },
+    )
+    assert post_reject.status_code == 200
+    assert search_calls == 1
+    reject_html = post_reject.content.decode()
+    assert reject_html.lstrip().startswith(f'<td id="candidate-{pi.pk}-decision">')
+    assert "Descartado" in reject_html
+    assert 'id="estimate-panel"' in reject_html
+    assert "<tr" not in reject_html
+    assert "0,0" not in reject_html
+
+    # Subsequent GET preserves exact semantic similarity and saved decision
+    get_after = client.get(reverse("pricing:screening", args=[1]))
+    assert get_after.status_code == 200
+    after_row = _row(get_after.content.decode(), pi.pk)
+    assert "0,89414424" in after_row
+    assert "Descartado" in after_row
+
+
+def test_screening_formats_db_and_on_demand_prices_and_quantities_identically(client, monkeypatch):
+    from django.core.cache import cache
+    from django.utils import timezone
+
+    import ingestion.client
+    from ingestion.models import PublicItem, RawRecord
+    from semantic_index.search import ScoredPublicItem
+
+    today = datetime.date.today()
+    pi_db = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=today.year,
+        purchase_sequence=84002,
+        item_number=1,
+        description="Item com preço homologado no banco",
+        unit="pacote",
+        quantity=Decimal("50.0000"),
+        agency_name="Órgão DB",
+        published_on=today,
+        awarded_unit_price=Decimal("17.5500"),
+        estimated_unit_price=Decimal("20.0000"),
+        secret_budget=False,
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+
+    raw_items = RawRecord.objects.create(
+        endpoint=f"/api/pncp/v1/orgaos/00000000000007/compras/{today.year}/84003/itens",
+        params={"pagina": 1},
+        fetched_at=timezone.now(),
+        payload=[{"numeroItem": 1, "temResultado": True}],
+        status_code=200,
+    )
+    pi_on_demand = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=today.year,
+        purchase_sequence=84003,
+        item_number=1,
+        description="Item com preço homologado sob demanda",
+        unit="pacote",
+        quantity=Decimal("0.0450"),
+        agency_name="Órgão Demanda",
+        published_on=today,
+        awarded_unit_price=None,
+        estimated_unit_price=Decimal("28.0000"),
+        secret_budget=False,
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+    pi_on_demand.raw_records.add(raw_items)
+    cache.delete(f"pncp_fetch_failed_{pi_on_demand.pk}")
+
+    def fake_fetch_item_results(**kwargs):
+        return RawRecord(
+            endpoint=f"/api/pncp/v1/orgaos/00000000000007/compras/{today.year}/84003/itens/1/resultados",
+            params={},
+            fetched_at=timezone.now(),
+            payload=[
+                {
+                    "numeroItem": 1,
+                    "situacaoCompraItemResultadoNome": "Informado",
+                    "dataCancelamento": None,
+                    "valorUnitarioHomologado": 17.55,
+                }
+            ],
+            status_code=200,
+        )
+
+    monkeypatch.setattr(ingestion.client, "fetch_item_results", fake_fetch_item_results)
+    monkeypatch.setattr(
+        views,
+        "search_function",
+        lambda **kwargs: [
+            ScoredPublicItem(item=pi_db, score=0.89414424),
+            ScoredPublicItem(item=pi_on_demand, score=0.81234567),
+        ],
+    )
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: views.CorpusInfo(2, today, today, is_partial=False, db_items_count=2),
+    )
+
+    response = client.get(reverse("pricing:screening", args=[1]))
+    assert response.status_code == 200
+    html = response.content.decode()
+
+    row_db = _row(html, pi_db.pk)
+    row_demand = _row(html, pi_on_demand.pk)
+
+    assert "<td>50</td>" in row_db
+    assert "50,0000" not in row_db
+    assert "<td>17,55</td>" in row_db
+    assert "17,5500" not in row_db
+    assert "<td>0,89414424</td>" in row_db
+
+    assert "<td>0,0450</td>" in row_demand
+    assert "<td>17,55</td>" in row_demand
+    assert "<td>0,81234567</td>" in row_demand

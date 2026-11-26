@@ -2,6 +2,8 @@ from typing import Any
 
 from django import template
 
+from pricing.formatting import format_decimal as _format_decimal
+
 register = template.Library()
 
 
@@ -17,3 +19,8 @@ def units_match(unit_a: Any, unit_b: Any) -> bool:
     from ingestion.units import normalize_unit
 
     return normalize_unit(unit_a) == normalize_unit(unit_b)
+
+
+@register.filter
+def format_decimal(value: Any) -> str:
+    return _format_decimal(value)

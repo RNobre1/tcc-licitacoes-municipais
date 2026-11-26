@@ -179,3 +179,84 @@ def test_screening_parallel_on_demand_fetch_does_not_leak_db_connections(monkeyp
 
     connections_after = _client_backend_connections()
     assert connections_after == connections_before
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_screening_and_decide_preserve_similarity_and_format_decimals_end_to_end(monkeypatch):
+    client = get_qdrant_client()
+    unique_rev = f"test_d1_d2_{uuid4().hex[:8]}"
+    model = FakeEmbeddingModel(name="integration-d1-d2", revision=unique_rev, dimension=16)
+    coll_name = collection_name_for_model(model)
+
+    try:
+        today = date.today()
+        item = PublicItem.objects.create(
+            cnpj="00000000000007",
+            year=today.year,
+            purchase_sequence=942,
+            item_number=1,
+            description="Papel sulfite A4 branco, resma com 500 folhas",
+            unit="pacote",
+            unit_normalized=normalize_unit("pacote"),
+            quantity=Decimal("50.0000"),
+            agency_name="Prefeitura D1D2",
+            published_on=today - timedelta(days=10),
+            awarded_unit_price=Decimal("41.1400"),
+            estimated_unit_price=Decimal("45.0000"),
+            secret_budget=False,
+            modality=6,
+            state="PA",
+            item_kind="product",
+        )
+        indexed = index_public_items(model=model, items=[item], client=client)
+        assert indexed == 1
+
+        monkeypatch.setattr(views, "get_embedding_model", lambda: model)
+        monkeypatch.setattr(views, "search_function", views.default_search_function)
+
+        django_client = Client()
+        screening_url = reverse("pricing:screening", args=[1])
+        get_resp = django_client.get(screening_url)
+        assert get_resp.status_code == 200
+        get_html = get_resp.content.decode()
+
+        assert "<td>50</td>" in get_html
+        assert "50,0000" not in get_html
+        assert "<td>41,14</td>" in get_html
+        assert "41,1400" not in get_html
+        assert f'hx-target="#candidate-{item.pk}-decision"' in get_html
+
+        candidate = get_resp.context["candidates"][0]
+        assert candidate.similarity > 0.0
+
+        post_accept = django_client.post(
+            reverse("pricing:decide", args=[item.pk]),
+            {"decision": "accept", "item_id": "1"},
+        )
+        assert post_accept.status_code == 200
+        accept_html = post_accept.content.decode()
+        assert accept_html.lstrip().startswith(f'<td id="candidate-{item.pk}-decision">')
+        assert "Aceito" in accept_html
+        assert "<tr" not in accept_html
+        assert "0,0" not in accept_html
+        assert 'id="estimate-panel"' in accept_html
+
+        post_reject = django_client.post(
+            reverse("pricing:decide", args=[item.pk]),
+            {"decision": "reject", "item_id": "1"},
+        )
+        assert post_reject.status_code == 200
+        reject_html = post_reject.content.decode()
+        assert reject_html.lstrip().startswith(f'<td id="candidate-{item.pk}-decision">')
+        assert "Descartado" in reject_html
+        assert "<tr" not in reject_html
+        assert "0,0" not in reject_html
+
+        get_after = django_client.get(screening_url)
+        assert get_after.status_code == 200
+        assert get_after.context["candidates"][0].similarity == candidate.similarity
+        assert "Descartado" in get_after.content.decode()
+    finally:
+        if client.collection_exists(coll_name):
+            client.delete_collection(coll_name)

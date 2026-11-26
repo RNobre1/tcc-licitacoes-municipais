@@ -695,3 +695,86 @@ def test_screening_renders_both_counts_and_indexed_date_range():
     rendered = _render_screening(item, candidates=[], corpus_info=corpus_info)
     assert "5111 de 5111 itens do banco indexados" in rendered
     assert "26/10/2026 a 30/10/2026" in rendered
+
+
+def test_candidate_fragment_renders_decision_cell_id_and_targets_only_decision_cell():
+    candidate = _make_candidate(id=7)
+    rendered = _render_candidate_fragment(candidate, decision="accept", item_unit="pacote")
+    assert '<td id="candidate-7-decision">' in rendered
+    assert 'hx-target="#candidate-7-decision"' in rendered
+    assert 'hx-swap="outerHTML"' in rendered
+
+
+def test_candidate_decision_template_renders_labels_and_optional_oob_panel():
+    candidate = _make_candidate(id=7, unit="pacote", price=Decimal("24.80"))
+    rendered = render_to_string(
+        "pricing/_candidate_decision.html",
+        {
+            "candidate": candidate,
+            "decision": "accept",
+            "item_unit": "pacote",
+            "estimate": {"counted_candidate_ids": {7}},
+            "oob_estimate": {
+                "mean": Decimal("24.80"),
+                "median": Decimal("24.80"),
+                "min": Decimal("24.80"),
+                "count": 1,
+                "requires_justification": True,
+            },
+        },
+        request=RequestFactory().post("/candidates/7/decision/"),
+    )
+    assert rendered.lstrip().startswith('<td id="candidate-7-decision">')
+    assert "Aceito" in rendered
+    assert "<tr" not in rendered
+    assert 'id="estimate-panel"' in rendered
+    assert 'hx-swap-oob="true"' in rendered
+
+
+def test_candidate_fragment_formats_price_and_quantity_and_leaves_similarity_untouched():
+    candidate = _make_candidate(
+        id=11,
+        quantity=Decimal("50.0000"),
+        price=Decimal("41.1400"),
+        similarity=0.89414424,
+    )
+    flat = _flat(_render_candidate_fragment(candidate))
+    assert "<td>50</td>" in flat
+    assert "50,0000" not in flat
+    assert "<td>41,14</td>" in flat
+    assert "41,1400" not in flat
+    assert "<td>0,89414424</td>" in flat
+
+    candidate_micro = _make_candidate(
+        id=12,
+        quantity=Decimal("0.045"),
+        price=Decimal("0.0450"),
+        similarity=0.5,
+        is_estimated=True,
+    )
+    flat_micro = _flat(_render_candidate_fragment(candidate_micro))
+    assert "<td>0,0450</td>" in flat_micro
+    assert "<td>0,0450 (estimado)</td>" in flat_micro
+    assert "<td>0,5</td>" in flat_micro
+
+    candidate_int_price = _make_candidate(
+        id=13,
+        quantity=Decimal("1000.0000"),
+        price=Decimal("28.00"),
+        similarity=0.75,
+        is_estimated=True,
+    )
+    flat_int = _flat(_render_candidate_fragment(candidate_int_price))
+    assert "<td>1000</td>" in flat_int
+    assert "<td>28 (estimado)</td>" in flat_int
+
+
+def test_screening_formats_requested_item_quantity_without_trailing_zeros():
+    item_int = _make_item(quantity=Decimal("50.0000"))
+    rendered_int = _render_screening(item_int, candidates=[])
+    assert "<strong>Quantidade:</strong> 50</p>" in rendered_int
+    assert "50,0000" not in rendered_int
+
+    item_micro = _make_item(quantity=Decimal("0.0450"))
+    rendered_micro = _render_screening(item_micro, candidates=[])
+    assert "<strong>Quantidade:</strong> 0,0450</p>" in rendered_micro
