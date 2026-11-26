@@ -120,6 +120,7 @@ class Command(BaseCommand):
         cli_finalist: str | None,
         expected_synthetic: bool,
         expected_items_count: int,
+        thresholds_note: Path,
     ) -> str:
         resolved_eval_dir = eval_dir.resolve()
         tuning_file = (
@@ -141,8 +142,23 @@ class Command(BaseCommand):
                 f"missing at {tuning_file}."
             )
         try:
-            tuning_data = json.loads(tuning_file.read_text(encoding="utf-8"))
-        except (TypeError, OSError, json.JSONDecodeError) as exc:
+            tuning_bytes = tuning_file.read_bytes()
+        except OSError as exc:
+            raise CommandError(f"Tuning output file is invalid: {tuning_file}") from exc
+
+        actual_tuning_sha256 = hashlib.sha256(tuning_bytes).hexdigest()
+        try:
+            check_thresholds_note_guard(
+                thresholds_note,
+                split_hash=split_hash,
+                tuning_output_hash=actual_tuning_sha256,
+            )
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
+
+        try:
+            tuning_data = json.loads(tuning_bytes.decode("utf-8"))
+        except (TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise CommandError(f"Tuning output file is invalid: {tuning_file}") from exc
 
         if not isinstance(tuning_data, dict):
@@ -265,6 +281,7 @@ class Command(BaseCommand):
                 output_path=output_path,
                 finalist=finalist,
                 tuning_output=tuning_output,
+                thresholds_note=thresholds_note,
                 top_n=top_n,
             )
         else:
@@ -287,6 +304,7 @@ class Command(BaseCommand):
         output_path: str | None,
         finalist: str | None,
         tuning_output: str | None = None,
+        thresholds_note: str | None = None,
         top_n: int = 20,
     ):
         self.stdout.write(f"Running benchmark on synthetic data ({split_name} split)...")
@@ -362,6 +380,10 @@ class Command(BaseCommand):
             set(split.tuning_items) if split_name == "tuning" else set(split.measurement_items)
         )
         if split_name == "measurement":
+            if not thresholds_note:
+                raise CommandError(
+                    "Thresholds note must be provided via --thresholds-note for measurement split"
+                )
             finalist = self._resolve_measurement_finalist(
                 eval_dir=eval_dir,
                 tuning_output=tuning_output,
@@ -369,6 +391,7 @@ class Command(BaseCommand):
                 cli_finalist=finalist,
                 expected_synthetic=True,
                 expected_items_count=len(split.tuning_items),
+                thresholds_note=Path(thresholds_note),
             )
 
         bm25 = BM25SearchMethod(name="bm25")
@@ -461,6 +484,7 @@ class Command(BaseCommand):
                 cli_finalist=finalist,
                 expected_synthetic=False,
                 expected_items_count=len(tuning_items),
+                thresholds_note=note_path,
             )
 
         ground_truth_path = eval_dir / "ground_truth_resolved.json"

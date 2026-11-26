@@ -214,7 +214,9 @@ def test_real_handler_runs_synthetic_fixture_only_on_frozen_tuning_split(monkeyp
     guarded_hashes = []
     monkeypatch.setattr(
         "evaluation.management.commands.run_benchmark.check_thresholds_note_guard",
-        lambda note_path, split_hash=None: guarded_hashes.append(split_hash) or "synthetic note",
+        lambda note_path, split_hash=None, tuning_output_hash=None: (
+            guarded_hashes.append(split_hash) or "synthetic note"
+        ),
     )
     monkeypatch.setattr(
         "evaluation.management.commands.run_benchmark.create_dataset_split",
@@ -303,7 +305,7 @@ def test_run_benchmark_synthetic_full_orchestration(monkeypatch):
         measurement_file = out_dir / "benchmark_measurement_results.json"
         monkeypatch.setattr(
             "evaluation.management.commands.run_benchmark.check_thresholds_note_guard",
-            lambda note_path: "synthetic accepted note",
+            lambda note_path, split_hash=None, tuning_output_hash=None: "synthetic accepted note",
         )
         call_command(
             "run_benchmark",

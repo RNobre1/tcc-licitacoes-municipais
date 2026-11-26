@@ -133,7 +133,7 @@ def test_n1_measurement_reads_tuning_output_checks_hash_and_rejects_mismatched_f
     )
     monkeypatch.setattr(
         "evaluation.management.commands.run_benchmark.check_thresholds_note_guard",
-        lambda note_path, split_hash=None: "accepted",
+        lambda note_path, split_hash=None, tuning_output_hash=None: "accepted",
     )
 
     fake_qdrant = SimpleNamespace(
@@ -857,7 +857,7 @@ def test_n7_real_benchmark_requires_explicit_pattern_and_ignores_other_json(monk
     )
     monkeypatch.setattr(
         "evaluation.management.commands.run_benchmark.check_thresholds_note_guard",
-        lambda note_path, split_hash=None: "accepted",
+        lambda note_path, split_hash=None, tuning_output_hash=None: "accepted",
     )
     fake_qdrant = SimpleNamespace(
         collection_exists=lambda name: True,

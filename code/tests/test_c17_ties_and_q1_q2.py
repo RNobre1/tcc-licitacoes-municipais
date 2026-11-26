@@ -635,7 +635,7 @@ def test_q1_and_q2_n1d_anti_forge_tuning_lock_and_sha256_stdout(monkeypatch, tmp
     )
     monkeypatch.setattr(
         "evaluation.management.commands.run_benchmark.check_thresholds_note_guard",
-        lambda note_path, split_hash=None: "accepted",
+        lambda note_path, split_hash=None, tuning_output_hash=None: "accepted",
     )
     monkeypatch.setattr(
         "pricing.views.get_embedding_model",
@@ -846,7 +846,7 @@ def test_q2_n6b_and_n6c_run_benchmark_refuses_missing_or_zero_chosen_prices_with
     )
     monkeypatch.setattr(
         "evaluation.management.commands.run_benchmark.check_thresholds_note_guard",
-        lambda note_path, split_hash=None: "accepted",
+        lambda note_path, split_hash=None, tuning_output_hash=None: "accepted",
     )
 
     # N6-b: one item with chosen_prices=None and one with missing key -> 2 item(s) refused

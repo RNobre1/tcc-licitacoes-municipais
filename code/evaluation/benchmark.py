@@ -137,8 +137,7 @@ def group_tied_scored_ids(
 
     ordered = sorted(
         ((_extract_doc_id(doc), float(score)) for doc, score in ranked_scored),
-        key=lambda pair: pair[1],
-        reverse=True,
+        key=lambda pair: (-pair[1], pair[0]),
     )
     groups: list[tuple[float, list[Any]]] = []
     current_score = ordered[0][1]
@@ -250,8 +249,7 @@ def shuffle_tied_groups(
 
     ordered = sorted(
         ((doc, float(score)) for doc, score in ranked_scored),
-        key=lambda pair: pair[1],
-        reverse=True,
+        key=lambda pair: (-pair[1], _extract_doc_id(pair[0])),
     )
     result: list[tuple[Any, float]] = []
     idx = 0
@@ -444,8 +442,9 @@ def check_thresholds_note_guard(
     note_path: Path | str,
     split_hash: str | None = None,
     repo_root: Path | None = None,
+    tuning_output_hash: str | None = None,
 ) -> str:
-    """Check that thresholds decision note exists, is valid, and matches split hash.
+    """Check that thresholds decision note exists, is valid, and matches pinned hashes.
 
     Requirements:
     1. Regular file, not a directory.
@@ -453,6 +452,7 @@ def check_thresholds_note_guard(
     3. Not empty.
     4. Has status: aceita.
     5. If split_hash provided, hash is present in the note.
+    6. If tuning_output_hash provided, 'resumo SHA-256 do ajuste `<sha256>`' matches it.
     """
     path = Path(note_path).resolve()
     if not path.exists():
@@ -485,6 +485,24 @@ def check_thresholds_note_guard(
         raise ValueError(
             f"Split SHA-256 hash {split_hash} was not found recorded in decision note: {note_path}"
         )
+
+    if tuning_output_hash is not None:
+        tuning_matches = re.findall(
+            r"resumo\s+SHA-256\s+do\s+ajuste\s*:?\s*`?([0-9a-f]{64})`?",
+            content,
+            re.IGNORECASE,
+        )
+        if not tuning_matches:
+            raise ValueError(
+                "Tuning output SHA-256 line ('resumo SHA-256 do ajuste `<sha256>`') was not "
+                f"found recorded in decision note: {note_path}"
+            )
+        expected_tuning_hash = tuning_output_hash.lower()
+        if any(match.lower() != expected_tuning_hash for match in tuning_matches):
+            raise ValueError(
+                f"Tuning output SHA-256 mismatch in decision note {note_path}: "
+                f"expected {expected_tuning_hash}, found {tuning_matches[-1].lower()}"
+            )
 
     return content
 
@@ -1041,6 +1059,7 @@ class BenchmarkOrchestrator:
                         unit=d_unit,
                     )
                 )
+            whole_cq_sim.sort(key=lambda c: c.id)
             whole_c_q_by_item[item_id] = whole_cq_sim
 
         # N4: Verify vector index coverage of C(q) IDs before measuring
@@ -1117,8 +1136,7 @@ class BenchmarkOrchestrator:
                 ranked_pairs = method.rank(query=item_desc, candidates=c_q_corpus)
                 full_pairs = sorted(
                     ((doc, float(score)) for doc, score in ranked_pairs),
-                    key=lambda pair: pair[1],
-                    reverse=True,
+                    key=lambda pair: (-pair[1], _extract_doc_id(pair[0])),
                 )
                 full_ranked_by_method[method.name][item_id] = full_pairs
                 top_pairs = full_pairs[:effective_top_n]
@@ -1244,7 +1262,8 @@ class BenchmarkOrchestrator:
             else:
                 hard_indices.append(idx)
 
-            # Group full finalist pairs once per item for pre-cut tie shuffling across draws
+            # Group full finalist pairs once per item for pre-cut tie shuffling across draws.
+            # Sort each tie group by candidate ID so shuffling is reproducible regardless of order.
             grouped_finalist_docs: list[tuple[float, list[Any]]] = []
             if full_pairs:
                 g_score = full_pairs[0][1]
@@ -1253,21 +1272,21 @@ class BenchmarkOrchestrator:
                     if score == g_score:
                         g_docs.append(doc)
                     else:
+                        g_docs.sort(key=_extract_doc_id)
                         grouped_finalist_docs.append((g_score, g_docs))
                         g_score = score
                         g_docs = [doc]
+                g_docs.sort(key=_extract_doc_id)
                 grouped_finalist_docs.append((g_score, g_docs))
 
-            # Precompute per-draw tie-shuffled top-N finalist candidates with random rank IDs
-            # (replacing persistent DB IDs inside RF23), and per-draw random rank IDs for whole C(q)
-            # in price-only ranking. Seeds never depend on labels.
+            # Iterate draws outside and noise levels inside so each draw's tie-shuffled top-N
+            # finalist candidates and price-only C(q) pool are built once, evaluated across all
+            # sigmas, and immediately discarded (O(|C(q)|) memory). Seeds never depend on labels.
             tie_rng = random.Random(derive_item_seed(self.seed, f"tie:{item_id}"))
-            rf23_candidates_by_draw: list[list[PriceCandidateSim]] = []
-            sys_rank_to_real_by_draw: list[dict[int, Any]] = []
-            po_candidates_by_draw: list[list[PriceCandidateSim]] = []
-            po_rank_to_real_by_draw: list[dict[int, Any]] = []
+            sys_recalls_by_sigma: dict[float, list[float]] = {s: [] for s in sigmas}
+            po_recalls_by_sigma: dict[float, list[float]] = {s: [] for s in sigmas}
 
-            for _draw_idx in range(self.n_noise_draws):
+            for draw_idx in range(self.n_noise_draws):
                 selected_top_pairs: list[tuple[Any, float]] = []
                 for g_score, g_docs in grouped_finalist_docs:
                     if len(selected_top_pairs) >= effective_top_n:
@@ -1303,8 +1322,6 @@ class BenchmarkOrchestrator:
                             unit=d_unit,
                         )
                     )
-                rf23_candidates_by_draw.append(sys_draw_candidates)
-                sys_rank_to_real_by_draw.append(sys_id_map)
 
                 po_ranks = list(range(len(whole_cq)))
                 tie_rng.shuffle(po_ranks)
@@ -1320,27 +1337,25 @@ class BenchmarkOrchestrator:
                             unit=candidate.unit,
                         )
                     )
-                po_candidates_by_draw.append(po_draw_candidates)
-                po_rank_to_real_by_draw.append(po_id_map)
 
-            for s in sigmas:
-                draw_anchors = anchors_by_sigma[s]
-                sys_draw_recalls: list[float] = []
-                po_draw_recalls: list[float] = []
-                for draw_idx, a in enumerate(draw_anchors):
+                for s in sigmas:
+                    a = anchors_by_sigma[s][draw_idx]
                     # System with RF23 reordering the tie-shuffled top N candidates
                     ranked_sys = self.rank_with_rf23(
-                        rf23_candidates_by_draw[draw_idx],
+                        sys_draw_candidates,
                         anchor=Decimal(str(round(a, 4))),
                         unit=unit,
                     )
-                    sys_real_ids = [sys_rank_to_real_by_draw[draw_idx][c.id] for c in ranked_sys]
-                    sys_draw_recalls.append(compute_recall_at_k(sys_real_ids, gt_ids, k=10))
+                    sys_real_ids = [sys_id_map[c.id] for c in ranked_sys]
+                    sys_recalls_by_sigma[s].append(compute_recall_at_k(sys_real_ids, gt_ids, k=10))
                     # Price-only baseline ranking the WHOLE C(q) with equal-price ties reshuffled
-                    ranked_po = rank_by_price_only(po_candidates_by_draw[draw_idx], anchor=a)
-                    po_real_ids = [po_rank_to_real_by_draw[draw_idx][c.id] for c in ranked_po]
-                    po_draw_recalls.append(compute_recall_at_k(po_real_ids, gt_ids, k=10))
+                    ranked_po = rank_by_price_only(po_draw_candidates, anchor=a)
+                    po_real_ids = [po_id_map[c.id] for c in ranked_po]
+                    po_recalls_by_sigma[s].append(compute_recall_at_k(po_real_ids, gt_ids, k=10))
 
+            for s in sigmas:
+                sys_draw_recalls = sys_recalls_by_sigma[s]
+                po_draw_recalls = po_recalls_by_sigma[s]
                 item_system_r10[s].append(sum(sys_draw_recalls) / len(sys_draw_recalls))
                 item_po_r10[s].append(sum(po_draw_recalls) / len(po_draw_recalls))
 
