@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from evaluation.ground_truth import match_ground_truth_item, resolve_purchase_items
 from ingestion.client import ItemCountMismatchError, PncpResponseError
@@ -54,12 +54,9 @@ class Command(BaseCommand):
         skip_fetch = options["skip_fetch"]
         pattern = options["pattern"]
 
-        report_files = sorted(eval_dir.glob(pattern))
+        report_files = sorted(f for f in eval_dir.glob(pattern) if f.is_file())
         if not report_files:
-            # fallback for general test environment
-            report_files = sorted(
-                f for f in eval_dir.glob("*.json") if f.name != "ground_truth_resolved.json"
-            )
+            raise CommandError(f"No parsed report files matched pattern '{pattern}' in {eval_dir}.")
 
         self.stdout.write(f"Found {len(report_files)} report JSON file(s).")
 

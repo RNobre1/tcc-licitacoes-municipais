@@ -57,10 +57,28 @@ class Command(BaseCommand):
             help="Evaluation directory containing JSON files.",
         )
         parser.add_argument(
+            "--pattern",
+            type=str,
+            default=None,
+            help="Explicit filename glob pattern for parsed quotation report JSON files.",
+        )
+        parser.add_argument(
             "--finalist",
             type=str,
             default=None,
-            help="Pinned finalist method name from tuning run (required for measurement).",
+            help=(
+                "Optional confirmation of pinned finalist method from tuning output "
+                "(must match benchmark_tuning_results.json)."
+            ),
+        )
+        parser.add_argument(
+            "--tuning-output",
+            type=str,
+            default=None,
+            help=(
+                "Path to benchmark_tuning_results.json used to verify pinned finalist during "
+                "measurement (defaults to <eval-dir>/benchmark_tuning_results.json)."
+            ),
         )
         parser.add_argument(
             "--output",
@@ -92,12 +110,64 @@ class Command(BaseCommand):
             ),
         )
 
+    def _resolve_measurement_finalist(
+        self,
+        eval_dir: Path,
+        tuning_output: str | None,
+        split_hash: str,
+        cli_finalist: str | None,
+    ) -> str:
+        tuning_file = (
+            Path(tuning_output) if tuning_output else (eval_dir / "benchmark_tuning_results.json")
+        )
+        if not tuning_file.is_file():
+            raise CommandError(
+                f"Measurement requires tuning output file (benchmark_tuning_results.json); "
+                f"missing at {tuning_file}."
+            )
+        try:
+            tuning_data = json.loads(tuning_file.read_text(encoding="utf-8"))
+        except (TypeError, OSError, json.JSONDecodeError) as exc:
+            raise CommandError(f"Tuning output file is invalid: {tuning_file}") from exc
+
+        if not isinstance(tuning_data, dict):
+            raise CommandError(f"Tuning output file must be a JSON object: {tuning_file}")
+
+        if "split" in tuning_data and tuning_data.get("split") != "tuning":
+            raise CommandError(f"Tuning output file must come from a tuning run: {tuning_file}")
+
+        tuning_split_hash = tuning_data.get("split_hash")
+        if not tuning_split_hash or tuning_split_hash != split_hash:
+            raise CommandError(
+                "Tuning output split_hash does not match the frozen dataset split hash."
+            )
+
+        tuning_finalist = tuning_data.get("finalist")
+        if (
+            not isinstance(tuning_finalist, str)
+            or not tuning_finalist.strip()
+            or tuning_finalist == "bm25"
+        ):
+            raise CommandError(
+                f"Tuning output does not contain a valid finalist candidate: {tuning_file}"
+            )
+
+        if cli_finalist is not None and cli_finalist != tuning_finalist:
+            raise CommandError(
+                f"Requested --finalist '{cli_finalist}' does not match pinned tuning finalist "
+                f"'{tuning_finalist}'."
+            )
+
+        return tuning_finalist
+
     def handle(self, *args, **options):
         split_name = options["split"]
         eval_dir = Path(options["eval_dir"])
         thresholds_note = options["thresholds_note"]
         output_path = options.get("output")
         finalist = options.get("finalist")
+        tuning_output = options.get("tuning_output")
+        report_pattern = options.get("pattern")
         synthetic = options["synthetic"]
         allow_real_data = options.get("allow_real_data", False)
         top_n = options.get("top_n", 20)
@@ -108,8 +178,6 @@ class Command(BaseCommand):
                 raise CommandError(
                     "Thresholds note must be provided via --thresholds-note for measurement split"
                 )
-            if not finalist:
-                raise CommandError("Finalist must be provided via --finalist for measurement split")
             try:
                 check_thresholds_note_guard(Path(thresholds_note))
             except ValueError as exc:
@@ -117,7 +185,14 @@ class Command(BaseCommand):
             self.stdout.write(f"Guard passed: verified thresholds note at {thresholds_note}")
 
         if synthetic:
-            self._handle_synthetic(split_name, output_path, finalist, top_n=top_n)
+            self._handle_synthetic(
+                split_name,
+                eval_dir=eval_dir,
+                output_path=output_path,
+                finalist=finalist,
+                tuning_output=tuning_output,
+                top_n=top_n,
+            )
         else:
             self._handle_real(
                 split_name,
@@ -125,6 +200,8 @@ class Command(BaseCommand):
                 output_path,
                 thresholds_note,
                 finalist,
+                tuning_output=tuning_output,
+                report_pattern=report_pattern,
                 allow_real_data=allow_real_data,
                 top_n=top_n,
             )
@@ -132,8 +209,10 @@ class Command(BaseCommand):
     def _handle_synthetic(
         self,
         split_name: str,
+        eval_dir: Path,
         output_path: str | None,
         finalist: str | None,
+        tuning_output: str | None = None,
         top_n: int = 20,
     ):
         self.stdout.write(f"Running benchmark on synthetic data ({split_name} split)...")
@@ -208,6 +287,13 @@ class Command(BaseCommand):
         active_ids = (
             set(split.tuning_items) if split_name == "tuning" else set(split.measurement_items)
         )
+        if split_name == "measurement":
+            finalist = self._resolve_measurement_finalist(
+                eval_dir=eval_dir,
+                tuning_output=tuning_output,
+                split_hash=split.sha256_hash,
+                cli_finalist=finalist,
+            )
 
         bm25 = BM25SearchMethod(name="bm25")
         semantic = SemanticSearchMethod(model=FakeDeterministicEmbeddingModel(), name="semantic")
@@ -243,6 +329,8 @@ class Command(BaseCommand):
         output_path: str | None,
         thresholds_note: str | None,
         finalist: str | None,
+        tuning_output: str | None,
+        report_pattern: str | None,
         allow_real_data: bool,
         top_n: int = 20,
     ):
@@ -252,6 +340,11 @@ class Command(BaseCommand):
             )
         if split_name not in ("tuning", "measurement"):
             raise CommandError("Real benchmark supports only tuning or measurement split.")
+        if not report_pattern:
+            raise CommandError(
+                "Parsed report filename pattern must be provided via --pattern for real "
+                "benchmark execution."
+            )
 
         split_file = eval_dir / "dataset_split.json"
         if not split_file.exists():
@@ -280,6 +373,14 @@ class Command(BaseCommand):
         except ValueError as exc:
             raise CommandError(str(exc)) from exc
 
+        if split_name == "measurement":
+            finalist = self._resolve_measurement_finalist(
+                eval_dir=eval_dir,
+                tuning_output=tuning_output,
+                split_hash=split_hash,
+                cli_finalist=finalist,
+            )
+
         ground_truth_path = eval_dir / "ground_truth_resolved.json"
         if not ground_truth_path.is_file():
             raise CommandError("The resolved ground-truth file is missing.")
@@ -295,12 +396,11 @@ class Command(BaseCommand):
             raise CommandError(f"The frozen {split_name} split contains no items.")
 
         parsed_items: dict[str, tuple[dict[str, Any], date]] = {}
-        report_files = sorted(
-            path
-            for path in eval_dir.glob("*.json")
-            if path.name not in {"dataset_split.json", "ground_truth_resolved.json"}
-            and not path.name.startswith("benchmark_")
-        )
+        report_files = sorted(path for path in eval_dir.glob(report_pattern) if path.is_file())
+        if not report_files:
+            raise CommandError(
+                f"No parsed report files matched pattern '{report_pattern}' in {eval_dir}."
+            )
         for report_file in report_files:
             try:
                 report_data = json.loads(report_file.read_text(encoding="utf-8"))
@@ -326,7 +426,7 @@ class Command(BaseCommand):
         missing_parsed_items = active_item_ids.difference(parsed_items)
         if missing_parsed_items:
             raise CommandError(
-                f"{len(missing_parsed_items)} tuning item(s) are missing from parsed reports."
+                f"{len(missing_parsed_items)} {split_name} item(s) are missing from parsed reports."
             )
 
         ground_truth_keys_by_item: dict[str, set[tuple[str, int, int, int]]] = {}
@@ -356,7 +456,8 @@ class Command(BaseCommand):
         missing_ground_truth = active_item_ids.difference(ground_truth_keys_by_item)
         if missing_ground_truth:
             raise CommandError(
-                f"{len(missing_ground_truth)} tuning item(s) have no resolved relevant records."
+                f"{len(missing_ground_truth)} {split_name} item(s) have no resolved "
+                "relevant records."
             )
 
         from django.db.models import Q
@@ -391,6 +492,7 @@ class Command(BaseCommand):
             )
 
         benchmark_items = []
+        missing_chosen_price_count = 0
         for item_id in sorted(active_item_ids):
             report_item, survey_date = parsed_items[item_id]
             ground_truth_ids = {
@@ -399,8 +501,9 @@ class Command(BaseCommand):
             chosen_prices = [
                 Decimal(str(price["unit_price"])) for price in report_item.get("chosen_prices", [])
             ]
-            if not chosen_prices:
-                raise CommandError("A tuning item has no chosen price for the R2 anchor.")
+            if not [p for p in chosen_prices if p > 0]:
+                missing_chosen_price_count += 1
+                continue
             benchmark_items.append(
                 {
                     "item_id": item_id,
@@ -412,23 +515,32 @@ class Command(BaseCommand):
                 }
             )
 
+        if missing_chosen_price_count > 0:
+            raise CommandError(
+                f"{missing_chosen_price_count} {split_name} item(s) have no chosen price "
+                "for the R2 anchor."
+            )
+
         from pricing.views import get_embedding_model
 
         semantic_method = SemanticSearchMethod(model=get_embedding_model(), name="semantic")
         orchestrator = BenchmarkOrchestrator(
             n_noise_draws=200, n_bootstrap_resamples=10000, seed=42, top_n=top_n
         )
-        results = orchestrator.run_benchmark(
-            items=benchmark_items,
-            corpus=PublicItem.objects.all(),
-            split_name=split_name,
-            active_item_ids=active_item_ids,
-            finalist=finalist,
-            candidate_methods=[semantic_method],
-            baseline_method=BM25SearchMethod(name="bm25"),
-            synthetic=False,
-            top_n=top_n,
-        )
+        try:
+            results = orchestrator.run_benchmark(
+                items=benchmark_items,
+                corpus=PublicItem.objects.all(),
+                split_name=split_name,
+                active_item_ids=active_item_ids,
+                finalist=finalist,
+                candidate_methods=[semantic_method],
+                baseline_method=BM25SearchMethod(name="bm25"),
+                synthetic=False,
+                top_n=top_n,
+            )
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
         results["split_hash"] = split_hash
 
         out_file = (
@@ -437,6 +549,6 @@ class Command(BaseCommand):
         out_file.parent.mkdir(parents=True, exist_ok=True)
         out_file.write_text(json.dumps(results, indent=2, cls=DecimalEncoder), encoding="utf-8")
         self.stdout.write(
-            f"Real tuning benchmark completed for {results['items_count']} items; "
+            f"Real {split_name} benchmark completed for {results['items_count']} items; "
             f"split SHA-256: {split_hash}. Results written to {out_file.name}."
         )

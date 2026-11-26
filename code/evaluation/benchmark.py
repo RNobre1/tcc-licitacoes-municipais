@@ -31,6 +31,53 @@ def _normalized_candidate_unit(doc: Any) -> str:
     return normalize_unit(getattr(doc, "unit", "UNIDADE"))
 
 
+def check_collection_coverage(
+    model: EmbeddingModel,
+    candidate_ids: Sequence[Any],
+    client: Any = None,
+    batch_size: int = 500,
+) -> dict[str, Any]:
+    """Count how many C(q) PublicItem IDs exist in the model's Qdrant collection."""
+    from semantic_index import get_qdrant_client
+    from semantic_index.embedding import collection_name_for_model
+
+    qdrant_client = client if client is not None else get_qdrant_client()
+    collection_name = collection_name_for_model(model)
+
+    if not qdrant_client.collection_exists(collection_name):
+        raise ValueError(f"Semantic index collection '{collection_name}' does not exist")
+
+    unique_ids = sorted({int(pk) for pk in candidate_ids})
+    unique_id_set = set(unique_ids)
+    present_ids: set[int] = set()
+
+    for start in range(0, len(unique_ids), batch_size):
+        batch = unique_ids[start : start + batch_size]
+        records = qdrant_client.retrieve(
+            collection_name=collection_name,
+            ids=batch,
+            with_payload=False,
+            with_vectors=False,
+        )
+        for record in records:
+            record_id = int(record.id)
+            if record_id in unique_id_set:
+                present_ids.add(record_id)
+
+    expected_count = len(unique_ids)
+    present_count = len(present_ids)
+    missing_count = expected_count - present_count
+    coverage_ratio = (present_count / expected_count) if expected_count else 1.0
+
+    return {
+        "collection": collection_name,
+        "expected_count": expected_count,
+        "present_count": present_count,
+        "missing_count": missing_count,
+        "coverage_ratio": coverage_ratio,
+    }
+
+
 def compute_recall_at_k(ranked_ids: Sequence[Any], ground_truth_ids: set[Any], k: int) -> float:
     """Compute Recall@k for a single item.
 
@@ -547,9 +594,10 @@ class BM25SearchMethod:
 class SemanticSearchMethod:
     """Rank candidates with semantic_index vectors, without access to evaluation labels."""
 
-    def __init__(self, model: EmbeddingModel, name: str = "semantic"):
+    def __init__(self, model: EmbeddingModel, name: str = "semantic", client: Any = None):
         self.name = name
         self.model = model
+        self.client = client
 
     def rank(
         self,
@@ -572,6 +620,7 @@ class SemanticSearchMethod:
                 query,
                 structured_filter=StructuredFilter(date_window=date_window),
                 limit=search_limit,
+                client=self.client,
             )
             scored_ids = [result.item.pk for result in scored_items]
             allowed_ids = set(
@@ -704,20 +753,11 @@ class BenchmarkOrchestrator:
         if not eval_items:
             raise ValueError(f"No items available to evaluate for split: {split_name}")
 
-        all_methods = [baseline_method] + list(candidate_methods)
-        all_method_names = [m.name for m in all_methods]
-
-        # Rankings and candidates by method
-        ranked_ids_by_method: dict[str, dict[str, list[Any]]] = {m: {} for m in all_method_names}
-        finalist_candidates_by_item: dict[str, dict[str, list[PriceCandidateSim]]] = {
-            m: {} for m in candidate_names
-        }
-        whole_c_q_by_item: dict[str, list[PriceCandidateSim]] = {}
-
-        # Apply C(q) per item and run retrieval
+        # Validate survey_date and chosen_prices upfront before running retrieval/measurement
+        parsed_survey_dates: dict[str, date] = {}
+        missing_price_count = 0
         for item in eval_items:
             item_id = str(item.get("item_id"))
-            item_desc = str(item.get("description", ""))
             s_date = item.get("survey_date")
             if isinstance(s_date, str):
                 from datetime import datetime
@@ -725,6 +765,27 @@ class BenchmarkOrchestrator:
                 s_date = datetime.strptime(s_date, "%Y-%m-%d").date()
             elif s_date is None:
                 raise ValueError(f"Item {item_id} is missing survey_date")
+            parsed_survey_dates[item_id] = s_date
+
+            raw_prices = item.get("chosen_prices") or []
+            if not [p for p in raw_prices if float(p) > 0]:
+                missing_price_count += 1
+
+        if missing_price_count > 0:
+            raise ValueError(
+                f"{missing_price_count} item(s) have no chosen price for the R2 anchor"
+            )
+
+        all_methods = [baseline_method] + list(candidate_methods)
+        all_method_names = [m.name for m in all_methods]
+
+        # Build per-item candidate corpus C(q) first
+        c_q_by_item: dict[str, list[Any]] = {}
+        whole_c_q_by_item: dict[str, list[PriceCandidateSim]] = {}
+
+        for item in eval_items:
+            item_id = str(item.get("item_id"))
+            s_date = parsed_survey_dates[item_id]
 
             source_corpus = corpus
             if hasattr(corpus, "model") and corpus.model.__name__ == "PublicItem":
@@ -755,6 +816,7 @@ class BenchmarkOrchestrator:
                     allowed_modalities=ALLOWED_MODALITIES,
                 )
             )
+            c_q_by_item[item_id] = c_q_corpus
 
             # Price-only baseline ranks whole C(q)
             whole_cq_sim = []
@@ -778,6 +840,73 @@ class BenchmarkOrchestrator:
                     )
                 )
             whole_c_q_by_item[item_id] = whole_cq_sim
+
+        # N4: Verify vector index coverage of C(q) IDs before measuring
+        index_coverage: dict[str, dict[str, Any]] = {}
+        is_queryset_corpus = hasattr(corpus, "model") and corpus.model.__name__ == "PublicItem"
+        has_public_items = is_queryset_corpus
+        if not has_public_items:
+            all_docs = [doc for c_q in c_q_by_item.values() for doc in c_q]
+            if all_docs:
+                from ingestion.models import PublicItem
+
+                has_public_items = all(isinstance(doc, PublicItem) for doc in all_docs)
+
+        if has_public_items:
+            all_c_q_ids = sorted(
+                {
+                    getattr(doc, "pk", getattr(doc, "id", None))
+                    for c_q in c_q_by_item.values()
+                    for doc in c_q
+                    if getattr(doc, "pk", getattr(doc, "id", None)) is not None
+                }
+            )
+            for method in all_methods:
+                model = getattr(method, "model", None)
+                if model is not None:
+                    coverage = check_collection_coverage(
+                        model,
+                        all_c_q_ids,
+                        client=getattr(method, "client", None),
+                    )
+                    if coverage["missing_count"] > 0:
+                        raise ValueError(
+                            f"Incomplete semantic index coverage for '{method.name}' in "
+                            f"collection '{coverage['collection']}': "
+                            f"{coverage['present_count']}/{coverage['expected_count']} C(q) IDs "
+                            f"present ({coverage['missing_count']} missing)"
+                        )
+                    index_coverage[method.name] = coverage
+        else:
+            all_c_q_ids_mem = {
+                getattr(
+                    doc,
+                    "id",
+                    getattr(doc, "pk", doc.get("id") if isinstance(doc, dict) else None),
+                )
+                for c_q in c_q_by_item.values()
+                for doc in c_q
+            }
+            for method in all_methods:
+                if getattr(method, "model", None) is not None:
+                    index_coverage[method.name] = {
+                        "collection": "in_memory",
+                        "expected_count": len(all_c_q_ids_mem),
+                        "present_count": len(all_c_q_ids_mem),
+                        "missing_count": 0,
+                        "coverage_ratio": 1.0,
+                    }
+
+        # Rankings and candidates by method
+        ranked_ids_by_method: dict[str, dict[str, list[Any]]] = {m: {} for m in all_method_names}
+        finalist_candidates_by_item: dict[str, dict[str, list[PriceCandidateSim]]] = {
+            m: {} for m in candidate_names
+        }
+
+        for item in eval_items:
+            item_id = str(item.get("item_id"))
+            item_desc = str(item.get("description", ""))
+            c_q_corpus = c_q_by_item[item_id]
 
             for method in all_methods:
                 ranked_pairs = method.rank(query=item_desc, candidates=c_q_corpus)
@@ -894,7 +1023,7 @@ class BenchmarkOrchestrator:
 
         for idx, item in enumerate(eval_items):
             item_id = str(item.get("item_id"))
-            chosen_prices = item.get("chosen_prices") or [Decimal("10.0")]
+            chosen_prices = [p for p in item["chosen_prices"] if float(p) > 0]
             gt_ids = set(item.get("ground_truth", set()))
             candidates = active_candidates.get(item_id, [])
             whole_cq = whole_c_q_by_item.get(item_id, [])
@@ -985,6 +1114,7 @@ class BenchmarkOrchestrator:
             "top_n": effective_top_n,
             "n": effective_top_n,
             "finalist": active_finalist,
+            "index_coverage": index_coverage,
             "methods": {
                 m: {
                     "metrics": method_summary_metrics[m],

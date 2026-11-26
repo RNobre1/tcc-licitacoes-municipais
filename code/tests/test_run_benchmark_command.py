@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 
 import pytest
 from django.core.management import call_command
@@ -107,6 +108,7 @@ def test_real_handler_rejects_self_consistent_split_with_unfrozen_hash(monkeypat
             "run_benchmark",
             split="tuning",
             eval_dir=str(eval_dir),
+            pattern="*.json",
             allow_real_data=True,
         )
 
@@ -202,6 +204,13 @@ def test_real_handler_runs_synthetic_fixture_only_on_frozen_tuning_split(monkeyp
         "pricing.views.get_embedding_model",
         lambda: FakeDeterministicEmbeddingModel(),
     )
+    fake_qdrant = SimpleNamespace(
+        collection_exists=lambda name: True,
+        retrieve=lambda collection_name, ids, with_payload=False, with_vectors=False: [
+            SimpleNamespace(id=pk) for pk in ids
+        ],
+    )
+    monkeypatch.setattr("semantic_index.get_qdrant_client", lambda *a, **kw: fake_qdrant)
     guarded_hashes = []
     monkeypatch.setattr(
         "evaluation.management.commands.run_benchmark.check_thresholds_note_guard",
@@ -217,6 +226,7 @@ def test_real_handler_runs_synthetic_fixture_only_on_frozen_tuning_split(monkeyp
         "run_benchmark",
         split="tuning",
         eval_dir=str(eval_dir),
+        pattern="synthetic_report.json",
         output=str(output_path),
         allow_real_data=True,
     )
@@ -227,6 +237,7 @@ def test_real_handler_runs_synthetic_fixture_only_on_frozen_tuning_split(monkeyp
     assert results["items_count"] == 1
     assert results["finalist"] == "semantic"
     assert results["split_hash"] == split.sha256_hash
+    assert results["index_coverage"]["semantic"]["coverage_ratio"] == 1.0
     assert guarded_hashes == [split.sha256_hash]
 
 
@@ -234,7 +245,7 @@ def test_run_benchmark_synthetic_full_orchestration(monkeypatch):
     with TemporaryDirectory() as tmp_dir:
         out_dir = Path(tmp_dir) / "output"
         out_dir.mkdir()
-        out_file = out_dir / "benchmark_run_results.json"
+        out_file = out_dir / "benchmark_tuning_results.json"
 
         call_command(
             "run_benchmark",
@@ -297,6 +308,7 @@ def test_run_benchmark_synthetic_full_orchestration(monkeypatch):
         call_command(
             "run_benchmark",
             split="measurement",
+            eval_dir=str(out_dir),
             thresholds_note=str(Path(tmp_dir) / "synthetic-thresholds.md"),
             finalist=data["finalist"],
             output=str(measurement_file),
