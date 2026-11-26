@@ -1712,3 +1712,397 @@ def test_screening_view_does_not_call_embedding_model_loader_when_search_functio
     response = client.get(reverse("pricing:screening", args=[1]))
     assert response.status_code == 200
     assert not loader_called
+
+
+def test_estimate_panel_parity_and_notice_when_accepted_candidate_is_out_of_current_list(
+    client, monkeypatch
+):
+    """B2: POST decide and GET screening build identical panels from all accepted candidates."""
+    from ingestion.models import PublicItem
+    from semantic_index.search import ScoredPublicItem
+
+    today = datetime.date.today()
+    pi_a = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=today.year,
+        purchase_sequence=7101,
+        item_number=1,
+        description="Papel A4 fora da lista depois",
+        unit="pacote",
+        quantity=Decimal("10"),
+        agency_name="Órgão A",
+        published_on=today,
+        awarded_unit_price=Decimal("20.00"),
+        estimated_unit_price=Decimal("22.00"),
+        secret_budget=False,
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+    pi_b = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=today.year,
+        purchase_sequence=7102,
+        item_number=1,
+        description="Papel A4 na lista atual",
+        unit="pacote",
+        quantity=Decimal("10"),
+        agency_name="Órgão B",
+        published_on=today,
+        awarded_unit_price=Decimal("30.00"),
+        estimated_unit_price=Decimal("32.00"),
+        secret_budget=False,
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+    pi_c = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=today.year,
+        purchase_sequence=7103,
+        item_number=1,
+        description="Papel A4 segundo fora da lista",
+        unit="pacote",
+        quantity=Decimal("10"),
+        agency_name="Órgão C",
+        published_on=today,
+        awarded_unit_price=Decimal("40.00"),
+        estimated_unit_price=Decimal("42.00"),
+        secret_budget=False,
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+
+    current_items = [pi_a, pi_b, pi_c]
+    monkeypatch.setattr(
+        views,
+        "search_function",
+        lambda **kwargs: [ScoredPublicItem(item=pi, score=0.9) for pi in current_items],
+    )
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: views.CorpusInfo(3, today, today, is_partial=False, db_items_count=3),
+    )
+
+    # Accept A while A is in list
+    resp_a = client.post(
+        reverse("pricing:decide", args=[pi_a.pk]),
+        {"decision": "accept", "item_id": "1"},
+    )
+    assert resp_a.status_code == 200
+    assert resp_a.context["estimate"]["count"] == 1
+
+    # When all accepted items are in the current list, no out-of-list notice appears
+    page_all_in = client.get(reverse("pricing:screening", args=[1]))
+    assert "fora da lista atual" not in page_all_in.content.decode()
+
+    # Now A drops out of the current search results; only B remains
+    current_items = [pi_b]
+
+    resp_b = client.post(
+        reverse("pricing:decide", args=[pi_b.pk]),
+        {"decision": "accept", "item_id": "1"},
+    )
+    assert resp_b.status_code == 200
+    assert resp_b.context["estimate"]["count"] == 2
+    assert resp_b.context["estimate"]["mean"] == Decimal("25.00")
+
+    page_one_out = client.get(reverse("pricing:screening", args=[1]))
+    assert page_one_out.status_code == 200
+    assert page_one_out.context["estimate"] == resp_b.context["estimate"]
+
+    swap_panel = re.search(
+        r'<section id="estimate-panel".*?</section>', resp_b.content.decode(), re.S
+    ).group(0)
+    page_panel = re.search(
+        r'<section id="estimate-panel".*?</section>', page_one_out.content.decode(), re.S
+    ).group(0)
+    swap_panel_clean = re.sub(r'\s+hx-swap-oob="true"', "", swap_panel)
+    assert _flat(swap_panel_clean) == _flat(page_panel)
+    assert "1 aceito fora da lista atual" in page_one_out.content.decode()
+
+    # Accept C (also out of current list) -> 2 accepted out of current list
+    resp_c = client.post(
+        reverse("pricing:decide", args=[pi_c.pk]),
+        {"decision": "accept", "item_id": "1"},
+    )
+    assert resp_c.status_code == 200
+    assert resp_c.context["estimate"]["count"] == 3
+    assert resp_c.context["estimate"]["mean"] == Decimal("30.00")
+
+    page_two_out = client.get(reverse("pricing:screening", args=[1]))
+    assert page_two_out.context["estimate"] == resp_c.context["estimate"]
+    assert "2 aceitos fora da lista atual" in page_two_out.content.decode()
+
+
+def test_get_screening_candidates_allows_retry_after_empty_pncp_response(monkeypatch):
+    """N2: Empty PNCP response does not cache failure; next view retries and succeeds."""
+    from django.core.cache import cache
+    from django.utils import timezone
+
+    import ingestion.client
+    from ingestion.models import PublicItem, RawRecord
+    from semantic_index.search import ScoredPublicItem
+
+    today = datetime.date.today()
+    raw_items = RawRecord.objects.create(
+        endpoint=f"/api/pncp/v1/orgaos/00000000000007/compras/{today.year}/7201/itens",
+        params={"pagina": 1},
+        fetched_at=timezone.now(),
+        payload=[{"numeroItem": 1, "temResultado": True}],
+        status_code=200,
+    )
+    pi = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=today.year,
+        purchase_sequence=7201,
+        item_number=1,
+        description="Item com resultado publicado depois",
+        unit="pacote",
+        quantity=Decimal("10"),
+        agency_name="Órgão Fictício",
+        published_on=today,
+        awarded_unit_price=None,
+        estimated_unit_price=Decimal("25.00"),
+        secret_budget=False,
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+    pi.raw_records.add(raw_items)
+    cache.delete(f"pncp_fetch_failed_{pi.pk}")
+
+    responses = [
+        RawRecord(
+            endpoint=f"/api/pncp/v1/orgaos/00000000000007/compras/{today.year}/7201/itens/1/resultados",
+            params={},
+            fetched_at=timezone.now(),
+            payload=[],
+            status_code=200,
+        ),
+        RawRecord(
+            endpoint=f"/api/pncp/v1/orgaos/00000000000007/compras/{today.year}/7201/itens/1/resultados",
+            params={},
+            fetched_at=timezone.now(),
+            payload=[
+                {
+                    "numeroItem": 1,
+                    "situacaoCompraItemResultadoNome": "Informado",
+                    "dataCancelamento": None,
+                    "valorUnitarioHomologado": 19.50,
+                }
+            ],
+            status_code=200,
+        ),
+    ]
+    call_count = 0
+
+    def fake_fetch_item_results(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        return responses[call_count - 1]
+
+    monkeypatch.setattr(ingestion.client, "fetch_item_results", fake_fetch_item_results)
+    item = get_item(1)
+
+    first = views.get_screening_candidates(
+        item,
+        search_fn=lambda **kwargs: [ScoredPublicItem(item=pi, score=0.9)],
+    )
+    assert call_count == 1
+    assert first[0].is_estimated is True
+    assert cache.get(f"pncp_fetch_failed_{pi.pk}") is None
+
+    pi.refresh_from_db()
+    second = views.get_screening_candidates(
+        item,
+        search_fn=lambda **kwargs: [ScoredPublicItem(item=pi, score=0.9)],
+    )
+    assert call_count == 2
+    assert second[0].is_estimated is False
+    assert second[0].price == Decimal("19.5000")
+
+
+@pytest.mark.parametrize("bad_item_id", ["abc", "2.5", "999999999999", "-1"])
+def test_decide_rejects_malformed_or_nonexistent_item_id_with_404_and_writes_no_session(
+    client, bad_item_id
+):
+    """N3: Non-integer or nonexistent item_id returns 404 (never 500) and leaves session clean."""
+    from ingestion.models import PublicItem
+
+    public_item = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=2026,
+        purchase_sequence=83002,
+        item_number=1,
+        description="Item público para teste N3",
+        unit="pacote",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("10.00"),
+        agency_name="Órgão fictício",
+        published_on=datetime.date(2026, 11, 24),
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+
+    response = client.post(
+        reverse("pricing:decide", args=[public_item.pk]),
+        {"decision": "accept", "item_id": bad_item_id},
+    )
+
+    assert response.status_code == 404
+    assert "screening_decisions" not in client.session
+
+
+def test_get_corpus_info_distinguishes_model_oserror_from_qdrant_error(client, monkeypatch):
+    """N4: Model OSError sets model_error=True (not qdrant_error) with distinct notice."""
+    from pricing.views import CorpusInfo
+
+    monkeypatch.setattr(views, "search_function", views.default_search_function)
+    monkeypatch.setattr(views, "_EMBEDDING_MODEL", None)
+
+    def failing_model_loader():
+        raise OSError("Cannot load model offline")
+
+    monkeypatch.setattr(views, "get_embedding_model", failing_model_loader)
+
+    info = views.get_corpus_info(client=MagicMock())
+    assert info.model_error is True
+    assert info.qdrant_error is False
+    assert info.is_partial is True
+
+    monkeypatch.setattr(views, "search_function", lambda **kwargs: [])
+    monkeypatch.setattr(views, "corpus_info_function", lambda: info)
+    response = client.get(reverse("pricing:screening", args=[1]))
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Modelo de busca semântica temporariamente indisponível." in html
+    assert "Índice de busca semântica temporariamente indisponível." not in html
+
+    qdrant_only_info = CorpusInfo(0, None, None, is_partial=True, qdrant_error=True)
+    monkeypatch.setattr(views, "corpus_info_function", lambda: qdrant_only_info)
+    qdrant_html = client.get(reverse("pricing:screening", args=[1])).content.decode()
+    assert "Índice de busca semântica temporariamente indisponível." in qdrant_html
+    assert "Modelo de busca semântica temporariamente indisponível." not in qdrant_html
+
+
+def test_max_screening_candidates_constant_is_pinned_at_20(client, monkeypatch):
+    """N6: MAX_SCREENING_CANDIDATES = 20 is a recorded decision; capping and view limit obey it."""
+    from pricing.candidates import Candidate
+
+    assert views.MAX_SCREENING_CANDIDATES == 20
+
+    many_candidates = [
+        Candidate(
+            id=30000 + i,
+            description=f"Candidato {i}",
+            unit="pacote",
+            quantity=Decimal("1"),
+            agency="Órgão fictício",
+            date=datetime.date(2026, 11, 24),
+            awarded_unit_price=Decimal("10.00"),
+            similarity=0.9,
+            item_id=1,
+        )
+        for i in range(50)
+    ]
+    recorded_limits = []
+
+    def fake_search(**kwargs):
+        recorded_limits.append(kwargs.get("limit"))
+        return many_candidates
+
+    result = views.get_screening_candidates(get_item(1), search_fn=fake_search, limit=50)
+    assert recorded_limits == [20]
+    assert len(result) == 20
+
+    recorded_limits.clear()
+    monkeypatch.setattr(views, "search_function", fake_search)
+    monkeypatch.setattr(
+        views,
+        "corpus_info_function",
+        lambda: views.CorpusInfo(0, None, None, is_partial=False),
+    )
+    response = client.get(reverse("pricing:screening", args=[1]))
+    assert response.status_code == 200
+    assert recorded_limits == [20]
+    assert len(response.context["candidates"]) == 20
+
+
+def test_get_screening_candidates_passes_2s_per_candidate_timeout(monkeypatch):
+    """N6: On-demand fetch inside get_screening_candidates uses 2.0 s per-candidate timeout."""
+    from django.core.cache import cache
+    from django.utils import timezone
+
+    import ingestion.client
+    from ingestion.models import PublicItem, RawRecord
+    from semantic_index.search import ScoredPublicItem
+
+    assert views.ON_DEMAND_FETCH_TIMEOUT_SECONDS == 2.0
+
+    today = datetime.date.today()
+    raw_items = RawRecord.objects.create(
+        endpoint=f"/api/pncp/v1/orgaos/00000000000007/compras/{today.year}/7301/itens",
+        params={"pagina": 1},
+        fetched_at=timezone.now(),
+        payload=[{"numeroItem": 1, "temResultado": True}],
+        status_code=200,
+    )
+    pi = PublicItem.objects.create(
+        cnpj="00000000000007",
+        year=today.year,
+        purchase_sequence=7301,
+        item_number=1,
+        description="Item para checar timeout de 2s",
+        unit="pacote",
+        quantity=Decimal("1"),
+        agency_name="Órgão Fictício",
+        published_on=today,
+        awarded_unit_price=None,
+        estimated_unit_price=Decimal("10.00"),
+        secret_budget=False,
+        modality=6,
+        state="PA",
+        item_kind="product",
+    )
+    pi.raw_records.add(raw_items)
+    cache.delete(f"pncp_fetch_failed_{pi.pk}")
+
+    recorded_timeouts = []
+
+    def fake_fetch_item_results(**kwargs):
+        transport = kwargs.get("transport")
+        if transport and hasattr(transport, "keywords"):
+            recorded_timeouts.append(transport.keywords.get("timeout"))
+        return None
+
+    monkeypatch.setattr(ingestion.client, "fetch_item_results", fake_fetch_item_results)
+    views.get_screening_candidates(
+        get_item(1),
+        search_fn=lambda **kwargs: [ScoredPublicItem(item=pi, score=0.9)],
+    )
+
+    assert recorded_timeouts == [2.0]
+
+
+def test_get_corpus_info_does_not_load_model_when_search_function_is_injected(monkeypatch):
+    """N6: Calling get_corpus_info directly must not call get_embedding_model if search is fake."""
+    from django.core.cache import cache
+
+    cache.delete("corpus_db_items_count")
+    monkeypatch.setattr(views, "_EMBEDDING_MODEL", None)
+    monkeypatch.setattr(views, "search_function", lambda **kwargs: [])
+
+    def forbidden_loader():
+        raise AssertionError("get_embedding_model must not be called when search_function injected")
+
+    monkeypatch.setattr(views, "get_embedding_model", forbidden_loader)
+
+    mock_client = MagicMock()
+    mock_client.collection_exists.return_value = False
+    info = views.get_corpus_info(client=mock_client)
+    assert info.qdrant_error is False
+    assert info.model_error is False

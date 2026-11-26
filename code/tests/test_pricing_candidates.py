@@ -78,6 +78,25 @@ def test_candidate_with_secret_budget():
     assert candidate.has_usable_calculation_price is False
 
 
+def test_candidate_usable_calculation_price_rejects_awarded_zero():
+    """N6: Zero is never a valid awarded price for calculation or display."""
+    candidate = Candidate(
+        id=4,
+        description="Item com homologado zero",
+        unit="pacote",
+        quantity=Decimal("10"),
+        agency="Órgão Fictício",
+        date=date(2026, 11, 20),
+        awarded_unit_price=Decimal("0.00"),
+        estimated_unit_price=None,
+        secret_budget=False,
+    )
+    assert candidate.price is None
+    assert candidate.price_kind == "no_price"
+    assert candidate.usable_calculation_price is None
+    assert candidate.has_usable_calculation_price is False
+
+
 def test_candidate_from_public_item_builder():
     mock_item = MagicMock()
     mock_item.pk = 101
@@ -229,6 +248,49 @@ def test_fetch_awarded_price_on_demand_remembers_failed_fetch_for_five_minutes()
 
     assert mock_fetch.call_count == 1
     assert cache.get(f"pncp_fetch_failed_{item_pk}") is True
+
+
+def test_fetch_awarded_price_on_demand_does_not_cache_failure_on_empty_response():
+    """N2: Empty PNCP response must not set failure cache key and must allow immediate retry."""
+    from django.core.cache import cache
+
+    from pricing.candidates import fetch_awarded_price_on_demand
+
+    item_pk = 98002
+    cache.delete(f"pncp_fetch_failed_{item_pk}")
+    mock_item = MagicMock()
+    mock_item.pk = item_pk
+    mock_item.cnpj = "00000000000007"
+    mock_item.year = 2026
+    mock_item.purchase_sequence = 10
+    mock_item.item_number = 3
+    mock_item.awarded_unit_price = None
+
+    raw_items_record = MagicMock()
+    raw_items_record.endpoint = "/api/pncp/v1/orgaos/00000000000007/compras/2026/10/itens"
+    raw_items_record.payload = [{"numeroItem": 3, "temResultado": True}]
+    mock_item.raw_records.all.return_value = [raw_items_record]
+
+    empty_record = MagicMock()
+    empty_record.payload = []
+    valid_record = MagicMock()
+    valid_record.payload = [
+        {
+            "numeroItem": 3,
+            "situacaoCompraItemResultadoNome": "Informado",
+            "dataCancelamento": None,
+            "valorUnitarioHomologado": 33.00,
+        }
+    ]
+    mock_fetch = MagicMock(side_effect=[empty_record, valid_record])
+
+    fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
+    assert cache.get(f"pncp_fetch_failed_{item_pk}") is None
+    assert mock_item.awarded_unit_price is None
+
+    fetch_awarded_price_on_demand(mock_item, fetch_fn=mock_fetch)
+    assert mock_fetch.call_count == 2
+    assert mock_item.awarded_unit_price == Decimal("33.00")
 
 
 def test_fetch_awarded_price_on_demand_skips_when_no_result():
