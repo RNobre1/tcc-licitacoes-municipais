@@ -1,8 +1,10 @@
-"""Behavioral red tests and mutant-killing tests for Step 2 (N1, N4, N6, N7)."""
+"""Step 2 tests for N1, N2, N3 (mutants), N4, N6, and N7."""
 
 import json
+import re
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -199,6 +201,450 @@ def test_n1_measurement_reads_tuning_output_checks_hash_and_rejects_mismatched_f
     )
     measurement_data = json.loads(out_file.read_text(encoding="utf-8"))
     assert measurement_data["finalist"] == "semantic"
+
+
+def test_n2_metamorphic_sentinel_swapping_ground_truth_preserves_method_rankings():
+    # N2: Same query, same candidates, ground truth swapped -> identical ranking per method.
+    # Catches a mutant that reads item["ground_truth"] directly and adds +0.2 to relevant docs.
+    corpus = [
+        PublicItemSim(
+            id=1,
+            description="papel sulfite a4 75g branco",
+            price=Decimal("25.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=2,
+            description="papel sulfite escolar pautado",
+            price=Decimal("25.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=3,
+            description="papel sulfite escolar pautado",
+            price=Decimal("25.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+    ]
+
+    class LexicalSimMethod:
+        name = "lexical_cand"
+
+        def rank(self, query, candidates):
+            q_words = set(query.lower().split())
+            scored = []
+            for c in candidates:
+                c_words = set(c.description.lower().split())
+                score = len(q_words & c_words) / max(len(q_words | c_words), 1)
+                scored.append((c, score))
+            return sorted(scored, key=lambda pair: (-pair[1], pair[0].id))
+
+    bm25 = BM25SearchMethod(name="bm25")
+    semantic = SemanticSearchMethod(model=FakeDeterministicEmbeddingModel(), name="semantic")
+    lexical = LexicalSimMethod()
+    orch = BenchmarkOrchestrator(n_noise_draws=1, n_bootstrap_resamples=5, seed=42)
+
+    base_item = {
+        "item_id": "item_meta",
+        "description": "papel sulfite branco",
+        "chosen_prices": [Decimal("25.0")],
+        "unit": "UNIDADE",
+        "survey_date": date(2026, 6, 1),
+    }
+
+    res_gt2 = orch.run_benchmark(
+        items=[{**base_item, "ground_truth": {2}}],
+        corpus=corpus,
+        split_name="tuning",
+        candidate_methods=[semantic, lexical],
+        baseline_method=bm25,
+    )
+    res_gt3 = orch.run_benchmark(
+        items=[{**base_item, "ground_truth": {3}}],
+        corpus=corpus,
+        split_name="tuning",
+        candidate_methods=[semantic, lexical],
+        baseline_method=bm25,
+    )
+
+    for method_name in ["bm25", "semantic", "lexical_cand"]:
+        assert (
+            res_gt2["ranked_ids_by_method"][method_name]["item_meta"]
+            == res_gt3["ranked_ids_by_method"][method_name]["item_meta"]
+        )
+
+
+@pytest.mark.django_db
+def test_n2_metamorphic_sentinel_on_public_item_db_corpus(monkeypatch):
+    from ingestion.models import PublicItem
+
+    doc_1 = PublicItem.objects.create(
+        cnpj="11111111000111",
+        year=2026,
+        purchase_sequence=100,
+        item_number=1,
+        description="papel sulfite branco",
+        unit="UNIDADE",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("25"),
+        awarded_unit_price=Decimal("25"),
+        secret_budget=False,
+        published_on=date(2026, 5, 1),
+        agency_name="Prefeitura Fictícia",
+        agency_cnpj="11111111000111",
+        state="PA",
+        modality=6,
+        item_kind="product",
+    )
+    doc_2 = PublicItem.objects.create(
+        cnpj="22222222000122",
+        year=2026,
+        purchase_sequence=200,
+        item_number=1,
+        description="papel sulfite pautado",
+        unit="UNIDADE",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("25"),
+        awarded_unit_price=Decimal("25"),
+        secret_budget=False,
+        published_on=date(2026, 5, 1),
+        agency_name="Prefeitura Fictícia",
+        agency_cnpj="22222222000122",
+        state="PA",
+        modality=6,
+        item_kind="product",
+    )
+    doc_3 = PublicItem.objects.create(
+        cnpj="33333333000133",
+        year=2026,
+        purchase_sequence=300,
+        item_number=1,
+        description="papel sulfite pautado",
+        unit="UNIDADE",
+        quantity=Decimal("1"),
+        estimated_unit_price=Decimal("25"),
+        awarded_unit_price=Decimal("25"),
+        secret_budget=False,
+        published_on=date(2026, 5, 1),
+        agency_name="Prefeitura Fictícia",
+        agency_cnpj="33333333000133",
+        state="PA",
+        modality=6,
+        item_kind="product",
+    )
+
+    monkeypatch.setattr(
+        "semantic_index.search.semantic_search",
+        lambda model, query, structured_filter, limit, client=None: [
+            ScoredPublicItem(item=doc_1, score=0.90),
+            ScoredPublicItem(item=doc_2, score=0.75),
+            ScoredPublicItem(item=doc_3, score=0.75),
+        ],
+    )
+    fake_qdrant = SimpleNamespace(
+        collection_exists=lambda name: True,
+        retrieve=lambda collection_name, ids, with_payload=False, with_vectors=False: [
+            SimpleNamespace(id=pk) for pk in ids
+        ],
+    )
+
+    orch = BenchmarkOrchestrator(n_noise_draws=1, n_bootstrap_resamples=5, seed=42)
+    base_item = {
+        "item_id": "db_meta",
+        "description": "papel sulfite branco",
+        "chosen_prices": [Decimal("25")],
+        "unit": "UNIDADE",
+        "survey_date": date(2026, 6, 1),
+    }
+
+    res_gt2 = orch.run_benchmark(
+        items=[{**base_item, "ground_truth": {doc_2.pk}}],
+        corpus=PublicItem.objects.all(),
+        split_name="tuning",
+        candidate_methods=[
+            SemanticSearchMethod(model=FakeDeterministicEmbeddingModel(), client=fake_qdrant)
+        ],
+        baseline_method=BM25SearchMethod(),
+    )
+    res_gt3 = orch.run_benchmark(
+        items=[{**base_item, "ground_truth": {doc_3.pk}}],
+        corpus=PublicItem.objects.all(),
+        split_name="tuning",
+        candidate_methods=[
+            SemanticSearchMethod(model=FakeDeterministicEmbeddingModel(), client=fake_qdrant)
+        ],
+        baseline_method=BM25SearchMethod(),
+    )
+
+    assert res_gt2["ranked_ids_by_method"]["bm25"] == res_gt3["ranked_ids_by_method"]["bm25"]
+    assert (
+        res_gt2["ranked_ids_by_method"]["semantic"] == res_gt3["ranked_ids_by_method"]["semantic"]
+    )
+
+
+def test_n3_mutant_top3_price_only_ranks_whole_cq_not_top_n():
+    # TOP-3: If price_only ranked only top_n instead of whole C(q), price_only_baseline would be 0.0
+    corpus = [
+        PublicItemSim(
+            id=1,
+            description="Papel sulfite A",
+            price=Decimal("100.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=2,
+            description="Papel sulfite B",
+            price=Decimal("90.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+        PublicItemSim(
+            id=99,
+            description="Outro item fora top n",
+            price=Decimal("25.0"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        ),
+    ]
+
+    class ExplicitTop2:
+        name = "explicit"
+
+        def rank(self, query, candidates):
+            scores = {1: 0.9, 2: 0.8, 99: 0.1}
+            return sorted([(c, scores[c.id]) for c in candidates], key=lambda x: -x[1])
+
+    item = {
+        "item_id": "top3_item",
+        "description": "Papel sulfite",
+        "ground_truth": {99},
+        "chosen_prices": [Decimal("25.0")],
+        "unit": "UNIDADE",
+        "survey_date": date(2026, 6, 1),
+    }
+
+    results = BenchmarkOrchestrator(
+        n_noise_draws=5, n_bootstrap_resamples=5, seed=42
+    ).run_benchmark(
+        items=[item],
+        corpus=corpus,
+        split_name="tuning",
+        candidate_methods=[ExplicitTop2()],
+        baseline_method=BM25SearchMethod(),
+        top_n=2,
+    )
+
+    assert results["ranked_ids_by_method"]["explicit"]["top3_item"] == [1, 2]
+    assert results["r2"]["price_only_baseline"] == 1.0
+    assert results["r2"]["g_sigma"]["0.25"] == -1.0
+
+
+def test_n3_mutant_orq2b_r1_ci90_contrasts_finalist_against_baseline():
+    # ORQ-2b: Only the 90% CI contrasts finalist with itself -> ci_90 would be (0.0, 0.0)
+    # and inconclusive gains could turn into false "tie".
+    class MatchAlpha:
+        name = "alpha_cand"
+
+        def rank(self, query, candidates):
+            return sorted(
+                [(c, 1.0 if "alpha" in c.description else 0.0) for c in candidates],
+                key=lambda x: (-x[1], x[0].id),
+            )
+
+    corpus = [
+        PublicItemSim(
+            id=index,
+            description=(
+                "alpha" if index in (1, 2) else ("distractor" if index <= 13 else "filler")
+            ),
+            price=Decimal("10"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        )
+        for index in range(1, 27)
+    ]
+    items = [
+        {
+            "item_id": f"i_{idx}",
+            "description": "distractor" if idx in (1, 2) else "unrelated_query",
+            "ground_truth": {1 if idx == 1 else (2 if idx == 2 else 26)},
+            "chosen_prices": [Decimal("10")],
+            "unit": "UNIDADE",
+            "survey_date": date(2026, 6, 1),
+        }
+        for idx in range(1, 11)
+    ]
+
+    results = BenchmarkOrchestrator(
+        n_noise_draws=1, n_bootstrap_resamples=20, seed=42
+    ).run_benchmark(
+        items=items,
+        corpus=corpus,
+        split_name="tuning",
+        candidate_methods=[MatchAlpha()],
+        baseline_method=BM25SearchMethod(),
+    )
+
+    ci_90 = results["r1_acceptance"]["ci_90"]
+    assert ci_90 != (0.0, 0.0)
+    assert ci_90[1] >= 0.08
+    assert results["r1_acceptance"]["outcome"] == "inconclusive"
+
+
+def test_n3_mutant_r2_1_condition_b_uses_sigma_025_not_050():
+    # R2-1: Condition (b) uses sigma=0.25 (accepted=True here),
+    # whereas sigma=0.50 has sys==po==0.0 (mutant would return accepted=False).
+    corpus = [
+        PublicItemSim(
+            id=1,
+            description="highband target",
+            price=Decimal("80"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        )
+    ]
+    corpus.extend(
+        PublicItemSim(
+            id=idx,
+            description=f"highband distractor {idx}",
+            price=Decimal("200"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        )
+        for idx in range(2, 12)
+    )
+    corpus.extend(
+        PublicItemSim(
+            id=idx,
+            description=f"bm25match distractor {idx}",
+            price=Decimal("100"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        )
+        for idx in range(12, 22)
+    )
+
+    class HighBandMethod:
+        name = "highband_cand"
+
+        def rank(self, query, candidates):
+            return sorted(
+                [(c, 0.85 if "highband" in c.description else 0.10) for c in candidates],
+                key=lambda x: (-x[1], x[0].id),
+            )
+
+    items = [
+        {
+            "item_id": item_id,
+            "description": "bm25match",
+            "ground_truth": {1},
+            "chosen_prices": [Decimal("100")],
+            "unit": "UNIDADE",
+            "survey_date": date(2026, 6, 1),
+        }
+        for item_id in ("r2_4", "r2_5", "r2_13", "r2_16")
+    ]
+
+    results = BenchmarkOrchestrator(
+        n_noise_draws=1, n_bootstrap_resamples=20, seed=42
+    ).run_benchmark(
+        items=items,
+        corpus=corpus,
+        split_name="tuning",
+        candidate_methods=[HighBandMethod()],
+        baseline_method=BM25SearchMethod(),
+        top_n=11,
+    )
+
+    assert results["r1_acceptance"]["outcome"] == "accepted"
+    assert results["r2"]["easy_items_count"] == 0
+    assert results["r2"]["g_sigma"]["0.25"] == 1.0
+    assert results["r2"]["g_sigma"]["0.5"] == 0.0
+    assert results["r2_acceptance"]["sigma_025_ci"][1] > 0
+    assert results["r2_acceptance"]["accepted"] is True
+
+
+def test_n3_mutant_sv1_missing_survey_date_raises_instead_of_defaulting():
+    corpus = [
+        PublicItemSim(
+            id=1,
+            description="Papel sulfite",
+            price=Decimal("25"),
+            published_on=date(2026, 5, 1),
+            modality=6,
+        )
+    ]
+    orch = BenchmarkOrchestrator(n_noise_draws=1, n_bootstrap_resamples=5, seed=42)
+    method = SemanticSearchMethod(model=FakeDeterministicEmbeddingModel())
+
+    for bad_item in (
+        {"item_id": "no_key", "description": "Papel", "ground_truth": {1}, "chosen_prices": [25]},
+        {
+            "item_id": "none_val",
+            "description": "Papel",
+            "ground_truth": {1},
+            "chosen_prices": [25],
+            "survey_date": None,
+        },
+    ):
+        with pytest.raises(ValueError, match="survey_date"):
+            orch.run_benchmark(
+                items=[bad_item],
+                corpus=corpus,
+                split_name="tuning",
+                candidate_methods=[method],
+                baseline_method=BM25SearchMethod(),
+            )
+
+
+def test_n3_mutant_lk3_real_handler_verifies_split_hash_even_when_note_hash_matches(
+    monkeypatch, tmp_path
+):
+    from django.conf import settings
+
+    repo_root = Path(__file__).resolve().parents[2]
+    decision_path = repo_root / "TCC" / "decisões" / "2026-11-24-limiares-de-aceitacao-r1-r2.md"
+    frozen_hash_match = re.search(
+        r"resumo SHA-256\s+`([0-9a-f]{64})`",
+        decision_path.read_text(encoding="utf-8"),
+    )
+    assert frozen_hash_match is not None
+    frozen_hash = frozen_hash_match.group(1)
+
+    project_root = tmp_path / "synthetic-repo"
+    decision_copy = project_root / "TCC" / "decisões" / decision_path.name
+    decision_copy.parent.mkdir(parents=True)
+    decision_copy.write_text(
+        f"---\nstatus: aceita\n---\nresumo SHA-256 `{frozen_hash}`\n",
+        encoding="utf-8",
+    )
+    eval_dir = tmp_path / "evaluation"
+    eval_dir.mkdir()
+    # Tampered tuning_items paired with the valid frozen hash so only verify_split_hash catches it
+    (eval_dir / "dataset_split.json").write_text(
+        json.dumps(
+            {
+                "tuning_items": ["tampered_1"],
+                "measurement_items": ["tampered_2"],
+                "sha256_hash": frozen_hash,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings, "BASE_DIR", project_root / "code")
+
+    with pytest.raises(CommandError, match="SHA-256 verification"):
+        call_command(
+            "run_benchmark",
+            split="tuning",
+            eval_dir=str(eval_dir),
+            pattern="*.json",
+            allow_real_data=True,
+        )
 
 
 @pytest.mark.django_db
