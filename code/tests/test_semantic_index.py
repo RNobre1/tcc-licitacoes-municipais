@@ -333,7 +333,7 @@ class TestModalitySemanticIndex:
         client.count.assert_called_once()
         client.query_points.assert_not_called()
 
-    def test_missing_modality_payload_count_is_cached_after_error(self):
+    def test_missing_modality_refusal_is_never_cached_and_recovers_after_reindex(self):
         from semantic_index import StructuredFilter, semantic_search
         from tests.fake_embedding_model import FakeEmbeddingModel
 
@@ -341,24 +341,44 @@ class TestModalitySemanticIndex:
             payload_schema={
                 "modality": SimpleNamespace(data_type=models.PayloadSchemaType.INTEGER)
             },
-            missing_points=1,
+            missing_points=3,
         )
+        model = FakeEmbeddingModel(dimension=16)
         search_filter = StructuredFilter(
             date_window=(date(2026, 1, 1), date(2026, 6, 1)),
             modality=[6],
         )
 
-        for _ in range(2):
-            with pytest.raises(ValueError, match="points.*modality"):
-                semantic_search(
-                    model=FakeEmbeddingModel(dimension=16),
-                    query="teste",
-                    structured_filter=search_filter,
-                    client=client,
-                )
+        with pytest.raises(ValueError, match=r"count=3"):
+            semantic_search(
+                model=model,
+                query="teste",
+                structured_filter=search_filter,
+                client=client,
+            )
 
-        client.count.assert_called_once()
-        client.query_points.assert_not_called()
+        # Simulate reindexing fixing the missing payload points on the same client
+        client.count.return_value = SimpleNamespace(count=0)
+
+        results = semantic_search(
+            model=model,
+            query="teste",
+            structured_filter=search_filter,
+            client=client,
+        )
+
+        assert results == []
+        assert client.count.call_count == 2
+        assert client.query_points.call_count == 1
+
+        # Positive result is cached on subsequent searches
+        semantic_search(
+            model=model,
+            query="teste",
+            structured_filter=search_filter,
+            client=client,
+        )
+        assert client.count.call_count == 2
 
     def test_empty_modality_list_does_not_filter_or_check_collection_schema(self):
         from semantic_index import StructuredFilter, semantic_search
