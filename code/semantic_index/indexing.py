@@ -1,8 +1,10 @@
 from collections.abc import Iterable, Sequence
 from typing import Any
 
+from django.db.models import Q
 from qdrant_client import models
 
+from ingestion.units import normalize_unit
 from semantic_index.embedding import EmbeddingModel, collection_name_for_model
 
 
@@ -13,6 +15,39 @@ def index_public_items(
     batch_size: int = 256,
 ) -> int:
     """Index public items into a Qdrant collection named for the given model and revision."""
+    if (
+        hasattr(items, "filter")
+        and hasattr(items, "query")
+        and not getattr(items.query, "is_sliced", False)
+    ):
+        unnormalized_count = sum(
+            1
+            for raw_value in items.filter(
+                Q(unit_normalized="") | Q(unit_normalized__regex=r"^\s*$")
+            )
+            .exclude(unit="")
+            .values_list("unit", flat=True)
+            .iterator(chunk_size=2000)
+            if normalize_unit(raw_value)
+        )
+        if unnormalized_count:
+            raise ValueError(
+                f"Refusing to index {unnormalized_count} item(s) with non-blank unit "
+                "and blank unit_normalized"
+            )
+    elif isinstance(items, Sequence):
+        unnormalized_count = sum(
+            1
+            for it in items
+            if not normalize_unit(getattr(it, "unit_normalized", ""))
+            and normalize_unit(getattr(it, "unit", ""))
+        )
+        if unnormalized_count:
+            raise ValueError(
+                f"Refusing to index {unnormalized_count} item(s) with non-blank unit "
+                "and blank unit_normalized"
+            )
+
     iterator = items.iterator(chunk_size=batch_size) if hasattr(items, "iterator") else iter(items)
     try:
         first_item = next(iterator)
@@ -35,6 +70,17 @@ def index_public_items(
     batch = [first_item]
 
     def _flush_batch(current_batch: list[Any]) -> int:
+        unnormalized_in_batch = sum(
+            1
+            for it in current_batch
+            if not normalize_unit(getattr(it, "unit_normalized", ""))
+            and normalize_unit(getattr(it, "unit", ""))
+        )
+        if unnormalized_in_batch:
+            raise ValueError(
+                f"Refusing to index {unnormalized_in_batch} item(s) with non-blank unit "
+                "and blank unit_normalized"
+            )
         descriptions = [getattr(it, "description", "") for it in current_batch]
         vectors = model.embed_passages(descriptions)
 
