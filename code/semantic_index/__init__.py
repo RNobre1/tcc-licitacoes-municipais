@@ -78,11 +78,16 @@ def _ensure_payload_indexes(client: Any, collection_name: str) -> None:
     if not hasattr(client, "create_payload_index"):
         return
     for field_name, field_schema in PAYLOAD_INDEX_FIELDS:
-        client.create_payload_index(
-            collection_name=collection_name,
-            field_name=field_name,
-            field_schema=field_schema,
-        )
+        try:
+            client.create_payload_index(
+                collection_name=collection_name,
+                field_name=field_name,
+                field_schema=field_schema,
+            )
+        except UnexpectedResponse as exc:
+            if exc.status_code == 409 or "already exists" in str(exc).lower():
+                continue
+            raise
 
 
 def create_collection(
