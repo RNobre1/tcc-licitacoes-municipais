@@ -1,9 +1,12 @@
+import contextlib
 import datetime
 import threading
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
+from django.db import connections
+from django.db.models import prefetch_related_objects
 from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
@@ -12,7 +15,16 @@ from ingestion.units import normalize_unit
 from procurement.demo_data import get_item, get_procurement_for_item
 
 from . import demo_data
-from .candidates import Candidate, candidate_from_public_item, fetch_awarded_price_on_demand
+from .candidates import (
+    Candidate,
+    apply_fetched_item_result_record,
+    candidate_from_public_item,
+    fetch_awarded_price_on_demand,
+    fetch_item_results_network,
+    has_pending_result,
+    is_fetch_failure_cached,
+    record_fetch_failure,
+)
 from .estimation import (
     calculate_mean,
     calculate_median,
@@ -30,6 +42,7 @@ PAGE_FETCH_BUDGET_SECONDS = 3.0
 
 _EMBEDDING_MODEL: Any = None
 _EMBEDDING_MODEL_LOCK = threading.Lock()
+_ORIGINAL_FETCH_AWARDED_PRICE_ON_DEMAND = fetch_awarded_price_on_demand
 
 
 def get_embedding_model():
@@ -62,7 +75,7 @@ def get_screening_date_window(
 def default_search_function(
     query: str,
     date_window: tuple[datetime.date, datetime.date],
-    limit: int = 20,
+    limit: int = MAX_SCREENING_CANDIDATES,
 ):
     """Execute semantic search against Qdrant and PostgreSQL under structured date window."""
     from semantic_index.search import StructuredFilter, semantic_search
@@ -91,6 +104,7 @@ class CorpusInfo:
     db_items_count: int = 0
     qdrant_error: bool = False
     empty_index: bool = False
+    model_error: bool = False
 
 
 def get_corpus_info(
@@ -113,84 +127,98 @@ def get_corpus_info(
 
     indexed_count = 0
     qdrant_error = False
+    model_error = False
     empty_index = False
     start_date = None
     end_date = None
 
-    try:
-        from qdrant_client import models as qmodels
-
-        if client is None:
-            from semantic_index import get_qdrant_client
-
-            client = get_qdrant_client()
-        if model is None:
-            if search_function is default_search_function:
+    if model is None:
+        if search_function is default_search_function:
+            try:
                 model = get_embedding_model()
-            elif _EMBEDDING_MODEL is not None:
-                model = _EMBEDDING_MODEL
-            else:
-                from collections import namedtuple
-
-                _ModelMeta = namedtuple("_ModelMeta", ["name", "revision"])
-                model = _ModelMeta(name=DEFAULT_MODEL, revision=DEFAULT_REVISION)
-        from semantic_index.embedding import collection_name_for_model
-
-        coll_name = collection_name_for_model(model)
-        index_cache_key = f"corpus_index_info:{coll_name}"
-        cached_index_info = cache.get(index_cache_key)
-        if cached_index_info is not None:
-            indexed_count, start_date, end_date, empty_index = cached_index_info
+            except Exception:
+                model_error = True
+        elif _EMBEDDING_MODEL is not None:
+            model = _EMBEDDING_MODEL
         else:
-            if not client.collection_exists(coll_name):
-                empty_index = True
+            from collections import namedtuple
+
+            _ModelMeta = namedtuple("_ModelMeta", ["name", "revision"])
+            model = _ModelMeta(name=DEFAULT_MODEL, revision=DEFAULT_REVISION)
+
+    if not model_error:
+        try:
+            from qdrant_client import models as qmodels
+
+            if client is None:
+                from semantic_index import get_qdrant_client
+
+                client = get_qdrant_client()
+
+            from semantic_index.embedding import collection_name_for_model
+
+            coll_name = collection_name_for_model(model)
+            index_cache_key = f"corpus_index_info:{coll_name}"
+            cached_index_info = cache.get(index_cache_key)
+            if cached_index_info is not None:
+                indexed_count, start_date, end_date, empty_index = cached_index_info
             else:
-                count_res = client.count(collection_name=coll_name)
-                indexed_count = int(getattr(count_res, "count", 0) or 0)
-                empty_index = indexed_count == 0
-                if not empty_index:
-                    # Read the covered range from Qdrant's indexed payloads.
-                    asc_points, _ = client.scroll(
-                        collection_name=coll_name,
-                        limit=1,
-                        with_payload=["published_on"],
-                        order_by=qmodels.OrderBy(
-                            key="published_on", direction=qmodels.Direction.ASC
-                        ),
-                    )
-                    desc_points, _ = client.scroll(
-                        collection_name=coll_name,
-                        limit=1,
-                        with_payload=["published_on"],
-                        order_by=qmodels.OrderBy(
-                            key="published_on", direction=qmodels.Direction.DESC
-                        ),
-                    )
-                    if asc_points:
-                        raw_start = (asc_points[0].payload or {}).get("published_on")
-                        if raw_start:
-                            start_date = datetime.date.fromisoformat(str(raw_start))
-                    if desc_points:
-                        raw_end = (desc_points[0].payload or {}).get("published_on")
-                        if raw_end:
-                            end_date = datetime.date.fromisoformat(str(raw_end))
-                    if start_date is None or end_date is None:
-                        start_date = None
-                        end_date = None
+                if not client.collection_exists(coll_name):
+                    empty_index = True
+                else:
+                    count_res = client.count(collection_name=coll_name)
+                    indexed_count = int(getattr(count_res, "count", 0) or 0)
+                    empty_index = indexed_count == 0
+                    if not empty_index:
+                        # Read the covered range from Qdrant's indexed payloads.
+                        asc_points, _ = client.scroll(
+                            collection_name=coll_name,
+                            limit=1,
+                            with_payload=["published_on"],
+                            order_by=qmodels.OrderBy(
+                                key="published_on", direction=qmodels.Direction.ASC
+                            ),
+                        )
+                        desc_points, _ = client.scroll(
+                            collection_name=coll_name,
+                            limit=1,
+                            with_payload=["published_on"],
+                            order_by=qmodels.OrderBy(
+                                key="published_on", direction=qmodels.Direction.DESC
+                            ),
+                        )
+                        if asc_points:
+                            raw_start = (asc_points[0].payload or {}).get("published_on")
+                            if raw_start:
+                                start_date = datetime.date.fromisoformat(str(raw_start))
+                        if desc_points:
+                            raw_end = (desc_points[0].payload or {}).get("published_on")
+                            if raw_end:
+                                end_date = datetime.date.fromisoformat(str(raw_end))
+                        if start_date is None or end_date is None:
+                            start_date = None
+                            end_date = None
 
-            cache.set(
-                index_cache_key,
-                (indexed_count, start_date, end_date, empty_index),
-                300,
-            )
-    except Exception:
-        qdrant_error = True
-        indexed_count = 0
-        start_date = None
-        end_date = None
-        empty_index = False
+                cache.set(
+                    index_cache_key,
+                    (indexed_count, start_date, end_date, empty_index),
+                    300,
+                )
+        except Exception:
+            qdrant_error = True
+            indexed_count = 0
+            start_date = None
+            end_date = None
+            empty_index = False
 
-    if qdrant_error or empty_index or indexed_count == 0 or start_date is None or end_date is None:
+    if (
+        model_error
+        or qdrant_error
+        or empty_index
+        or indexed_count == 0
+        or start_date is None
+        or end_date is None
+    ):
         is_partial = True
     else:
         # One day of lag is expected because a complete daily collection ends yesterday.
@@ -208,6 +236,7 @@ def get_corpus_info(
         db_items_count=db_count,
         qdrant_error=qdrant_error,
         empty_index=empty_index,
+        model_error=model_error,
     )
 
 
@@ -218,9 +247,11 @@ def get_screening_candidates(
     item,
     expected_price: Decimal | None = None,
     search_fn: Any = None,
-    limit: int = 20,
+    limit: int = MAX_SCREENING_CANDIDATES,
 ) -> list[Any]:
     """Fetch and rank screening candidates for an item from semantic search."""
+    from ingestion.models import PublicItem
+
     fn = search_fn or search_function
     date_window = get_screening_date_window()
     limit = max(0, min(limit, MAX_SCREENING_CANDIDATES))
@@ -240,21 +271,76 @@ def get_screening_candidates(
         else:
             extracted.append((res, None))
 
-    items_to_fetch = [public_item for public_item, _ in extracted if hasattr(public_item, "pk")]
-    if items_to_fetch:
-        from concurrent.futures import ThreadPoolExecutor, wait
+    db_items = [
+        public_item
+        for public_item, _ in extracted
+        if isinstance(public_item, PublicItem) and not public_item._state.adding
+    ]
+    if db_items:
+        prefetch_related_objects(db_items, "raw_records")
 
-        executor = ThreadPoolExecutor(max_workers=len(items_to_fetch))
-        futures = [
-            executor.submit(
-                fetch_awarded_price_on_demand,
-                public_item,
-                timeout=ON_DEMAND_FETCH_TIMEOUT_SECONDS,
-            )
-            for public_item in items_to_fetch
+    using_default_fetch = fetch_awarded_price_on_demand is _ORIGINAL_FETCH_AWARDED_PRICE_ON_DEMAND
+    if using_default_fetch:
+        items_to_fetch = [
+            public_item
+            for public_item, _ in extracted
+            if hasattr(public_item, "pk")
+            and has_pending_result(public_item)
+            and not is_fetch_failure_cached(public_item)
         ]
-        wait(futures, timeout=PAGE_FETCH_BUDGET_SECONDS)
-        executor.shutdown(wait=False, cancel_futures=True)
+        if items_to_fetch:
+            from concurrent.futures import ThreadPoolExecutor, wait
+
+            def _fetch_network_only(public_item):
+                try:
+                    return fetch_item_results_network(
+                        public_item, timeout=ON_DEMAND_FETCH_TIMEOUT_SECONDS
+                    )
+                finally:
+                    connections.close_all()
+
+            executor = ThreadPoolExecutor(max_workers=len(items_to_fetch))
+            future_to_item = {
+                executor.submit(_fetch_network_only, public_item): public_item
+                for public_item in items_to_fetch
+            }
+            done, not_done = wait(future_to_item, timeout=PAGE_FETCH_BUDGET_SECONDS)
+            executor.shutdown(wait=False, cancel_futures=True)
+
+            for future in not_done:
+                record_fetch_failure(future_to_item[future])
+
+            for future in done:
+                public_item = future_to_item[future]
+                try:
+                    record = future.result()
+                except Exception:
+                    record_fetch_failure(public_item)
+                else:
+                    with contextlib.suppress(Exception):
+                        apply_fetched_item_result_record(public_item, record)
+    else:
+        items_to_fetch = [public_item for public_item, _ in extracted if hasattr(public_item, "pk")]
+        if items_to_fetch:
+            from concurrent.futures import ThreadPoolExecutor, wait
+
+            def _run_custom_fetch(public_item):
+                try:
+                    return fetch_awarded_price_on_demand(
+                        public_item, timeout=ON_DEMAND_FETCH_TIMEOUT_SECONDS
+                    )
+                finally:
+                    connections.close_all()
+
+            executor = ThreadPoolExecutor(max_workers=len(items_to_fetch))
+            future_to_item = {
+                executor.submit(_run_custom_fetch, public_item): public_item
+                for public_item in items_to_fetch
+            }
+            _, not_done = wait(future_to_item, timeout=PAGE_FETCH_BUDGET_SECONDS)
+            executor.shutdown(wait=False, cancel_futures=True)
+            for future in not_done:
+                record_fetch_failure(future_to_item[future])
 
     candidates: list[Any] = []
     for public_item, score in extracted:
@@ -358,12 +444,72 @@ def build_estimate_panel(
     )
 
 
+def _parse_item_decisions(raw_decisions: dict, item_id: int) -> dict[int, str]:
+    item_decisions: dict[int, str] = {}
+    for k, v in raw_decisions.items():
+        if ":" in str(k):
+            it_str, cand_str = str(k).split(":", 1)
+            try:
+                if int(it_str) == item_id:
+                    item_decisions[int(cand_str)] = v
+            except ValueError:
+                continue
+    return item_decisions
+
+
+def build_item_estimate_panel(
+    item,
+    item_decisions: dict[int, str],
+    current_candidates: list[Any] | None = None,
+) -> tuple[dict, int]:
+    """Build the estimate panel from all accepted candidates of an item."""
+    from ingestion.models import PublicItem
+
+    if item is None:
+        return build_estimate_panel(None, item_decisions, candidates=[]), 0
+
+    current_by_id = {c.id: c for c in (current_candidates or [])}
+    accepted_ids = [
+        accepted_id for accepted_id, value in item_decisions.items() if value == "accept"
+    ]
+    missing_ids = [accepted_id for accepted_id in accepted_ids if accepted_id not in current_by_id]
+    public_items = PublicItem.objects.in_bulk(missing_ids) if missing_ids else {}
+
+    panel_candidates: list[Any] = []
+    out_of_list_accepted_count = 0
+    for accepted_id in accepted_ids:
+        if accepted_id in current_by_id:
+            panel_candidates.append(current_by_id[accepted_id])
+            continue
+
+        public_item = public_items.get(accepted_id)
+        if public_item is not None:
+            panel_candidates.append(candidate_from_public_item(public_item, item_id=item.id))
+            out_of_list_accepted_count += 1
+            continue
+
+        demo_candidate = demo_data.get_candidate(accepted_id)
+        if demo_candidate is not None and demo_candidate.item_id == item.id:
+            panel_candidates.append(demo_candidate)
+            out_of_list_accepted_count += 1
+
+    estimate = build_estimate_panel(item, item_decisions, candidates=panel_candidates)
+    return estimate, out_of_list_accepted_count
+
+
 @require_POST
 def decide(request, candidate_id):
     from ingestion.models import PublicItem
 
     item_id_raw = request.POST.get("item_id")
-    requested_item_id = int(item_id_raw) if item_id_raw else None
+    if item_id_raw is not None and item_id_raw != "":
+        try:
+            requested_item_id = int(item_id_raw)
+        except ValueError as exc:
+            raise Http404("Item not found") from exc
+    else:
+        requested_item_id = None
+
     pi = PublicItem.objects.filter(pk=candidate_id).prefetch_related("raw_records").first()
     if pi is not None:
         candidate = candidate_from_public_item(pi, item_id=requested_item_id)
@@ -383,8 +529,10 @@ def decide(request, candidate_id):
     if item_id is None:
         return HttpResponseBadRequest(b"Requested item is required")
 
-    item = get_item(item_id) if item_id else None
-    item_unit = item.unit if item else None
+    item = get_item(item_id)
+    if item is None:
+        raise Http404("Item not found")
+    item_unit = item.unit
 
     if pi is not None:
         fetch_awarded_price_on_demand(pi)
@@ -404,29 +552,8 @@ def decide(request, candidate_id):
     )
     proximity = format_proximity(cand_price, expected_price, prox, candidate.unit, item_unit)
 
-    item_decisions = {}
-    for k, v in decisions.items():
-        if ":" in str(k):
-            it_str, cand_str = str(k).split(":", 1)
-            if int(it_str) == item_id:
-                item_decisions[int(cand_str)] = v
-
-    accepted_ids = [
-        accepted_id for accepted_id, value in item_decisions.items() if value == "accept"
-    ]
-    public_items = PublicItem.objects.in_bulk(accepted_ids)
-    panel_candidates = []
-    for accepted_id in accepted_ids:
-        public_item = public_items.get(accepted_id)
-        if public_item is not None:
-            panel_candidates.append(candidate_from_public_item(public_item, item_id=item_id))
-            continue
-
-        demo_candidate = demo_data.get_candidate(accepted_id)
-        if demo_candidate is not None and demo_candidate.item_id == item_id:
-            panel_candidates.append(demo_candidate)
-
-    estimate = build_estimate_panel(item, item_decisions, candidates=panel_candidates)
+    item_decisions = _parse_item_decisions(decisions, item_id)
+    estimate, _ = build_item_estimate_panel(item, item_decisions, current_candidates=[candidate])
 
     return render(
         request,
@@ -437,7 +564,7 @@ def decide(request, candidate_id):
             "proximity": proximity,
             "expected_price": expected_price,
             "item_unit": item_unit,
-            "item_id": item.id if item else None,
+            "item_id": item.id,
             "estimate": estimate,
             "oob_estimate": estimate,
         },
@@ -445,6 +572,7 @@ def decide(request, candidate_id):
 
 
 def screening(request, item_id):
+    """Render item price screening; caches fetched PNCP RawRecords and awarded prices on GET."""
     item = get_item(item_id)
     if item is None:
         raise Http404("Item not found")
@@ -461,17 +589,14 @@ def screening(request, item_id):
         item,
         expected_price=expected_price,
         search_fn=search_function,
-        limit=20,
+        limit=MAX_SCREENING_CANDIDATES,
     )
 
     raw_decisions = request.session.get("screening_decisions", {})
-    decisions = {}
-    for k, v in raw_decisions.items():
-        if ":" in str(k):
-            it_str, cand_str = str(k).split(":", 1)
-            if int(it_str) == item_id:
-                decisions[int(cand_str)] = v
-    estimate = build_estimate_panel(item, decisions, candidates=candidates)
+    decisions = _parse_item_decisions(raw_decisions, item_id)
+    estimate, out_of_list_accepted_count = build_item_estimate_panel(
+        item, decisions, current_candidates=candidates
+    )
 
     proximities = {
         candidate.id: format_proximity(
@@ -501,6 +626,7 @@ def screening(request, item_id):
             "expected_price": expected_price,
             "expected_price_ignored": expected_price_ignored,
             "estimate": estimate,
+            "out_of_list_accepted_count": out_of_list_accepted_count,
             "corpus_info": corpus_info,
         },
     )
