@@ -176,8 +176,8 @@ def test_o_diagrama_da_arquitetura_existe():
 
 def test_o_diagrama_da_arquitetura_esta_limpo():
     paginas = vd.verificar(DIAGRAMA.read_text(encoding="utf-8"))
-    # Três páginas de arquitetura, casos de uso, sequência e modelo de dados.
-    assert len(paginas) == 6
+    # Três páginas de arquitetura, casos de uso, duas sequências e modelo de dados.
+    assert len(paginas) == 7
     ruins = {p.nome: p for p in paginas if p.problemas}
     detalhe = {
         nome: {
