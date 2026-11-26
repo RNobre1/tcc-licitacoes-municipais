@@ -187,6 +187,17 @@ class TestSemanticIndexCollectionUnit:
         with pytest.raises(RuntimeError, match="index unavailable"):
             create_collection(client, "items", vector_size=128, distance=Distance.COSINE)
 
+    def test_payload_index_already_exists_is_suppressed_while_other_errors_raise(self):
+        client = FakeQdrantClient()
+        client.create_payload_index = MagicMock(
+            side_effect=response(409, "Payload index already exists")
+        )
+        assert create_collection(client, "items", vector_size=128, distance=Distance.COSINE) is True
+
+        client.create_payload_index = MagicMock(side_effect=response(500, "internal server error"))
+        with pytest.raises(UnexpectedResponse):
+            create_collection(client, "items", vector_size=128, distance=Distance.COSINE)
+
     def test_losing_a_creation_race_with_the_same_configuration_is_success(self):
         assert create_collection(RacingClient(), "items", 128, Distance.COSINE) is True
 
