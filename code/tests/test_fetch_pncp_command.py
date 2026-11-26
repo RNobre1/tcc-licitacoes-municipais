@@ -1170,3 +1170,219 @@ def test_fetch_pncp_deduplicates_duplicate_publications_in_same_listing():
     assert RawRecord.objects.filter(endpoint__endswith="/itens").count() == 1
     output = out.getvalue()
     assert "[2026-11-01 modality 6] seen: 2, fetched: 1, skipped: 1, failed: 0" in output
+
+
+def _seed_listing_page(
+    *,
+    day: str = "20261101",
+    modality: int = 6,
+    pagina: int = 1,
+    total_paginas: int = 1,
+    publications: list[dict] | None = None,
+    uf: str | None = None,
+    fetched_at=None,
+) -> RawRecord:
+    pubs = publications if publications is not None else []
+    params = {
+        "dataInicial": day,
+        "dataFinal": day,
+        "codigoModalidadeContratacao": modality,
+        "tamanhoPagina": 50,
+        "pagina": pagina,
+    }
+    if uf is not None:
+        params["uf"] = uf
+    return RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params=params,
+        fetched_at=fetched_at or timezone.now(),
+        payload={
+            "data": pubs,
+            "totalRegistros": len(pubs),
+            "totalPaginas": total_paginas,
+            "numeroPagina": pagina,
+            "paginasRestantes": max(0, total_paginas - pagina),
+        },
+        status_code=200,
+    )
+
+
+def _seed_purchase_items(seq: int, cnpj: str = "00000000000000", status_code: int = 200) -> None:
+    RawRecord.objects.create(
+        endpoint=f"/api/pncp/v1/orgaos/{cnpj}/compras/2026/{seq}/itens",
+        params={"pagina": 1},
+        fetched_at=timezone.now(),
+        payload=[{"numeroItem": 1}] if status_code == 200 else {"status": status_code},
+        status_code=status_code,
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_complete_day_makes_zero_http_calls():
+    _seed_listing_page(pagina=1, total_paginas=2, publications=[publication(1)])
+    _seed_listing_page(pagina=2, total_paginas=2, publications=[publication(2)])
+    _seed_purchase_items(1)
+    _seed_purchase_items(2)
+
+    calls = []
+
+    def transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        raise AssertionError("No HTTP call should be made for a complete day")
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        modality=6,
+        transport=transport,
+        stdout=out,
+    )
+
+    assert calls == []
+    output = out.getvalue()
+    assert "[2026-11-01 modality 6] seen: 2, fetched: 0, skipped: 2, failed: 0" in output
+    assert "Publications: 2" in output
+    assert "Skipped already stored: 2" in output
+    assert "Failures: 0" in output
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_rewalks_day_missing_a_listing_page():
+    # totalPaginas=2, but only page 1 is stored in DB
+    _seed_listing_page(pagina=1, total_paginas=2, publications=[publication(1)])
+    _seed_purchase_items(1)
+
+    listing_calls = []
+    item_calls = []
+
+    def transport(url: str, params: dict | None = None):
+        if "/contratacoes/publicacao" in url:
+            page = (params or {}).get("pagina", 1)
+            listing_calls.append(page)
+            if page == 1:
+                return 200, {
+                    "data": [publication(1)],
+                    "totalRegistros": 2,
+                    "totalPaginas": 2,
+                    "numeroPagina": 1,
+                    "paginasRestantes": 1,
+                }
+            return 200, {
+                "data": [publication(2)],
+                "totalRegistros": 2,
+                "totalPaginas": 2,
+                "numeroPagina": 2,
+                "paginasRestantes": 0,
+            }
+        if url.endswith("/quantidade"):
+            return 200, 1
+        if "/itens" in url:
+            item_calls.append(url)
+            return 200, [{"numeroItem": 1}]
+        return 404, {}
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        modality=6,
+        transport=transport,
+        stdout=out,
+    )
+
+    assert listing_calls == [1, 2]
+    assert len(item_calls) == 1
+    assert "/compras/2026/2/itens" in item_calls[0]
+    assert "[2026-11-01 modality 6] seen: 2, fetched: 1, skipped: 1, failed: 0" in out.getvalue()
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_rewalks_day_missing_a_purchase_items():
+    _seed_listing_page(pagina=1, total_paginas=2, publications=[publication(1)])
+    _seed_listing_page(pagina=2, total_paginas=2, publications=[publication(2)])
+    # Purchase 1 has items, purchase 2 is missing items
+    _seed_purchase_items(1)
+
+    listing_calls = []
+    item_calls = []
+
+    def transport(url: str, params: dict | None = None):
+        if "/contratacoes/publicacao" in url:
+            page = (params or {}).get("pagina", 1)
+            listing_calls.append(page)
+            if page == 1:
+                return 200, {
+                    "data": [publication(1)],
+                    "totalRegistros": 2,
+                    "totalPaginas": 2,
+                    "numeroPagina": 1,
+                    "paginasRestantes": 1,
+                }
+            return 200, {
+                "data": [publication(2)],
+                "totalRegistros": 2,
+                "totalPaginas": 2,
+                "numeroPagina": 2,
+                "paginasRestantes": 0,
+            }
+        if url.endswith("/quantidade"):
+            return 200, 1
+        if "/itens" in url:
+            item_calls.append(url)
+            return 200, [{"numeroItem": 1}]
+        return 404, {}
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        modality=6,
+        transport=transport,
+        stdout=out,
+    )
+
+    assert listing_calls == [1, 2]
+    assert len(item_calls) == 1
+    assert "/compras/2026/2/itens" in item_calls[0]
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_refetch_listings_forces_rewalk_even_when_complete():
+    _seed_listing_page(pagina=1, total_paginas=1, publications=[publication(1)])
+    _seed_purchase_items(1)
+
+    listing_calls = []
+
+    def transport(url: str, params: dict | None = None):
+        if "/contratacoes/publicacao" in url:
+            listing_calls.append((params or {}).get("pagina", 1))
+            return 200, {
+                "data": [publication(1)],
+                "totalRegistros": 1,
+                "totalPaginas": 1,
+                "numeroPagina": 1,
+                "paginasRestantes": 0,
+            }
+        raise AssertionError(f"Unexpected call: {url}")
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        modality=6,
+        refetch_listings=True,
+        transport=transport,
+        stdout=out,
+    )
+
+    assert listing_calls == [1]
+    assert "Skipped already stored: 1" in out.getvalue()
