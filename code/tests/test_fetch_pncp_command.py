@@ -1553,3 +1553,84 @@ def test_fetch_pncp_skips_day_listed_after_day_end_brt():
         "[2026-11-01 modality 6] seen: 2, fetched: 0, skipped: 2, failed: 0 (complete)"
         in out.getvalue()
     )
+
+
+def test_fetch_pncp_default_failed_purchases_file_is_outside_repository():
+    from ingestion.management.commands.fetch_pncp import Command
+
+    parser = Command().create_parser("manage.py", "fetch_pncp")
+    default_path = Path(parser.get_default("failed_purchases_file")).resolve()
+    repo_root = Path(__file__).resolve().parents[2]
+    assert not default_path.is_relative_to(repo_root)
+    assert default_path.name == "fetch_failed_purchases.jsonl"
+    assert default_path.parent.name == "preparatory-phase-support"
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_resolves_relative_failed_purchases_file_under_state_dir(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    code_dir = Path(__file__).resolve().parents[1]
+    monkeypatch.chdir(code_dir)
+
+    page_1 = _read_json("publications_page_1.json")
+    single_pub = dict(page_1)
+    single_pub["data"] = [page_1["data"][0]]
+    single_pub["totalRegistros"] = 1
+    single_pub["totalPaginas"] = 1
+    single_pub["numeroPagina"] = 1
+    single_pub["paginasRestantes"] = 0
+
+    def failing_transport(url: str, params: dict | None = None):
+        if "/api/consulta/v1/contratacoes/publicacao" in url:
+            return 200, single_pub
+        if url.endswith("/quantidade"):
+            return 500, {"message": "fatal internal server error"}
+        return 404, {}
+
+    rel_name = "relative_fetch_failed.jsonl"
+    stray_in_code = code_dir / rel_name
+    try:
+        with pytest.raises(CommandError):
+            call_command(
+                "fetch_pncp",
+                start="2026-11-01",
+                end="2026-11-01",
+                uf="PA",
+                modality=6,
+                transport=failing_transport,
+                failed_purchases_file=rel_name,
+                stdout=io.StringIO(),
+                stderr=io.StringIO(),
+            )
+
+        assert not stray_in_code.exists()
+        expected = tmp_path / ".local" / "state" / "preparatory-phase-support" / rel_name
+        assert expected.exists()
+        lines = expected.read_text(encoding="utf-8").strip().splitlines()
+        assert len(lines) == 1
+        assert json.loads(lines[0])["purchase_key"] == ["00000000000000", 2026, 1]
+    finally:
+        stray_in_code.unlink(missing_ok=True)
+
+
+@pytest.mark.django_db
+def test_fetch_pncp_rejects_failed_purchases_file_inside_repository():
+    code_dir = Path(__file__).resolve().parents[1]
+    inside_repo = code_dir / "should_not_be_created.jsonl"
+    try:
+        with pytest.raises(CommandError, match="repository"):
+            call_command(
+                "fetch_pncp",
+                start="2026-11-01",
+                end="2026-11-01",
+                uf="PA",
+                modality=6,
+                transport=lambda u, p: (204, None),
+                failed_purchases_file=str(inside_repo),
+                stdout=io.StringIO(),
+                stderr=io.StringIO(),
+            )
+        assert not inside_repo.exists()
+    finally:
+        inside_repo.unlink(missing_ok=True)
