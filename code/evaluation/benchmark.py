@@ -498,10 +498,14 @@ def check_thresholds_note_guard(
                 f"found recorded in decision note: {note_path}"
             )
         expected_tuning_hash = tuning_output_hash.lower()
-        if any(match.lower() != expected_tuning_hash for match in tuning_matches):
+        mismatched = [
+            match.lower() for match in tuning_matches if match.lower() != expected_tuning_hash
+        ]
+        if mismatched:
             raise ValueError(
-                f"Tuning output SHA-256 mismatch in decision note {note_path}: "
-                f"expected {expected_tuning_hash}, found {tuning_matches[-1].lower()}"
+                f"All 'resumo SHA-256 do ajuste' lines in decision note {note_path} must match "
+                f"expected {expected_tuning_hash}; found mismatching hash(es): "
+                f"{', '.join(mismatched)}"
             )
 
     return content
@@ -509,6 +513,14 @@ def check_thresholds_note_guard(
 
 @dataclass(frozen=True)
 class PriceCandidateSim:
+    id: int
+    price: Decimal
+    similarity: float
+    unit: str = "UNIDADE"
+
+
+@dataclass(slots=True)
+class _MutablePriceCandidate:
     id: int
     price: Decimal
     similarity: float
@@ -1282,6 +1294,21 @@ class BenchmarkOrchestrator:
             # Iterate draws outside and noise levels inside so each draw's tie-shuffled top-N
             # finalist candidates and price-only C(q) pool are built once, evaluated across all
             # sigmas, and immediately discarded (O(|C(q)|) memory). Seeds never depend on labels.
+            # Build each item's candidate objects once and only swap the drawn rank per draw.
+            n_po = len(whole_cq)
+            whole_cq_ids = [candidate.id for candidate in whole_cq]
+            po_draw_candidates = [
+                _MutablePriceCandidate(
+                    id=0,
+                    price=candidate.price,
+                    similarity=0.0,
+                    unit=candidate.unit,
+                )
+                for candidate in whole_cq
+            ]
+            po_id_map: list[Any] = [None] * n_po
+            sys_candidate_pool: dict[int, tuple[Any, _MutablePriceCandidate]] = {}
+
             tie_rng = random.Random(derive_item_seed(self.seed, f"tie:{item_id}"))
             sys_recalls_by_sigma: dict[float, list[float]] = {s: [] for s in sigmas}
             po_recalls_by_sigma: dict[float, list[float]] = {s: [] for s in sigmas}
@@ -1302,41 +1329,44 @@ class BenchmarkOrchestrator:
 
                 sys_ranks = list(range(len(selected_top_pairs)))
                 tie_rng.shuffle(sys_ranks)
-                sys_draw_candidates: list[PriceCandidateSim] = []
-                sys_id_map: dict[int, Any] = {}
+                sys_draw_candidates: list[_MutablePriceCandidate] = []
+                sys_id_map: list[Any] = [None] * len(selected_top_pairs)
                 for rank_pos, (doc, score) in zip(sys_ranks, selected_top_pairs, strict=True):
-                    d_id = _extract_doc_id(doc)
-                    p_val = (
-                        doc.get("price") if isinstance(doc, dict) else getattr(doc, "price", None)
-                    )
-                    if p_val is None:
-                        p_val = resolve_candidate_price(doc)
-                    p_dec = Decimal(str(p_val)) if p_val is not None else Decimal("0")
-                    d_unit = _normalized_candidate_unit(doc)
-                    sys_id_map[rank_pos] = d_id
-                    sys_draw_candidates.append(
-                        PriceCandidateSim(
+                    doc_key = id(doc)
+                    cached = sys_candidate_pool.get(doc_key)
+                    if cached is None:
+                        d_id = _extract_doc_id(doc)
+                        p_val = (
+                            doc.get("price")
+                            if isinstance(doc, dict)
+                            else getattr(doc, "price", None)
+                        )
+                        if p_val is None:
+                            p_val = resolve_candidate_price(doc)
+                        p_dec = Decimal(str(p_val)) if p_val is not None else Decimal("0")
+                        d_unit = _normalized_candidate_unit(doc)
+                        cand_obj = _MutablePriceCandidate(
                             id=rank_pos,
                             price=p_dec,
                             similarity=score,
                             unit=d_unit,
                         )
-                    )
+                        cached = (d_id, cand_obj)
+                        sys_candidate_pool[doc_key] = cached
+                    else:
+                        d_id, cand_obj = cached
+                        cand_obj.id = rank_pos
+                        cand_obj.similarity = score
+                    sys_id_map[rank_pos] = d_id
+                    sys_draw_candidates.append(cand_obj)
 
-                po_ranks = list(range(len(whole_cq)))
+                po_ranks = list(range(n_po))
                 tie_rng.shuffle(po_ranks)
-                po_draw_candidates: list[PriceCandidateSim] = []
-                po_id_map: dict[int, Any] = {}
-                for rank_pos, candidate in zip(po_ranks, whole_cq, strict=True):
-                    po_id_map[rank_pos] = candidate.id
-                    po_draw_candidates.append(
-                        PriceCandidateSim(
-                            id=rank_pos,
-                            price=candidate.price,
-                            similarity=0.0,
-                            unit=candidate.unit,
-                        )
-                    )
+                for cand_obj, rank_pos, real_id in zip(
+                    po_draw_candidates, po_ranks, whole_cq_ids, strict=True
+                ):
+                    cand_obj.id = rank_pos
+                    po_id_map[rank_pos] = real_id
 
                 for s in sigmas:
                     a = anchors_by_sigma[s][draw_idx]

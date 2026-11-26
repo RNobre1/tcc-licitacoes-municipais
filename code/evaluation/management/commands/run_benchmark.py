@@ -422,6 +422,8 @@ class Command(BaseCommand):
                 f"Synthetic benchmark completed. Results written to {out_file} "
                 f"(SHA-256: {output_sha256})"
             )
+            if split_name == "tuning":
+                self.stdout.write(f"resumo SHA-256 do ajuste `{output_sha256}`")
         else:
             self.stdout.write("Synthetic benchmark completed successfully.")
 
@@ -663,3 +665,5 @@ class Command(BaseCommand):
             f"split SHA-256: {split_hash}. Results written to {out_file.name} "
             f"(output SHA-256: {output_sha256})."
         )
+        if split_name == "tuning":
+            self.stdout.write(f"resumo SHA-256 do ajuste `{output_sha256}`")
