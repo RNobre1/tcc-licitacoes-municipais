@@ -266,6 +266,7 @@ def test_fetch_pncp_command_requires_valid_dates():
     assert "YYYY-MM-DD" in str(exc_info.value)
 
 
+@pytest.mark.django_db
 def test_fetch_pncp_command_handles_empty_window_204():
     out = io.StringIO()
     call_command(

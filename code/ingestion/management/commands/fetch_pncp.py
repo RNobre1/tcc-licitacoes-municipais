@@ -7,6 +7,7 @@ import threading
 import time
 import urllib.error
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -321,6 +322,15 @@ def create_retrying_transport(
     )
 
 
+@dataclass(slots=True)
+class _StoredListingPage:
+    order_key: tuple[datetime, int]
+    total_paginas: int
+    purchase_keys: list[tuple[str, int, int]]
+    pub_count: int
+    valid: bool
+
+
 def find_complete_listing_counts(
     start_dt: date,
     end_dt: date,
@@ -329,7 +339,113 @@ def find_complete_listing_counts(
     existing_purchases: set[tuple[str, int, int]] | Callable[[], set[tuple[str, int, int]]],
 ) -> dict[tuple[str, int], int]:
     """Return seen publication counts for completely stored (YYYYMMDD, modality) slices."""
-    raise NotImplementedError
+    start_str = start_dt.strftime("%Y%m%d")
+    end_str = end_dt.strftime("%Y%m%d")
+    mod_set = set(modalities)
+    target_uf = uf or None
+
+    pages_by_slice: dict[tuple[str, int], dict[int, _StoredListingPage]] = {}
+    listing_qs = (
+        RawRecord.objects.filter(
+            endpoint="/api/consulta/v1/contratacoes/publicacao",
+            status_code=200,
+        )
+        .values_list("id", "fetched_at", "params", "payload")
+        .iterator(chunk_size=200)
+    )
+    for rec_id, fetched_at, params, payload in listing_qs:
+        if not isinstance(params, dict) or not isinstance(payload, dict):
+            continue
+        day_init = params.get("dataInicial")
+        day_end = params.get("dataFinal")
+        if not isinstance(day_init, str) or day_init != day_end:
+            continue
+        if not (start_str <= day_init <= end_str):
+            continue
+        if (params.get("uf") or None) != target_uf:
+            continue
+        mod_raw = params.get("codigoModalidadeContratacao")
+        if isinstance(mod_raw, bool) or mod_raw is None:
+            continue
+        try:
+            mod = int(mod_raw)
+        except TypeError, ValueError:
+            continue
+        if mod not in mod_set:
+            continue
+
+        pagina = params.get("pagina", payload.get("numeroPagina"))
+        total_paginas = payload.get("totalPaginas")
+        if (
+            not isinstance(pagina, int)
+            or isinstance(pagina, bool)
+            or pagina < 1
+            or not isinstance(total_paginas, int)
+            or isinstance(total_paginas, bool)
+            or total_paginas < 1
+        ):
+            continue
+
+        data = payload.get("data")
+        purchase_keys: list[tuple[str, int, int]] = []
+        valid = isinstance(data, list)
+        pub_count = len(data) if valid else 0
+        if valid:
+            for pub in data:
+                if not isinstance(pub, dict):
+                    valid = False
+                    break
+                orgao = pub.get("orgaoEntidade")
+                cnpj = orgao.get("cnpj") if isinstance(orgao, dict) else None
+                ano = pub.get("anoCompra")
+                seq = pub.get("sequencialCompra")
+                if not cnpj or not ano or seq is None:
+                    valid = False
+                    break
+                try:
+                    purchase_keys.append((str(cnpj), int(ano), int(seq)))
+                except TypeError, ValueError:
+                    valid = False
+                    break
+
+        slice_key = (day_init, mod)
+        pages = pages_by_slice.setdefault(slice_key, {})
+        order_key = (fetched_at, rec_id)
+        prev = pages.get(pagina)
+        if prev is None or order_key > prev.order_key:
+            pages[pagina] = _StoredListingPage(
+                order_key=order_key,
+                total_paginas=total_paginas,
+                purchase_keys=purchase_keys,
+                pub_count=pub_count,
+                valid=valid,
+            )
+
+    if not pages_by_slice:
+        return {}
+
+    known_purchases = existing_purchases() if callable(existing_purchases) else existing_purchases
+    complete: dict[tuple[str, int], int] = {}
+    for slice_key, pages in pages_by_slice.items():
+        page_1 = pages.get(1)
+        if page_1 is None or not page_1.valid:
+            continue
+        total_pages = page_1.total_paginas
+        is_complete = True
+        seen_count = 0
+        for p_num in range(1, total_pages + 1):
+            page = pages.get(p_num)
+            if page is None or not page.valid or page.total_paginas != total_pages:
+                is_complete = False
+                break
+            if any(pk not in known_purchases for pk in page.purchase_keys):
+                is_complete = False
+                break
+            seen_count += page.pub_count
+        if is_complete:
+            complete[slice_key] = seen_count
+
+    return complete
 
 
 class Command(BaseCommand):
@@ -389,6 +505,12 @@ class Command(BaseCommand):
             default=None,
             help="Path to JSONL file to write failed purchase records",
         )
+        parser.add_argument(
+            "--refetch-listings",
+            action="store_true",
+            default=False,
+            help="Refetch publication listing pages even for completely stored days",
+        )
 
     def handle(self, *args, **options):
         start_str = options["start"]
@@ -427,6 +549,7 @@ class Command(BaseCommand):
         concurrency = max(1, min(4, int(options.get("concurrency") or 3)))
         base_url = options.get("base_url", DEFAULT_PNCP_BASE_URL)
         with_results = bool(options.get("with_results"))
+        refetch_listings = bool(options.get("refetch_listings"))
         rate_limit_opt = options.get("rate_limit")
         rate_limit = float(rate_limit_opt) if rate_limit_opt is not None else 2.0
         transport = options.get("transport")
@@ -478,6 +601,14 @@ class Command(BaseCommand):
         skipped_already_stored = 0
         failures_count = 0
 
+        complete_listings = (
+            {}
+            if refetch_listings
+            else find_complete_listing_counts(
+                start_dt, end_dt, modalities, uf, _get_existing_purchases
+            )
+        )
+
         try:
             # Walk day by day
             current_dt = start_dt
@@ -486,6 +617,16 @@ class Command(BaseCommand):
                 day_dash = current_dt.strftime("%Y-%m-%d")
 
                 for mod in modalities:
+                    if (day_str, mod) in complete_listings:
+                        mod_seen = complete_listings[(day_str, mod)]
+                        publications_count += mod_seen
+                        skipped_already_stored += mod_seen
+                        self.stdout.write(
+                            f"[{day_dash} modality {mod}] seen: {mod_seen}, "
+                            f"fetched: 0, skipped: {mod_seen}, failed: 0 (complete)"
+                        )
+                        continue
+
                     pub_params: dict[str, Any] = {
                         "dataInicial": day_str,
                         "dataFinal": day_str,
