@@ -2,7 +2,9 @@ import http.client
 import io
 import json
 import urllib.error
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.core.management import call_command
@@ -1218,11 +1220,18 @@ def _seed_purchase_items(seq: int, cnpj: str = "00000000000000", status_code: in
     )
 
 
+AFTER_20261101_END = datetime(2026, 11, 2, 0, 30, tzinfo=ZoneInfo("America/Sao_Paulo"))
+
+
 @pytest.mark.integration
 @pytest.mark.django_db
 def test_fetch_pncp_complete_day_makes_zero_http_calls():
-    _seed_listing_page(pagina=1, total_paginas=2, publications=[publication(1)])
-    _seed_listing_page(pagina=2, total_paginas=2, publications=[publication(2)])
+    _seed_listing_page(
+        pagina=1, total_paginas=2, publications=[publication(1)], fetched_at=AFTER_20261101_END
+    )
+    _seed_listing_page(
+        pagina=2, total_paginas=2, publications=[publication(2)], fetched_at=AFTER_20261101_END
+    )
     _seed_purchase_items(1)
     _seed_purchase_items(2)
 
@@ -1254,7 +1263,9 @@ def test_fetch_pncp_complete_day_makes_zero_http_calls():
 @pytest.mark.django_db
 def test_fetch_pncp_rewalks_day_missing_a_listing_page():
     # totalPaginas=2, but only page 1 is stored in DB
-    _seed_listing_page(pagina=1, total_paginas=2, publications=[publication(1)])
+    _seed_listing_page(
+        pagina=1, total_paginas=2, publications=[publication(1)], fetched_at=AFTER_20261101_END
+    )
     _seed_purchase_items(1)
 
     listing_calls = []
@@ -1305,8 +1316,12 @@ def test_fetch_pncp_rewalks_day_missing_a_listing_page():
 @pytest.mark.integration
 @pytest.mark.django_db
 def test_fetch_pncp_rewalks_day_missing_a_purchase_items():
-    _seed_listing_page(pagina=1, total_paginas=2, publications=[publication(1)])
-    _seed_listing_page(pagina=2, total_paginas=2, publications=[publication(2)])
+    _seed_listing_page(
+        pagina=1, total_paginas=2, publications=[publication(1)], fetched_at=AFTER_20261101_END
+    )
+    _seed_listing_page(
+        pagina=2, total_paginas=2, publications=[publication(2)], fetched_at=AFTER_20261101_END
+    )
     # Purchase 1 has items, purchase 2 is missing items
     _seed_purchase_items(1)
 
@@ -1357,7 +1372,9 @@ def test_fetch_pncp_rewalks_day_missing_a_purchase_items():
 @pytest.mark.integration
 @pytest.mark.django_db
 def test_fetch_pncp_refetch_listings_forces_rewalk_even_when_complete():
-    _seed_listing_page(pagina=1, total_paginas=1, publications=[publication(1)])
+    _seed_listing_page(
+        pagina=1, total_paginas=1, publications=[publication(1)], fetched_at=AFTER_20261101_END
+    )
     _seed_purchase_items(1)
 
     listing_calls = []
@@ -1387,3 +1404,152 @@ def test_fetch_pncp_refetch_listings_forces_rewalk_even_when_complete():
 
     assert listing_calls == [1]
     assert "Skipped already stored: 1" in out.getvalue()
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_rewalks_day_listed_before_day_end_brt():
+    """B1: day D listed at 10:00 BRT on D is open and must be re-listed on 2nd pass."""
+    open_day_fetched_at = datetime(2026, 11, 1, 10, 0, tzinfo=ZoneInfo("America/Sao_Paulo"))
+    _seed_listing_page(
+        day="20261101",
+        pagina=1,
+        total_paginas=1,
+        publications=[publication(1), publication(2)],
+        fetched_at=open_day_fetched_at,
+    )
+    _seed_purchase_items(1)
+    _seed_purchase_items(2)
+
+    listing_calls = []
+    item_calls = []
+
+    def transport(url: str, params: dict | None = None):
+        if "/contratacoes/publicacao" in url:
+            listing_calls.append((params or {}).get("pagina", 1))
+            return 200, {
+                "data": [publication(1), publication(2), publication(3)],
+                "totalRegistros": 3,
+                "totalPaginas": 1,
+                "numeroPagina": 1,
+                "paginasRestantes": 0,
+            }
+        if url.endswith("/quantidade"):
+            return 200, 1
+        if "/itens" in url:
+            item_calls.append(url)
+            return 200, [{"numeroItem": 1}]
+        return 404, {}
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        modality=6,
+        transport=transport,
+        stdout=out,
+    )
+
+    assert listing_calls == [1]
+    assert len(item_calls) == 1
+    assert "/compras/2026/3/itens" in item_calls[0]
+    assert "[2026-11-01 modality 6] seen: 3, fetched: 1, skipped: 2, failed: 0" in out.getvalue()
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_rewalks_multipage_day_if_any_page_fetched_before_day_end_brt():
+    """B1: min(fetched_at) across all pages must be >= (day + 1) 00:00 BRT."""
+    after_end = datetime(2026, 11, 2, 0, 30, tzinfo=ZoneInfo("America/Sao_Paulo"))
+    before_end = datetime(2026, 11, 1, 23, 59, tzinfo=ZoneInfo("America/Sao_Paulo"))
+    _seed_listing_page(
+        day="20261101",
+        pagina=1,
+        total_paginas=2,
+        publications=[publication(1)],
+        fetched_at=after_end,
+    )
+    _seed_listing_page(
+        day="20261101",
+        pagina=2,
+        total_paginas=2,
+        publications=[publication(2)],
+        fetched_at=before_end,
+    )
+    _seed_purchase_items(1)
+    _seed_purchase_items(2)
+
+    listing_calls = []
+
+    def transport(url: str, params: dict | None = None):
+        if "/contratacoes/publicacao" in url:
+            page = (params or {}).get("pagina", 1)
+            listing_calls.append(page)
+            if page == 1:
+                return 200, {
+                    "data": [publication(1)],
+                    "totalRegistros": 2,
+                    "totalPaginas": 2,
+                    "numeroPagina": 1,
+                    "paginasRestantes": 1,
+                }
+            return 200, {
+                "data": [publication(2)],
+                "totalRegistros": 2,
+                "totalPaginas": 2,
+                "numeroPagina": 2,
+                "paginasRestantes": 0,
+            }
+        raise AssertionError(f"Unexpected call: {url}")
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        modality=6,
+        transport=transport,
+        stdout=out,
+    )
+
+    assert listing_calls == [1, 2]
+    assert "[2026-11-01 modality 6] seen: 2, fetched: 0, skipped: 2, failed: 0" in out.getvalue()
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_fetch_pncp_skips_day_listed_after_day_end_brt():
+    """B1 counter-proof: day D listed at 00:30 BRT on D+1 is closed and skipped."""
+    closed_day_fetched_at = datetime(2026, 11, 2, 0, 30, tzinfo=ZoneInfo("America/Sao_Paulo"))
+    _seed_listing_page(
+        day="20261101",
+        pagina=1,
+        total_paginas=1,
+        publications=[publication(1), publication(2)],
+        fetched_at=closed_day_fetched_at,
+    )
+    _seed_purchase_items(1)
+    _seed_purchase_items(2)
+
+    calls = []
+
+    def transport(url: str, params: dict | None = None):
+        calls.append((url, params))
+        raise AssertionError("No HTTP call should be made when listed after day end BRT")
+
+    out = io.StringIO()
+    call_command(
+        "fetch_pncp",
+        start="2026-11-01",
+        end="2026-11-01",
+        modality=6,
+        transport=transport,
+        stdout=out,
+    )
+
+    assert calls == []
+    assert (
+        "[2026-11-01 modality 6] seen: 2, fetched: 0, skipped: 2, failed: 0 (complete)"
+        in out.getvalue()
+    )
