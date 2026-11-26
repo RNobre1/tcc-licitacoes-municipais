@@ -39,6 +39,8 @@ PAGINAS = {
     2: "arquitetura-nivel2-conteineres.pdf",
     3: "arquitetura-fluxo-processo.pdf",
     4: "casos-de-uso.pdf",
+    5: "sequencia-busca-triagem.pdf",
+    6: "modelo-de-dados.pdf",
 }
 
 

@@ -5,13 +5,10 @@ e versionadas em ``texto/tcc1/figuras/``. Versioná-las é decisão deliberada: 
 texto precisa compilar em qualquer máquina, inclusive a de quem avalia, sem
 depender de um aplicativo gráfico instalado.
 
-O preço dessa decisão é o risco que esta guarda cobre: alguém move uma caixa no
-diagrama, não reexporta, e o PDF sai com a figura antiga. Nada reclama — o
-documento compila, a figura aparece, e só está errada.
-
-A guarda **não** usa data de modificação: ela não sobrevive a um clone, e um
-clone novo passaria a acusar tudo como velho. Compara-se a impressão digital do
-diagrama registrada no momento da exportação com a do diagrama em disco.
+O preço dessa decisão é o risco de a figura envelhecer em silêncio, e é por isso
+que este script grava, junto das figuras, a impressão digital do diagrama que as
+produziu. `tests/test_figuras_do_diagrama.py` compara as duas e falha quando
+divergem.
 
 Regerar com ``python scripts/gerar_figuras.py``.
 """
@@ -32,6 +29,8 @@ ESPERADAS = (
     "arquitetura-nivel2-conteineres.pdf",
     "arquitetura-fluxo-processo.pdf",
     "casos-de-uso.pdf",
+    "sequencia-busca-triagem.pdf",
+    "modelo-de-dados.pdf",
 )
 
 
@@ -42,6 +41,15 @@ def _impressao(caminho: Path) -> str:
 def test_o_diagrama_existe():
     """Contraprova: sem o diagrama, toda a guarda abaixo é vácuo."""
     assert DIAGRAMA.is_file(), f"{DIAGRAMA.relative_to(RAIZ)} não existe"
+
+
+def test_gerador_mapeia_todas_as_figuras_esperadas():
+    """O mapeamento do script gerador deve cobrir cada página esperada na ordem."""
+    from scripts.gerar_figuras import PAGINAS
+
+    indices_ordenados = sorted(PAGINAS)
+    assert indices_ordenados == list(range(1, len(ESPERADAS) + 1))
+    assert tuple(PAGINAS[i] for i in indices_ordenados) == ESPERADAS
 
 
 def test_todas_as_figuras_foram_exportadas():
