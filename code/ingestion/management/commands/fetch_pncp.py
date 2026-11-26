@@ -506,6 +506,7 @@ class Command(BaseCommand):
                     mod_failed = 0
 
                     pubs_to_fetch: list[dict[str, Any]] = []
+                    seen_purchase_keys: set[tuple[str, int, int]] = set()
                     for pub in all_publications:
                         cnpj = pub.get("orgaoEntidade", {}).get("cnpj")
                         ano = pub.get("anoCompra")
@@ -538,7 +539,11 @@ class Command(BaseCommand):
                             skipped_already_stored += 1
                             mod_skipped += 1
                             continue
+                        if purchase_key in seen_purchase_keys:
+                            mod_skipped += 1
+                            continue
 
+                        seen_purchase_keys.add(purchase_key)
                         pubs_to_fetch.append(pub)
 
                     # Fetch items for pending publications using worker pool
