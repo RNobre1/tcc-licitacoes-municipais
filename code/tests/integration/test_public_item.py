@@ -997,3 +997,76 @@ def test_build_public_items_populates_has_result_from_item_payload():
     item2 = PublicItem.objects.get(item_number=2)
     assert item1.has_result is True
     assert item2.has_result is False
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_build_public_items_skips_items_without_state_or_modality():
+    """R7: publications missing state (unidadeOrgao.ufSigla) or modalityId are skipped."""
+    t1 = timezone.now()
+    # Publication 1: missing unidadeOrgao
+    # Publication 2: modalityId is None
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/contratacoes/publicacao",
+        params={"pagina": 1},
+        fetched_at=t1,
+        payload={
+            "data": [
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000001", "razaoSocial": "Prefeitura 1"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 1,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": 6,
+                },
+                {
+                    "orgaoEntidade": {"cnpj": "00000000000002", "razaoSocial": "Prefeitura 2"},
+                    "anoCompra": 2026,
+                    "sequencialCompra": 2,
+                    "dataPublicacaoPncp": "2026-10-26T08:00:00",
+                    "modalidadeId": None,
+                    "unidadeOrgao": {"ufSigla": "PA"},
+                },
+            ]
+        },
+        status_code=200,
+    )
+    # Single purchase 3: unidadeOrgao is None
+    RawRecord.objects.create(
+        endpoint="/api/consulta/v1/orgaos/00000000000003/compras/2026/3",
+        params={},
+        fetched_at=t1,
+        payload={
+            "orgaoEntidade": {"cnpj": "00000000000003", "razaoSocial": "Prefeitura 3"},
+            "anoCompra": 2026,
+            "sequencialCompra": 3,
+            "dataPublicacaoPncp": "2026-10-26T08:00:00",
+            "modalidadeId": 8,
+            "unidadeOrgao": None,
+        },
+        status_code=200,
+    )
+    for i in (1, 2, 3):
+        RawRecord.objects.create(
+            endpoint=f"/api/pncp/v1/orgaos/0000000000000{i}/compras/2026/{i}/itens",
+            params={"pagina": 1},
+            fetched_at=t1,
+            payload=[
+                {
+                    "numeroItem": 1,
+                    "descricao": f"DEMO-Item {i}",
+                    "quantidade": 1.0,
+                    "unidadeMedida": "UNIDADE",
+                    "valorUnitarioEstimado": 10.0,
+                    "temResultado": False,
+                    "orcamentoSigiloso": False,
+                    "materialOuServico": "M",
+                }
+            ],
+            status_code=200,
+        )
+
+    result = build_public_items()
+    assert result == 0
+    assert PublicItem.objects.count() == 0
+    assert result.skipped_without_publication == 3
