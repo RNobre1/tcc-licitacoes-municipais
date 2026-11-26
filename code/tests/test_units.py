@@ -150,6 +150,49 @@ def same_measurement(item, candidate):
     assert "equality comparison" in violations[0]
 
 
+def test_ast_guard_ignores_false_positive_substrings():
+    """Avoid tripping on prices, domain words, or org units like unidadeOrgao."""
+    source = """
+def format_prices(estimated_unit_price, awarded_unit_price, community, unity, unidade):
+    state = str(unidade.get("ufSigla") or "").strip()
+    label = f"{community.strip()} {unity.lower()}"
+    same_price = str(estimated_unit_price).strip() == str(awarded_unit_price).strip()
+    return state, label, same_price and estimated_unit_price == awarded_unit_price
+"""
+
+    assert _source_violations(source, "example.py") == []
+
+
+def test_ast_guard_catches_uom_tokens_and_raw_unidade_medida_key():
+    """Match last _-separated token ('unit'/'uom') and raw key 'unidadeMedida'.
+
+    Known hole: aliases such as `u = item.unit` are not resolved across
+    assignments, so operations on `u` alone are not flagged by AST inspection.
+    """
+    source = """
+def bad_unit_handling(item, candidate, uom, candidate_uom, item_uom):
+    a = uom.strip()
+    b = candidate_uom.lower()
+    c = candidate_uom == item_uom
+    d = item["unidadeMedida"].strip()
+    e = str(candidate.get("unidadeMedida") or "").casefold()
+    f = item["unidadeMedida"] == candidate.get("unidadeMedida")
+    g = item.get("unidadeMedida") != candidate.unit_normalized
+    return (a, b, c, d, e, f, g)
+"""
+
+    violations = _source_violations(source, "example.py")
+
+    assert len(violations) == 7
+    assert any("strip" in v and ":3:" in v for v in violations)
+    assert any("lower" in v and ":4:" in v for v in violations)
+    assert any("equality comparison" in v and ":5:" in v for v in violations)
+    assert any("strip" in v and ":6:" in v for v in violations)
+    assert any("casefold" in v and ":7:" in v for v in violations)
+    assert any("equality comparison" in v and ":8:" in v for v in violations)
+    assert any("equality comparison" in v and ":9:" in v for v in violations)
+
+
 def test_ast_guard_rejects_duplicate_normalization_in_codebase():
     code_dir = Path(__file__).resolve().parent.parent
     violations = []
