@@ -26,6 +26,7 @@
     --pen-wash: #EEF2FA;
     --graphite: #5B6270;
     --rule: #D6DAE0;
+    --input-border: #858EA0;
     --stamp-green: #2F6B45;
     --stamp-red: #A33A2F;
     --amber: #8A5A00;
@@ -58,7 +59,7 @@
     --pico-table-row-stripped-background-color: transparent;
     --pico-form-element-background-color: var(--sheet);
     --pico-form-element-active-background-color: var(--sheet);
-    --pico-form-element-border-color: var(--rule);
+    --pico-form-element-border-color: var(--input-border);
     --pico-form-element-active-border-color: var(--pen);
     --pico-form-element-color: var(--ink);
     --pico-form-element-focus-color: rgba(43, 76, 155, 0.25);
@@ -86,7 +87,7 @@
         --pico-table-border-color: var(--rule);
         --pico-form-element-background-color: var(--sheet);
         --pico-form-element-active-background-color: var(--sheet);
-        --pico-form-element-border-color: var(--rule);
+        --pico-form-element-border-color: var(--input-border);
         --pico-form-element-active-border-color: var(--pen);
         --pico-form-element-color: var(--ink);
     }
@@ -366,6 +367,10 @@ a.btn-outline:hover {
     margin-bottom: 0.35rem;
 }
 
+.expected-price-card input[type="text"] {
+    border-color: var(--input-border);
+}
+
 .input-row {
     display: flex;
     gap: 0.5rem;
@@ -502,7 +507,12 @@ a.btn-outline:hover {
     padding: 0.7rem 0.65rem;
 }
 
-.col-price,
+.col-price {
+    min-width: 4.5rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
 .col-similarity {
     white-space: nowrap;
 }
@@ -544,7 +554,7 @@ a.btn-outline:hover {
 
 /* Decision cell, stamp, and actions */
 .screening-sheet > table td[id$="-decision"] {
-    min-width: 155px;
+    min-width: 170px;
     white-space: nowrap;
 }
 
@@ -664,4 +674,31 @@ a.btn-outline:hover {
 .empty-state {
     color: var(--graphite);
     padding: 1rem 0;
+}
+
+@media print {
+    a[href^="http"]::after {
+        content: " (" attr(href) ")";
+        word-break: break-all;
+        font-size: 0.75rem;
+    }
+
+    .screening-sheet > table td[id$="-decision"] form,
+    .expected-price-card button[type="submit"],
+    .back-link,
+    .site-header nav ul:last-child {
+        display: none;
+    }
+
+    .screening-layout {
+        display: block;
+    }
+
+    .screening-sidebar {
+        position: static;
+    }
+
+    .paper-sheet {
+        overflow: visible;
+    }
 }

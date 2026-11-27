@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.staticfiles import finders
@@ -59,3 +60,14 @@ def test_header_nav_links_to_procurement_list():
         rendered,
         re.DOTALL,
     )
+
+
+def test_app_css_includes_s8_1_layout_contrast_and_print_rules():
+    css_path = Path(finders.find("css/app.css"))
+    css = css_path.read_text(encoding="utf-8")
+    assert '"Atkinson Hyperlegible Next"' in css
+    assert "--input-border: #858EA0;" in css
+    assert "min-width: 170px;" in css
+    assert "overflow-wrap: anywhere;" in css
+    assert "@media print" in css
+    assert "attr(href)" in css

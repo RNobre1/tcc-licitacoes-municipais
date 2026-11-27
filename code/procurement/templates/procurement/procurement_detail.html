@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load pricing_extras %}
 
 {% block title %}{{ procurement.title }} — {{ block.super }}{% endblock %}
 
@@ -24,7 +25,7 @@
             {% for item in procurement.items %}
                 <tr>
                     <td>{{ item.description }}</td>
-                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.quantity|format_decimal }}</td>
                     <td>{{ item.unit }}</td>
                     <td>{{ item.requesting_department }}</td>
                     <td><a href="{% url 'pricing:screening' item.id %}" class="btn-outline">Triagem</a></td>

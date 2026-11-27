@@ -48,8 +48,8 @@
         {% csrf_token %}
         <input type="hidden" name="expected_price" value="{% if expected_price is not None %}{{ expected_price|unlocalize }}{% endif %}">
         <input type="hidden" name="item_id" value="{% if item_id %}{{ item_id }}{% elif item %}{{ item.id }}{% elif candidate.item_id %}{{ candidate.item_id }}{% endif %}">
-        <button type="submit" name="decision" value="accept">Aceitar</button>
-        <button type="submit" name="decision" value="reject">Descartar</button>
+        <button type="submit" id="candidate-{{ candidate.id }}-accept" name="decision" value="accept">Aceitar</button>
+        <button type="submit" id="candidate-{{ candidate.id }}-reject" name="decision" value="reject">Descartar</button>
     </form>
 </td>
 {% if oob_estimate %}
