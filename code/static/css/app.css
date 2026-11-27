@@ -1,0 +1,657 @@
+@font-face {
+    font-family: "Atkinson Hyperlegible Next";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../vendor/atkinson-hyperlegible-next/AtkinsonHyperlegibleNext-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Atkinson Hyperlegible Next";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../vendor/atkinson-hyperlegible-next/AtkinsonHyperlegibleNext-Bold.woff2") format("woff2");
+}
+
+:root,
+:root:not([data-theme]),
+[data-theme="light"] {
+    --paper: #FCFCFA;
+    --sheet: #FFFFFF;
+    --wash: #F1F3F5;
+    --ink: #1F2A44;
+    --pen: #2B4C9B;
+    --pen-hover: #213C7D;
+    --pen-wash: #EEF2FA;
+    --graphite: #5B6270;
+    --rule: #D6DAE0;
+    --stamp-green: #2F6B45;
+    --stamp-red: #A33A2F;
+    --amber: #8A5A00;
+    --amber-bg: #FDF7EB;
+    --error-bg: #FDF2F2;
+
+    color-scheme: light;
+    --pico-font-family-sans-serif: "Atkinson Hyperlegible Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --pico-font-family: var(--pico-font-family-sans-serif);
+    --pico-font-size: 16px;
+    --pico-line-height: 1.5;
+    --pico-background-color: var(--paper);
+    --pico-color: var(--ink);
+    --pico-h1-color: var(--ink);
+    --pico-h2-color: var(--ink);
+    --pico-h3-color: var(--ink);
+    --pico-muted-color: var(--graphite);
+    --pico-primary: var(--pen);
+    --pico-primary-background: var(--pen);
+    --pico-primary-border: var(--pen);
+    --pico-primary-hover: var(--pen-hover);
+    --pico-primary-hover-background: var(--pen-hover);
+    --pico-primary-hover-border: var(--pen-hover);
+    --pico-primary-underline: var(--pen);
+    --pico-primary-hover-underline: var(--pen-hover);
+    --pico-primary-focus: rgba(43, 76, 155, 0.25);
+    --pico-primary-inverse: #FFFFFF;
+    --pico-border-color: var(--rule);
+    --pico-table-border-color: var(--rule);
+    --pico-table-row-stripped-background-color: transparent;
+    --pico-form-element-background-color: var(--sheet);
+    --pico-form-element-active-background-color: var(--sheet);
+    --pico-form-element-border-color: var(--rule);
+    --pico-form-element-active-border-color: var(--pen);
+    --pico-form-element-color: var(--ink);
+    --pico-form-element-focus-color: rgba(43, 76, 155, 0.25);
+    --pico-border-radius: 4px;
+    --pico-card-box-shadow: none;
+}
+
+@media only screen and (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        color-scheme: light;
+        --pico-background-color: var(--paper);
+        --pico-color: var(--ink);
+        --pico-h1-color: var(--ink);
+        --pico-h2-color: var(--ink);
+        --pico-h3-color: var(--ink);
+        --pico-muted-color: var(--graphite);
+        --pico-primary: var(--pen);
+        --pico-primary-background: var(--pen);
+        --pico-primary-border: var(--pen);
+        --pico-primary-hover: var(--pen-hover);
+        --pico-primary-hover-background: var(--pen-hover);
+        --pico-primary-hover-border: var(--pen-hover);
+        --pico-primary-inverse: #FFFFFF;
+        --pico-border-color: var(--rule);
+        --pico-table-border-color: var(--rule);
+        --pico-form-element-background-color: var(--sheet);
+        --pico-form-element-active-background-color: var(--sheet);
+        --pico-form-element-border-color: var(--rule);
+        --pico-form-element-active-border-color: var(--pen);
+        --pico-form-element-color: var(--ink);
+    }
+}
+
+html,
+body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--pico-font-family-sans-serif);
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+h1 {
+    font-size: 1.75rem;
+    line-height: 1.25;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 1rem;
+}
+
+h2 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.75rem;
+}
+
+small {
+    font-size: 0.875rem;
+}
+
+a {
+    color: var(--pen);
+    text-underline-offset: 2px;
+}
+
+a:hover {
+    color: var(--pen-hover);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--pen);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+/* Header */
+.site-header {
+    background-color: var(--sheet);
+    border-bottom: 1px solid var(--rule);
+    padding-block: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.site-header nav {
+    align-items: center;
+}
+
+.site-header nav ul {
+    margin: 0;
+}
+
+.site-header nav a {
+    text-decoration: none;
+    padding: 0.25rem 0;
+}
+
+.site-header nav ul:first-child a,
+.site-header nav ul:first-child a strong {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.site-header nav ul:last-child a {
+    color: var(--pen);
+    font-weight: 400;
+}
+
+.site-header nav ul:last-child a:hover {
+    text-decoration: underline;
+}
+
+main.container {
+    padding-top: 0;
+    padding-bottom: 3rem;
+}
+
+.container-wide {
+    max-width: min(1360px, 100%);
+}
+
+/* Shared surfaces and controls */
+.paper-card {
+    background-color: var(--sheet);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem 1.15rem;
+    margin-bottom: 1rem;
+}
+
+.paper-sheet {
+    background-color: var(--sheet);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.back-link {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.lead-copy {
+    color: var(--graphite);
+    max-width: 62ch;
+    margin-bottom: 1.25rem;
+}
+
+.btn-primary,
+a.btn-primary {
+    display: inline-block;
+    background-color: var(--pen);
+    color: #FFFFFF;
+    border: 1px solid var(--pen);
+    border-radius: 4px;
+    padding: 0.45rem 0.95rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    text-decoration: none;
+    line-height: 1.3;
+    cursor: pointer;
+}
+
+.btn-primary:hover,
+a.btn-primary:hover {
+    background-color: var(--pen-hover);
+    border-color: var(--pen-hover);
+    color: #FFFFFF;
+}
+
+.btn-outline,
+a.btn-outline {
+    display: inline-block;
+    background-color: transparent;
+    color: var(--pen);
+    border: 1px solid var(--pen);
+    border-radius: 4px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    text-decoration: none;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.btn-outline:hover,
+a.btn-outline:hover {
+    background-color: var(--pen-wash);
+    border-color: var(--pen-hover);
+    color: var(--pen-hover);
+}
+
+.num {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Tables on procurement pages */
+.paper-sheet > table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.paper-sheet > table thead th {
+    background-color: var(--wash);
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 700;
+    border-bottom: 1px solid var(--rule);
+    padding: 0.65rem 0.85rem;
+    text-align: left;
+}
+
+.paper-sheet > table tbody td {
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+}
+
+.paper-sheet > table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.list-sheet > table th:nth-child(2),
+.list-sheet > table td:nth-child(2),
+.items-sheet > table th:nth-child(2),
+.items-sheet > table td:nth-child(2) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* Screening two-column layout */
+.screening-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@media (min-width: 1200px) {
+    .screening-layout {
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 1.75rem;
+    }
+
+    .screening-sidebar {
+        position: sticky;
+        top: 1.5rem;
+    }
+}
+
+.screening-sidebar section:last-child {
+    margin-bottom: 0;
+}
+
+.item-card h2 {
+    margin-bottom: 0.5rem;
+}
+
+.item-description {
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+}
+
+.item-meta {
+    font-size: 0.875rem;
+    color: var(--graphite);
+    margin-bottom: 0.3rem;
+}
+
+.item-meta strong {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.item-meta:last-child {
+    margin-bottom: 0;
+}
+
+/* Expected price form */
+.expected-price-card form {
+    margin: 0;
+}
+
+.expected-price-card label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.35rem;
+}
+
+.input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.input-row input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0.4rem 0.6rem;
+    height: auto;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.input-row button[type="submit"] {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    background-color: var(--pen);
+    border-color: var(--pen);
+    color: #FFFFFF;
+}
+
+.input-row button[type="submit"]:hover {
+    background-color: var(--pen-hover);
+    border-color: var(--pen-hover);
+}
+
+/* Estimate panel */
+.estimate-panel h2 {
+    margin-bottom: 0.65rem;
+}
+
+.estimate-grid.grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--rule);
+}
+
+.estimate-grid.grid > p {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 0;
+    font-size: 0.9375rem;
+}
+
+.estimate-grid.grid > p strong {
+    font-weight: 400;
+    color: var(--graphite);
+}
+
+.estimate-grid.grid > p .num {
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.estimate-count {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.875rem;
+    color: var(--graphite);
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+}
+
+.estimate-count strong {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+/* Notices */
+.corpus-note {
+    color: var(--graphite);
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+}
+
+.notice {
+    font-size: 0.875rem;
+    color: var(--graphite);
+    margin-top: 0.65rem;
+    margin-bottom: 0;
+    line-height: 1.4;
+}
+
+.notice-warning {
+    color: var(--amber);
+    background-color: var(--amber-bg);
+    border: 1px solid #EBD7B0;
+    border-radius: 3px;
+    padding: 0.45rem 0.65rem;
+}
+
+.notice-error {
+    color: var(--stamp-red);
+    background-color: var(--error-bg);
+    border: 1px solid #E5C1BD;
+    border-radius: 3px;
+    padding: 0.45rem 0.65rem;
+    margin-bottom: 0.75rem;
+}
+
+.screening-main .notice-warning {
+    margin-bottom: 0.75rem;
+}
+
+/* Screening 6-column table */
+.screening-sheet > table {
+    font-size: 0.9375rem;
+}
+
+.screening-sheet > table thead th {
+    padding: 0.6rem 0.65rem;
+    white-space: nowrap;
+}
+
+.screening-sheet > table thead th:nth-child(3),
+.screening-sheet > table thead th:nth-child(4),
+.screening-sheet > table tbody td.num {
+    text-align: right;
+}
+
+.screening-sheet > table tbody td {
+    padding: 0.7rem 0.65rem;
+}
+
+.col-price,
+.col-similarity {
+    white-space: nowrap;
+}
+
+.screening-sheet > table td:nth-child(5) {
+    white-space: nowrap;
+    font-size: 0.875rem;
+    color: var(--graphite);
+}
+
+.cand-desc {
+    color: var(--ink);
+    line-height: 1.4;
+    margin-bottom: 0.3rem;
+}
+
+.cand-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--graphite);
+    line-height: 1.4;
+}
+
+.meta-sub {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--graphite);
+    margin-top: 0.15rem;
+}
+
+.estimated-marker {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--amber);
+    margin-top: 0.15rem;
+}
+
+/* Decision cell, stamp, and actions */
+.screening-sheet > table td[id$="-decision"] {
+    min-width: 155px;
+    white-space: nowrap;
+}
+
+.stamp {
+    display: inline-block;
+    padding: 0.18rem 0.48rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: 2px solid currentColor;
+    outline: 1px solid currentColor;
+    outline-offset: -4px;
+    border-radius: 3px;
+    transform: rotate(-3deg);
+    margin-bottom: 0.45rem;
+}
+
+.stamp-accepted {
+    color: var(--stamp-green);
+}
+
+.stamp-rejected {
+    color: var(--stamp-red);
+}
+
+.stamp-excluded {
+    color: var(--graphite);
+}
+
+.decision-reason {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--graphite);
+    margin-bottom: 0.45rem;
+    white-space: normal;
+}
+
+@keyframes stamp-press {
+    from {
+        opacity: 0;
+        transform: rotate(-3deg) scale(1.15);
+    }
+    to {
+        opacity: 1;
+        transform: rotate(-3deg) scale(1);
+    }
+}
+
+.stamp-animate {
+    animation: stamp-press 140ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stamp-animate {
+        animation: none;
+    }
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.screening-sheet > table td[id$="-decision"] form {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+    margin: 0;
+}
+
+.screening-sheet > table td[id$="-decision"] button {
+    width: auto;
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+    border-radius: 3px;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.screening-sheet > table td[id$="-decision"] button[value="accept"] {
+    background-color: var(--sheet);
+    color: var(--pen);
+    border: 1px solid var(--pen);
+    padding: 0.25rem 0.55rem;
+    font-weight: 400;
+}
+
+.screening-sheet > table td[id$="-decision"] button[value="accept"]:hover {
+    background-color: var(--pen-wash);
+    border-color: var(--pen-hover);
+    color: var(--pen-hover);
+}
+
+.screening-sheet > table td[id$="-decision"] button[value="reject"] {
+    background-color: transparent;
+    color: var(--graphite);
+    border: 1px solid transparent;
+    padding: 0.25rem 0.45rem;
+    font-weight: 400;
+}
+
+.screening-sheet > table td[id$="-decision"] button[value="reject"]:hover {
+    background-color: var(--wash);
+    color: var(--ink);
+}
+
+.empty-state {
+    color: var(--graphite);
+    padding: 1rem 0;
+}

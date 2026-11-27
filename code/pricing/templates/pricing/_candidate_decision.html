@@ -1,32 +1,56 @@
+{% load l10n %}
 {% load pricing_extras %}
 <td id="candidate-{{ candidate.id }}-decision">
     {% if decision == "accept" %}
         {% if estimate %}
             {% if candidate.id in estimate.counted_candidate_ids %}
-                Aceito
+                <span class="stamp stamp-accepted{% if oob_estimate %} stamp-animate{% endif %}">Aceito</span>
             {% elif candidate.is_estimated %}
-                fora do cálculo: preço estimado
+                <span class="stamp stamp-excluded{% if oob_estimate %} stamp-animate{% endif %}" aria-hidden="true">fora do cálculo</span>
+                <span class="sr-only">fora do cálculo: preço estimado</span>
+                <span class="decision-reason" aria-hidden="true">preço estimado</span>
             {% elif candidate.secret_budget %}
-                fora do cálculo: orçamento sigiloso
+                <span class="stamp stamp-excluded{% if oob_estimate %} stamp-animate{% endif %}" aria-hidden="true">fora do cálculo</span>
+                <span class="sr-only">fora do cálculo: orçamento sigiloso</span>
+                <span class="decision-reason" aria-hidden="true">orçamento sigiloso</span>
             {% elif candidate.price is None %}
-                fora do cálculo: sem preço
+                <span class="stamp stamp-excluded{% if oob_estimate %} stamp-animate{% endif %}" aria-hidden="true">fora do cálculo</span>
+                <span class="sr-only">fora do cálculo: sem preço</span>
+                <span class="decision-reason" aria-hidden="true">sem preço</span>
             {% else %}
-                fora do cálculo: unidade diferente
+                <span class="stamp stamp-excluded{% if oob_estimate %} stamp-animate{% endif %}" aria-hidden="true">fora do cálculo</span>
+                <span class="sr-only">fora do cálculo: unidade diferente</span>
+                <span class="decision-reason" aria-hidden="true">unidade diferente</span>
             {% endif %}
         {% elif item_unit and not candidate.unit|units_match:item_unit %}
-            fora do cálculo: unidade diferente
+            <span class="stamp stamp-excluded{% if oob_estimate %} stamp-animate{% endif %}" aria-hidden="true">fora do cálculo</span>
+            <span class="sr-only">fora do cálculo: unidade diferente</span>
+            <span class="decision-reason" aria-hidden="true">unidade diferente</span>
         {% elif candidate.is_estimated %}
-            fora do cálculo: preço estimado
+            <span class="stamp stamp-excluded{% if oob_estimate %} stamp-animate{% endif %}" aria-hidden="true">fora do cálculo</span>
+            <span class="sr-only">fora do cálculo: preço estimado</span>
+            <span class="decision-reason" aria-hidden="true">preço estimado</span>
         {% elif candidate.secret_budget %}
-            fora do cálculo: orçamento sigiloso
+            <span class="stamp stamp-excluded{% if oob_estimate %} stamp-animate{% endif %}" aria-hidden="true">fora do cálculo</span>
+            <span class="sr-only">fora do cálculo: orçamento sigiloso</span>
+            <span class="decision-reason" aria-hidden="true">orçamento sigiloso</span>
         {% elif candidate.price is None %}
-            fora do cálculo: sem preço
+            <span class="stamp stamp-excluded{% if oob_estimate %} stamp-animate{% endif %}" aria-hidden="true">fora do cálculo</span>
+            <span class="sr-only">fora do cálculo: sem preço</span>
+            <span class="decision-reason" aria-hidden="true">sem preço</span>
         {% else %}
-            Aceito
+            <span class="stamp stamp-accepted{% if oob_estimate %} stamp-animate{% endif %}">Aceito</span>
         {% endif %}
     {% elif decision == "reject" %}
-        Descartado
+        <span class="stamp stamp-rejected{% if oob_estimate %} stamp-animate{% endif %}">Descartado</span>
     {% endif %}
+    <form method="post" action="{% url 'pricing:decide' candidate.id %}" hx-post="{% url 'pricing:decide' candidate.id %}" hx-target="#candidate-{{ candidate.id }}-decision" hx-swap="outerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="expected_price" value="{% if expected_price is not None %}{{ expected_price|unlocalize }}{% endif %}">
+        <input type="hidden" name="item_id" value="{% if item_id %}{{ item_id }}{% elif item %}{{ item.id }}{% elif candidate.item_id %}{{ candidate.item_id }}{% endif %}">
+        <button type="submit" name="decision" value="accept">Aceitar</button>
+        <button type="submit" name="decision" value="reject">Descartar</button>
+    </form>
 </td>
 {% if oob_estimate %}
     {% include "pricing/_estimate_panel.html" with estimate=oob_estimate hx_swap_oob=True %}

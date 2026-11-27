@@ -6,14 +6,27 @@
 <h1>Processos de contratação</h1>
 
 {% if procurements %}
-    <ul>
-        {% for procurement in procurements %}
-            <li>
-                <a href="{% url 'procurement:detail' procurement.id %}">{{ procurement.title }}</a>
-            </li>
-        {% endfor %}
-    </ul>
+    <div class="paper-sheet list-sheet">
+        <table>
+            <thead>
+                <tr>
+                    <th>Processo</th>
+                    <th>Itens</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for procurement in procurements %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'procurement:detail' procurement.id %}">{{ procurement.title }}</a>
+                        </td>
+                        <td>{{ procurement.items|length }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
-    <p>Nenhum processo de contratação encontrado.</p>
+    <p class="empty-state">Nenhum processo de contratação encontrado.</p>
 {% endif %}
 {% endblock %}

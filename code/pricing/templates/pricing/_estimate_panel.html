@@ -1,34 +1,22 @@
 {% load l10n %}
-<section id="estimate-panel" aria-live="polite"{% if hx_swap_oob %} hx-swap-oob="true"{% endif %}>
+<section id="estimate-panel" class="paper-card estimate-panel" aria-live="polite"{% if hx_swap_oob %} hx-swap-oob="true"{% endif %}>
     <h2>Valor estimado</h2>
     <div class="estimate-grid grid">
         <p>
             <strong>Média:</strong>
-            {% if estimate.mean is not None %}
-                R$ {{ estimate.mean|floatformat:2 }}
-            {% else %}
-                —
-            {% endif %}
+            <span class="num">{% if estimate.mean is not None %}R$ {{ estimate.mean|floatformat:2 }}{% else %}—{% endif %}</span>
         </p>
         <p>
             <strong>Mediana:</strong>
-            {% if estimate.median is not None %}
-                R$ {{ estimate.median|floatformat:2 }}
-            {% else %}
-                —
-            {% endif %}
+            <span class="num">{% if estimate.median is not None %}R$ {{ estimate.median|floatformat:2 }}{% else %}—{% endif %}</span>
         </p>
         <p>
             <strong>Menor valor:</strong>
-            {% if estimate.min is not None %}
-                R$ {{ estimate.min|floatformat:2 }}
-            {% else %}
-                —
-            {% endif %}
+            <span class="num">{% if estimate.min is not None %}R$ {{ estimate.min|floatformat:2 }}{% else %}—{% endif %}</span>
         </p>
     </div>
-    <p><strong>Preços no cálculo:</strong> {{ estimate.count }}</p>
+    <p class="estimate-count"><strong>Preços no cálculo:</strong> {{ estimate.count }}</p>
     {% if estimate.requires_justification %}
-        <p class="notice"><small>Menos de três preços: a pesquisa exige justificativa (IN 65/2021, art. 6º, § 5º; RN06).</small></p>
+        <p class="notice notice-warning"><small>Menos de três preços: a pesquisa exige justificativa (IN 65/2021, art. 6º, § 5º; RN06).</small></p>
     {% endif %}
 </section>

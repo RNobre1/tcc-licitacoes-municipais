@@ -28,6 +28,19 @@ def test_stylesheet_link_resolves_to_a_vendored_file():
     assert finders.find(match.group(1)), f"{match.group(1)} is not a static file"
 
 
+def test_app_stylesheet_and_local_fonts_resolve_via_staticfiles():
+    rendered = _render_base()
+    links = re.findall(r'<link rel="stylesheet" href="/static/([^"]+)">', rendered)
+    assert links == ["vendor/pico-2.0.6/pico.min.css", "css/app.css"]
+    for static_path in (
+        "css/app.css",
+        "vendor/atkinson-hyperlegible-next/AtkinsonHyperlegibleNext-Regular.woff2",
+        "vendor/atkinson-hyperlegible-next/AtkinsonHyperlegibleNext-Bold.woff2",
+        "vendor/atkinson-hyperlegible-next/OFL.txt",
+    ):
+        assert finders.find(static_path), f"{static_path} is not a static file"
+
+
 def test_header_links_system_name_to_home():
     rendered = _render_base()
     home_url = reverse("procurement:home")

@@ -174,7 +174,7 @@ def test_screening_renders_two_dimension_headers_separately():
     item = _make_item()
     rendered = _render_screening(item, candidates=[_make_candidate()])
     assert "<th>Semelhança</th>" in rendered
-    assert "<th>Proximidade de valor</th>" in rendered
+    assert "<th>Proximidade</th>" in rendered
 
 
 def test_candidate_fragment_renders_proximity_string_when_given():
@@ -260,21 +260,34 @@ def test_candidate_fragment_renders_every_evidence_field_in_column_order():
         similarity=0.88,
     )
     flat = _flat(_render_candidate_fragment(candidate, proximity="1,35× acima"))
-    assert (
-        "<td>Descrição X</td> <td>caixa</td> <td>20</td> <td>Prefeitura Fictícia A</td> "
-        "<td>12 de Março de 2026</td> <td>Fonte Fictícia 2</td> <td>DEMO-007/2026-03</td> "
-        "<td>24,80</td> <td>0,88</td> <td>1,35× acima</td>"
-    ) in flat
+    tokens = [
+        "Descrição X",
+        "Prefeitura Fictícia A",
+        "12/03/2026",
+        "Fonte Fictícia 2",
+        "DEMO-007/2026-03",
+        "caixa",
+        ">20<",
+        "24,80",
+        "0,88",
+        "1,35× acima",
+        'id="candidate-5-decision"',
+    ]
+    positions = [flat.find(tok) for tok in tokens]
+    assert all(pos != -1 for pos in positions), flat
+    assert positions == sorted(positions), positions
+    assert "·" not in flat
 
 
 def test_screening_header_row_lists_every_column_in_the_fragment_order():
     c = _make_candidate()
     flat = _flat(_render_screening(_make_item(), candidates=[c]))
     assert (
-        "<th>Descrição</th> <th>Unidade</th> <th>Quantidade</th> <th>Órgão</th> <th>Data</th> "
-        "<th>Fonte</th> <th>Procedência</th> <th>Preço</th> <th>Semelhança</th> "
-        "<th>Proximidade de valor</th> <th>Decisão</th> <th>Ações</th>"
+        "<th>Descrição</th> <th>Unidade</th> <th>Preço</th> "
+        "<th>Semelhança</th> <th>Proximidade</th> <th>Decisão</th>"
     ) in flat
+    thead = re.search(r"<thead>(.*?)</thead>", flat, re.S).group(1)
+    assert thead.count("<th>") == 6
 
 
 def test_screening_looks_decisions_and_proximities_up_by_candidate_id():
@@ -541,13 +554,14 @@ def test_screening_renders_no_back_link_when_procurement_is_none():
 def test_candidate_fragment_renders_awarded_price():
     candidate = _make_candidate(price=Decimal("24.80"), is_estimated=False)
     rendered = _render_candidate_fragment(candidate)
-    assert "<td>24,80</td>" in rendered
+    assert '<td class="col-price num">24,80</td>' in rendered
 
 
 def test_candidate_fragment_renders_estimated_price_with_marker():
     candidate = _make_candidate(price=Decimal("24.80"), is_estimated=True)
     rendered = _render_candidate_fragment(candidate)
-    assert "24,80 (estimado)" in rendered
+    assert ">24,80<" in rendered
+    assert '<span class="estimated-marker">estimado</span>' in rendered
 
 
 def test_candidate_fragment_renders_dash_for_secret_budget():
@@ -740,11 +754,11 @@ def test_candidate_fragment_formats_price_quantity_and_similarity():
         similarity=0.89414424,
     )
     flat = _flat(_render_candidate_fragment(candidate))
-    assert "<td>50</td>" in flat
+    assert ">50<" in flat
     assert "50,0000" not in flat
-    assert "<td>41,14</td>" in flat
+    assert '<td class="col-price num">41,14</td>' in flat
     assert "41,1400" not in flat
-    assert "<td>0,89</td>" in flat
+    assert '<td class="col-similarity num">0,89</td>' in flat
     assert "0,89414424" not in flat
 
     candidate_micro = _make_candidate(
@@ -755,9 +769,9 @@ def test_candidate_fragment_formats_price_quantity_and_similarity():
         is_estimated=True,
     )
     flat_micro = _flat(_render_candidate_fragment(candidate_micro))
-    assert "<td>0,0450</td>" in flat_micro
-    assert "<td>0,0450 (estimado)</td>" in flat_micro
-    assert "<td>0,50</td>" in flat_micro
+    assert ">0,0450<" in flat_micro
+    assert '<span class="estimated-marker">estimado</span>' in flat_micro
+    assert '<td class="col-similarity num">0,50</td>' in flat_micro
 
     candidate_int_price = _make_candidate(
         id=13,
@@ -767,12 +781,15 @@ def test_candidate_fragment_formats_price_quantity_and_similarity():
         is_estimated=True,
     )
     flat_int = _flat(_render_candidate_fragment(candidate_int_price))
-    assert "<td>1000</td>" in flat_int
-    assert "<td>28 (estimado)</td>" in flat_int
-    assert "<td>0,89</td>" in flat_int
+    assert ">1000<" in flat_int
+    assert ">28<" in flat_int
+    assert '<span class="estimated-marker">estimado</span>' in flat_int
+    assert '<td class="col-similarity num">0,89</td>' in flat_int
 
     candidate_half_up = _make_candidate(id=14, similarity=0.895)
-    assert "<td>0,90</td>" in _flat(_render_candidate_fragment(candidate_half_up))
+    assert '<td class="col-similarity num">0,90</td>' in _flat(
+        _render_candidate_fragment(candidate_half_up)
+    )
 
 
 def test_screening_formats_requested_item_quantity_without_trailing_zeros():
@@ -784,3 +801,36 @@ def test_screening_formats_requested_item_quantity_without_trailing_zeros():
     item_micro = _make_item(quantity=Decimal("0.0450"))
     rendered_micro = _render_screening(item_micro, candidates=[])
     assert "<strong>Quantidade:</strong> 0,0450</p>" in rendered_micro
+
+
+def test_candidate_fragment_renders_edital_link_for_http_provenance():
+    candidate = _make_candidate(
+        source="PNCP",
+        provenance="https://pncp.gov.br/app/editais/00000000000007/2026/42",
+    )
+    rendered = _render_candidate_fragment(candidate)
+    assert 'href="https://pncp.gov.br/app/editais/00000000000007/2026/42"' in rendered
+    assert ">Edital no PNCP</a>" in rendered
+
+
+def test_candidate_decision_keeps_action_form_inside_swapped_cell():
+    candidate = _make_candidate(id=7, unit="pacote", price=Decimal("24.80"))
+    rendered = render_to_string(
+        "pricing/_candidate_decision.html",
+        {
+            "candidate": candidate,
+            "decision": "accept",
+            "item_unit": "pacote",
+            "item_id": 1,
+            "expected_price": Decimal("25.00"),
+            "estimate": {"counted_candidate_ids": {7}},
+            "oob_estimate": None,
+        },
+        request=RequestFactory().post("/candidates/7/decision/"),
+    )
+    assert rendered.count("<td") == 1
+    assert '<form method="post" action="/candidates/7/decision/"' in rendered
+    assert '<input type="hidden" name="expected_price" value="25.00">' in rendered
+    assert '<input type="hidden" name="item_id" value="1">' in rendered
+    assert '<button type="submit" name="decision" value="accept">Aceitar</button>' in rendered
+    assert '<button type="submit" name="decision" value="reject">Descartar</button>' in rendered

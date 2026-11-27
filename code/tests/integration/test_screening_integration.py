@@ -221,9 +221,9 @@ def test_screening_and_decide_preserve_similarity_and_format_decimals_end_to_end
         assert get_resp.status_code == 200
         get_html = get_resp.content.decode()
 
-        assert "<td>50</td>" in get_html
+        assert ">50<" in get_html
         assert "50,0000" not in get_html
-        assert "<td>41,14</td>" in get_html
+        assert '<td class="col-price num">41,14</td>' in get_html
         assert "41,1400" not in get_html
         assert f'hx-target="#candidate-{item.pk}-decision"' in get_html
 

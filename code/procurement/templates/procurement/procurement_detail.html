@@ -3,32 +3,34 @@
 {% block title %}{{ procurement.title }} — {{ block.super }}{% endblock %}
 
 {% block content %}
-<p>
+<p class="back-link">
     <a href="{% url 'procurement:list' %}">Voltar para a lista</a>
 </p>
 
 <h1>{{ procurement.title }}</h1>
 
-<table>
-    <thead>
-        <tr>
-            <th>Descrição</th>
-            <th>Quantidade</th>
-            <th>Unidade</th>
-            <th>Secretaria demandante</th>
-            <th>Preços</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in procurement.items %}
+<div class="paper-sheet items-sheet">
+    <table>
+        <thead>
             <tr>
-                <td>{{ item.description }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>{{ item.unit }}</td>
-                <td>{{ item.requesting_department }}</td>
-                <td><a href="{% url 'pricing:screening' item.id %}">Triagem</a></td>
+                <th>Descrição</th>
+                <th>Quantidade</th>
+                <th>Unidade</th>
+                <th>Secretaria demandante</th>
+                <th>Preços</th>
             </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            {% for item in procurement.items %}
+                <tr>
+                    <td>{{ item.description }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.unit }}</td>
+                    <td>{{ item.requesting_department }}</td>
+                    <td><a href="{% url 'pricing:screening' item.id %}" class="btn-outline">Triagem</a></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

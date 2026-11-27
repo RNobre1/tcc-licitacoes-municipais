@@ -6,19 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{{ system_name }}{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'vendor/pico-2.0.6/pico.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
-    <header class="container">
-        <nav>
-            <ul>
-                <li><a href="{% url 'procurement:home' %}"><strong>{{ system_name }}</strong></a></li>
-            </ul>
-            <ul>
-                <li><a href="{% url 'procurement:list' %}">Processos</a></li>
-            </ul>
-        </nav>
+    <header class="site-header">
+        <div class="{% block header_class %}container{% endblock %}">
+            <nav>
+                <ul>
+                    <li><a href="{% url 'procurement:home' %}"><strong>{{ system_name }}</strong></a></li>
+                </ul>
+                <ul>
+                    <li><a href="{% url 'procurement:list' %}">Processos</a></li>
+                </ul>
+            </nav>
+        </div>
     </header>
-    <main class="container">
+    <main class="{% block main_class %}container{% endblock %}">
         {% block content %}{% endblock %}
     </main>
 </body>

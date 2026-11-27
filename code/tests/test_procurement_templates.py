@@ -180,3 +180,18 @@ def test_procurement_detail_links_each_item_to_screening():
             rf'<a\s+[^>]*href="{re.escape(screening_url)}"[^>]*>\s*Triagem\s*</a>',
             rendered,
         )
+
+
+def test_procurement_list_renders_table_with_item_counts():
+    item = ItemStub(
+        id=101,
+        description="Resma de papel A4",
+        quantity=Decimal("50"),
+        unit="pacote",
+        requesting_department="Secretaria Municipal de Educação",
+    )
+    p = ProcurementStub(id=7, title="Aquisição de merenda escolar", items=(item,))
+    rendered = _render_procurement_list([p])
+    assert "<table>" in rendered
+    assert "<th>Itens</th>" in rendered
+    assert "<td>1</td>" in rendered

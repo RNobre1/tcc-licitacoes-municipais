@@ -1,26 +1,28 @@
 {% load l10n %}
 {% load pricing_extras %}
 <tr id="candidate-{{ candidate.id }}">
-    <td>{{ candidate.description }}</td>
-    <td>{{ candidate.unit }}</td>
-    <td>{{ candidate.quantity|format_decimal }}</td>
-    <td>{{ candidate.agency }}</td>
-    <td>{{ candidate.date }}</td>
-    <td>{{ candidate.source }}</td>
-    <td>{{ candidate.provenance }}</td>
-    <td>{% if candidate.secret_budget or candidate.price is None %}—{% elif candidate.is_estimated %}{{ candidate.price|format_decimal }} (estimado){% else %}{{ candidate.price|format_decimal }}{% endif %}</td>
-    <td>{{ candidate.similarity|format_similarity }}</td>
+    <td class="col-description">
+        <div class="cand-desc">{{ candidate.description }}</div>
+        <div class="cand-meta">
+            <span>{{ candidate.agency }}</span>
+            <span>{{ candidate.date|date:"d/m/Y" }}</span>
+            {% if candidate.provenance|slice:":4" == "http" %}
+                {% if candidate.source and candidate.source != "PNCP" %}<span>{{ candidate.source }}</span>{% endif %}
+                <a href="{{ candidate.provenance }}" target="_blank" rel="noopener noreferrer">Edital no PNCP</a>
+            {% else %}
+                {% if candidate.source %}<span>{{ candidate.source }}</span>{% endif %}
+                {% if candidate.provenance %}<span>{{ candidate.provenance }}</span>{% endif %}
+            {% endif %}
+        </div>
+    </td>
+    <td class="col-unit">
+        <span>{{ candidate.unit }}</span>
+        <span class="meta-sub num">{{ candidate.quantity|format_decimal }}</span>
+    </td>
+    <td class="col-price num">{% if candidate.secret_budget or candidate.price is None %}—{% elif candidate.is_estimated %}<span>{{ candidate.price|format_decimal }}</span><span class="estimated-marker">estimado</span>{% else %}{{ candidate.price|format_decimal }}{% endif %}</td>
+    <td class="col-similarity num">{{ candidate.similarity|format_similarity }}</td>
     <td>{% if proximity %}{{ proximity }}{% else %}—{% endif %}</td>
     {% include "pricing/_candidate_decision.html" with oob_estimate=None %}
-    <td>
-        <form method="post" action="{% url 'pricing:decide' candidate.id %}" hx-post="{% url 'pricing:decide' candidate.id %}" hx-target="#candidate-{{ candidate.id }}-decision" hx-swap="outerHTML">
-            {% csrf_token %}
-            <input type="hidden" name="expected_price" value="{% if expected_price is not None %}{{ expected_price|unlocalize }}{% endif %}">
-            <input type="hidden" name="item_id" value="{% if item_id %}{{ item_id }}{% elif item %}{{ item.id }}{% elif candidate.item_id %}{{ candidate.item_id }}{% endif %}">
-            <button type="submit" name="decision" value="accept">Aceitar</button>
-            <button type="submit" name="decision" value="reject">Descartar</button>
-        </form>
-    </td>
 </tr>
 {% if oob_estimate %}
     {% include "pricing/_estimate_panel.html" with estimate=oob_estimate hx_swap_oob=True %}

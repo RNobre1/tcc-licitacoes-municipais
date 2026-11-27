@@ -958,11 +958,14 @@ def test_screening_renders_real_candidates_from_semantic_search(client, monkeypa
     html = response.content.decode()
 
     assert "https://pncp.gov.br/app/editais/00000000000007/2026/42" in html
+    assert "Edital no PNCP" in html
     assert "25,50" in html
-    assert "28 (estimado)" in html
+    row_estimated = _row(html, 1002)
+    assert ">28<" in row_estimated
+    assert "estimado" in row_estimated
 
     row_secret = _row(html, 1003)
-    assert "<td>—</td>" in row_secret
+    assert '<td class="col-price num">—</td>' in row_secret
 
 
 def test_screening_estimate_panel_ignores_estimated_prices(client, monkeypatch):
@@ -2360,14 +2363,14 @@ def test_screening_formats_db_and_on_demand_prices_and_quantities_identically(cl
     row_db = _row(html, pi_db.pk)
     row_demand = _row(html, pi_on_demand.pk)
 
-    assert "<td>50</td>" in row_db
+    assert ">50<" in row_db
     assert "50,0000" not in row_db
-    assert "<td>17,55</td>" in row_db
+    assert '<td class="col-price num">17,55</td>' in row_db
     assert "17,5500" not in row_db
-    assert "<td>0,89</td>" in row_db
+    assert '<td class="col-similarity num">0,89</td>' in row_db
     assert "0,89414424" not in row_db
 
-    assert "<td>0,0450</td>" in row_demand
-    assert "<td>17,55</td>" in row_demand
-    assert "<td>0,81</td>" in row_demand
+    assert ">0,0450<" in row_demand
+    assert '<td class="col-price num">17,55</td>' in row_demand
+    assert '<td class="col-similarity num">0,81</td>' in row_demand
     assert "0,81234567" not in row_demand
