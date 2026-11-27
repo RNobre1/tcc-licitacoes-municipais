@@ -106,7 +106,7 @@ h1 {
     line-height: 1.25;
     font-weight: 700;
     color: var(--ink);
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
 }
 
 h2 {
@@ -142,8 +142,14 @@ input:focus-visible {
 .site-header {
     background-color: var(--sheet);
     border-bottom: 1px solid var(--rule);
-    padding-block: 0.5rem;
-    margin-bottom: 1.5rem;
+    padding-block: 0.45rem;
+    margin-bottom: 1.15rem;
+}
+
+.site-header .container,
+main.container {
+    padding-inline: 1.25rem;
+    box-sizing: border-box;
 }
 
 .site-header nav {
@@ -152,6 +158,10 @@ input:focus-visible {
 
 .site-header nav ul {
     margin: 0;
+}
+
+.site-header nav li {
+    padding-block: 0.25rem;
 }
 
 .site-header nav a {
@@ -180,7 +190,7 @@ main.container {
 }
 
 .container-wide {
-    max-width: min(1360px, 100%);
+    max-width: 1380px;
 }
 
 /* Shared surfaces and controls */
@@ -304,8 +314,8 @@ a.btn-outline:hover {
 
 @media (min-width: 1200px) {
     .screening-layout {
-        grid-template-columns: 340px minmax(0, 1fr);
-        gap: 1.75rem;
+        grid-template-columns: 320px minmax(0, 1fr);
+        gap: 1.5rem;
     }
 
     .screening-sidebar {
