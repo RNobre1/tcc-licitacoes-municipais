@@ -69,6 +69,26 @@ Reabrir se:
    resposta prevista é ocultar a coluna até o operador marcar a
    comparabilidade.
 
+## Adendo de 27/11: a semelhança também com duas casas
+
+Até 26/11, a coluna de semelhança mostrava o escore cru, com oito casas. Com a
+busca semântica real na tela, o autor decidiu em 27/11 exibir a semelhança com
+duas casas e vírgula decimal: 0,89, por exemplo. O arredondamento é para cima a
+partir da metade.
+
+Pesaram os mesmos motivos desta nota:
+
+- a ordem usa o valor exato, então R1 e R2 não mudam;
+- a precisão exibida pode dar a um número um peso que ele não tem no
+  julgamento;
+- a proximidade já aparece com duas casas, e as duas colunas ficam coerentes.
+
+O percentual (89%) foi descartado, porque sugere uma probabilidade de ser o
+mesmo item, e o escore de cosseno não é isso.
+
+O critério de revisão 1 vale também aqui: dois candidatos com 0,89 na tela
+podem estar em ordem diferente.
+
 ## Backlinks
 
 - [[2026-10-28-ordenacao-rf23]]
