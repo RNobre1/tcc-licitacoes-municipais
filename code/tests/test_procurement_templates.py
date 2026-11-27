@@ -195,3 +195,30 @@ def test_procurement_list_renders_table_with_item_counts():
     assert "<table>" in rendered
     assert "<th>Itens</th>" in rendered
     assert "<td>1</td>" in rendered
+
+
+def test_procurement_detail_formats_item_quantity_with_format_decimal():
+    item_int = ItemStub(
+        id=101,
+        description="Resma de papel A4",
+        quantity=Decimal("50.0000"),
+        unit="pacote",
+        requesting_department="Secretaria Municipal de Educação",
+    )
+    item_micro = ItemStub(
+        id=102,
+        description="Reagente laboratorial",
+        quantity=Decimal("0.0450"),
+        unit="litro",
+        requesting_department="Secretaria Municipal de Saúde",
+    )
+    procurement = ProcurementStub(
+        id=1,
+        title="Material de expediente",
+        items=(item_int, item_micro),
+    )
+    rendered = _render_procurement_detail(procurement)
+
+    assert "<td>50</td>" in rendered
+    assert "50,0000" not in rendered
+    assert "<td>0,0450</td>" in rendered

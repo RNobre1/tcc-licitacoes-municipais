@@ -61,6 +61,7 @@ def test_format_decimal_template_filter():
         (0.89414424, "0,89"),
         (0.895, "0,90"),
         (0.885, "0,89"),
+        (0.145, "0,15"),
         (1.0, "1,00"),
         (0.5, "0,50"),
         (0.0, "0,00"),
@@ -83,6 +84,7 @@ def test_format_similarity_template_filter():
     assert tpl.render(Context({"val": 0.89414424})) == "0,89"
     assert tpl.render(Context({"val": 0.885})) == "0,89"
     assert tpl.render(Context({"val": 0.895})) == "0,90"
+    assert tpl.render(Context({"val": 0.145})) == "0,15"
     assert tpl.render(Context({"val": 0.5})) == "0,50"
     assert tpl.render(Context({"val": 1.0})) == "1,00"
     assert tpl.render(Context({"val": 0.0})) == "0,00"

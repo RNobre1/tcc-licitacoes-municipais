@@ -174,7 +174,7 @@ def test_screening_renders_two_dimension_headers_separately():
     item = _make_item()
     rendered = _render_screening(item, candidates=[_make_candidate()])
     assert "<th>Semelhança</th>" in rendered
-    assert "<th>Proximidade</th>" in rendered
+    assert "<th>Proximidade de valor</th>" in rendered
 
 
 def test_candidate_fragment_renders_proximity_string_when_given():
@@ -210,8 +210,14 @@ def test_candidate_fragment_renders_decide_form_with_htmx_attributes_and_csrf():
     assert f'hx-target="#candidate-{candidate.id}-decision"' in rendered
     assert 'hx-swap="outerHTML"' in rendered
     assert 'name="csrfmiddlewaretoken"' in rendered
-    assert '<button type="submit" name="decision" value="accept">Aceitar</button>' in rendered
-    assert '<button type="submit" name="decision" value="reject">Descartar</button>' in rendered
+    assert (
+        f'<button type="submit" id="candidate-{candidate.id}-accept" '
+        'name="decision" value="accept">Aceitar</button>'
+    ) in rendered
+    assert (
+        f'<button type="submit" id="candidate-{candidate.id}-reject" '
+        'name="decision" value="reject">Descartar</button>'
+    ) in rendered
 
 
 def test_screening_pre_fills_expected_price_field_when_given():
@@ -284,7 +290,7 @@ def test_screening_header_row_lists_every_column_in_the_fragment_order():
     flat = _flat(_render_screening(_make_item(), candidates=[c]))
     assert (
         "<th>Descrição</th> <th>Unidade</th> <th>Preço</th> "
-        "<th>Semelhança</th> <th>Proximidade</th> <th>Decisão</th>"
+        "<th>Semelhança</th> <th>Proximidade de valor</th> <th>Decisão</th>"
     ) in flat
     thead = re.search(r"<thead>(.*?)</thead>", flat, re.S).group(1)
     assert thead.count("<th>") == 6
@@ -810,6 +816,20 @@ def test_candidate_fragment_renders_edital_link_for_http_provenance():
     )
     rendered = _render_candidate_fragment(candidate)
     assert 'href="https://pncp.gov.br/app/editais/00000000000007/2026/42"' in rendered
+    assert 'rel="noopener noreferrer"' in rendered
+    assert "noopener" in rendered
+    assert ">Edital no PNCP</a>" in rendered
+
+
+def test_candidate_fragment_renders_non_pncp_source_with_http_provenance():
+    candidate = _make_candidate(
+        source="Portal Estadual",
+        provenance="https://example.org/edital/1",
+    )
+    rendered = _render_candidate_fragment(candidate)
+    assert "<span>Portal Estadual</span>" in rendered
+    assert 'href="https://example.org/edital/1"' in rendered
+    assert 'rel="noopener noreferrer"' in rendered
     assert ">Edital no PNCP</a>" in rendered
 
 
@@ -832,5 +852,11 @@ def test_candidate_decision_keeps_action_form_inside_swapped_cell():
     assert '<form method="post" action="/candidates/7/decision/"' in rendered
     assert '<input type="hidden" name="expected_price" value="25.00">' in rendered
     assert '<input type="hidden" name="item_id" value="1">' in rendered
-    assert '<button type="submit" name="decision" value="accept">Aceitar</button>' in rendered
-    assert '<button type="submit" name="decision" value="reject">Descartar</button>' in rendered
+    assert (
+        '<button type="submit" id="candidate-7-accept" '
+        'name="decision" value="accept">Aceitar</button>'
+    ) in rendered
+    assert (
+        '<button type="submit" id="candidate-7-reject" '
+        'name="decision" value="reject">Descartar</button>'
+    ) in rendered

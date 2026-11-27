@@ -683,6 +683,8 @@ def test_decide_post_returns_candidate_row_and_out_of_band_estimate_panel(client
     assert html.count("<td") == 1
     assert "<tr" not in html
     assert "Aceito" in html
+    assert 'id="candidate-1-accept"' in html
+    assert 'id="candidate-1-reject"' in html
 
     # The estimate panel is returned as an out-of-band swap with stable id
     assert 'id="estimate-panel"' in html
