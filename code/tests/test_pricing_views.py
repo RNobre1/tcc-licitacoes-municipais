@@ -2214,7 +2214,8 @@ def test_decide_preserves_semantic_similarity_and_never_renders_zero_for_public_
     get_resp = client.get(reverse("pricing:screening", args=[1]))
     assert get_resp.status_code == 200
     get_html = get_resp.content.decode()
-    assert "0,89414424" in get_html
+    assert "0,89" in get_html
+    assert "0,89414424" not in get_html
     assert f'hx-target="#candidate-{pi.pk}-decision"' in get_html
     assert search_calls == 1
 
@@ -2262,7 +2263,8 @@ def test_decide_preserves_semantic_similarity_and_never_renders_zero_for_public_
     get_after = client.get(reverse("pricing:screening", args=[1]))
     assert get_after.status_code == 200
     after_row = _row(get_after.content.decode(), pi.pk)
-    assert "0,89414424" in after_row
+    assert "0,89" in after_row
+    assert "0,89414424" not in after_row
     assert "Descartado" in after_row
 
 
@@ -2362,8 +2364,10 @@ def test_screening_formats_db_and_on_demand_prices_and_quantities_identically(cl
     assert "50,0000" not in row_db
     assert "<td>17,55</td>" in row_db
     assert "17,5500" not in row_db
-    assert "<td>0,89414424</td>" in row_db
+    assert "<td>0,89</td>" in row_db
+    assert "0,89414424" not in row_db
 
     assert "<td>0,0450</td>" in row_demand
     assert "<td>17,55</td>" in row_demand
-    assert "<td>0,81234567</td>" in row_demand
+    assert "<td>0,81</td>" in row_demand
+    assert "0,81234567" not in row_demand

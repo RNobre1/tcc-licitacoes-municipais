@@ -44,3 +44,8 @@ def format_decimal(value: Any) -> str:
         target_places = frac_digits
 
     return f"{norm:.{target_places}f}".replace(".", ",")
+
+
+def format_similarity(value: Any) -> str:
+    """Format a semantic similarity score to two decimal places with Brazilian comma."""
+    raise NotImplementedError("format_similarity is not implemented yet")

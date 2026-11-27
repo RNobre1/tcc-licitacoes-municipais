@@ -732,7 +732,7 @@ def test_candidate_decision_template_renders_labels_and_optional_oob_panel():
     assert 'hx-swap-oob="true"' in rendered
 
 
-def test_candidate_fragment_formats_price_and_quantity_and_leaves_similarity_untouched():
+def test_candidate_fragment_formats_price_quantity_and_similarity():
     candidate = _make_candidate(
         id=11,
         quantity=Decimal("50.0000"),
@@ -744,7 +744,8 @@ def test_candidate_fragment_formats_price_and_quantity_and_leaves_similarity_unt
     assert "50,0000" not in flat
     assert "<td>41,14</td>" in flat
     assert "41,1400" not in flat
-    assert "<td>0,89414424</td>" in flat
+    assert "<td>0,89</td>" in flat
+    assert "0,89414424" not in flat
 
     candidate_micro = _make_candidate(
         id=12,
@@ -756,18 +757,22 @@ def test_candidate_fragment_formats_price_and_quantity_and_leaves_similarity_unt
     flat_micro = _flat(_render_candidate_fragment(candidate_micro))
     assert "<td>0,0450</td>" in flat_micro
     assert "<td>0,0450 (estimado)</td>" in flat_micro
-    assert "<td>0,5</td>" in flat_micro
+    assert "<td>0,50</td>" in flat_micro
 
     candidate_int_price = _make_candidate(
         id=13,
         quantity=Decimal("1000.0000"),
         price=Decimal("28.00"),
-        similarity=0.75,
+        similarity=0.885,
         is_estimated=True,
     )
     flat_int = _flat(_render_candidate_fragment(candidate_int_price))
     assert "<td>1000</td>" in flat_int
     assert "<td>28 (estimado)</td>" in flat_int
+    assert "<td>0,89</td>" in flat_int
+
+    candidate_half_up = _make_candidate(id=14, similarity=0.895)
+    assert "<td>0,90</td>" in _flat(_render_candidate_fragment(candidate_half_up))
 
 
 def test_screening_formats_requested_item_quantity_without_trailing_zeros():

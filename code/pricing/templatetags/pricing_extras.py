@@ -3,6 +3,7 @@ from typing import Any
 from django import template
 
 from pricing.formatting import format_decimal as _format_decimal
+from pricing.formatting import format_similarity as _format_similarity
 
 register = template.Library()
 
@@ -24,3 +25,8 @@ def units_match(unit_a: Any, unit_b: Any) -> bool:
 @register.filter
 def format_decimal(value: Any) -> str:
     return _format_decimal(value)
+
+
+@register.filter
+def format_similarity(value: Any) -> str:
+    return _format_similarity(value)

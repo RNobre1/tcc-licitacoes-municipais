@@ -3,7 +3,7 @@ from decimal import Decimal
 import pytest
 from django.template import Context, Template
 
-from pricing.formatting import format_decimal
+from pricing.formatting import format_decimal, format_similarity
 
 
 @pytest.mark.parametrize(
@@ -52,4 +52,38 @@ def test_format_decimal_template_filter():
     tpl = Template("{% load pricing_extras %}{{ val|format_decimal }}")
     assert tpl.render(Context({"val": Decimal("41.1400")})) == "41,14"
     assert tpl.render(Context({"val": Decimal("50.0000")})) == "50"
+    assert tpl.render(Context({"val": None})) == "—"
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (0.89414424, "0,89"),
+        (0.895, "0,90"),
+        (0.885, "0,89"),
+        (1.0, "1,00"),
+        (0.5, "0,50"),
+        (0.0, "0,00"),
+        (None, "—"),
+        (Decimal("0.885"), "0,89"),
+        (Decimal("0.895"), "0,90"),
+        (Decimal("0.89414424"), "0,89"),
+        (Decimal("-0.00"), "0,00"),
+        ("invalid", "invalid"),
+        (Decimal("NaN"), "NaN"),
+        (float("inf"), "inf"),
+    ],
+)
+def test_format_similarity_rules(value, expected):
+    assert format_similarity(value) == expected
+
+
+def test_format_similarity_template_filter():
+    tpl = Template("{% load pricing_extras %}{{ val|format_similarity }}")
+    assert tpl.render(Context({"val": 0.89414424})) == "0,89"
+    assert tpl.render(Context({"val": 0.885})) == "0,89"
+    assert tpl.render(Context({"val": 0.895})) == "0,90"
+    assert tpl.render(Context({"val": 0.5})) == "0,50"
+    assert tpl.render(Context({"val": 1.0})) == "1,00"
+    assert tpl.render(Context({"val": 0.0})) == "0,00"
     assert tpl.render(Context({"val": None})) == "—"
