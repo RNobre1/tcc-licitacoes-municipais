@@ -1,5 +1,5 @@
 import math
-from decimal import Decimal, InvalidOperation, localcontext
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
 from typing import Any
 
 
@@ -48,4 +48,27 @@ def format_decimal(value: Any) -> str:
 
 def format_similarity(value: Any) -> str:
     """Format a semantic similarity score to two decimal places with Brazilian comma."""
-    raise NotImplementedError("format_similarity is not implemented yet")
+    if value is None:
+        return "—"
+    if isinstance(value, bool):
+        return str(value)
+
+    if isinstance(value, Decimal):
+        d = value
+    elif isinstance(value, float):
+        if not math.isfinite(value):
+            return str(value)
+        d = Decimal(str(value))
+    else:
+        try:
+            d = Decimal(str(value).strip())
+        except InvalidOperation, ValueError:
+            return str(value)
+
+    if not d.is_finite():
+        return str(value)
+
+    rounded = d.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if rounded == 0:
+        return "0,00"
+    return f"{rounded:.2f}".replace(".", ",")
